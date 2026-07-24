@@ -102,7 +102,7 @@
 
                     <!-- Input Credentials Form -->
                     <form id="vendorLoginForm" class="flex flex-col gap-5">
-                        <!-- Select Outlet Field (Shop Name from Admin Provisioning) -->
+                        <!-- Select Outlet Field -->
                         <div class="relative">
                             <label class="sr-only">Select Food Court Outlet</label>
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -213,9 +213,12 @@
                 alertBox.classList.add('bg-emerald-50', 'text-emerald-700');
                 alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Authentication Successful! Loading ${record.shopName} Terminal...`;
                 
-                // Route safely into the respective dashboard workspace context
+                // Formats the selected name to target dedicated individual pages
+                // e.g. "German Cafe" -> "german-cafe-dashboard.html"
+                const fileFriendlyName = record.shopName.toLowerCase().replace(/\s+/g, '-');
+                
                 setTimeout(() => {
-                    window.location.href = `vendor-dashboard.html?stall=${encodeURIComponent(record.shopName)}`;
+                    window.location.href = `${fileFriendlyName}-dashboard.html`;
                 }, 1500);
             } else {
                 alertBox.classList.add('bg-red-50', 'text-red-700');
