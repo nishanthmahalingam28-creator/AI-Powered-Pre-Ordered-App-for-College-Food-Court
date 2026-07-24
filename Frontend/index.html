@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPR Food Court | AI-Powered Pre-Order</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        kpr: {
+                            blue: '#113377',    /* Text, Theme dark blue */
+                            teal: '#008080',    /* Buttons, Accent green */
+                            green: '#33AA44',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Utility for the background wave effect */
+        .wave-bg {
+            background-color: #f1f8fc;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .wave-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23FFFFFF" fill-opacity="1" d="M0,96L80,128C160,160,320,224,480,218.7C640,213,800,139,960,128C1120,117,1280,171,1360,197.3L1440,224L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path></svg>');
+            background-size: cover;
+            z-index: -1;
+            transform: translateY(-50%);
+        }
+        
+        /* Utility for the footer dark wave */
+        .footer-wave {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23113377" fill-opacity="1" d="M0,96L80,128C160,160,320,224,480,218.7C640,213,800,139,960,128C1120,117,1280,171,1360,197.3L1440,224L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path></svg>');
+            background-size: cover;
+            background-position: bottom;
+            background-repeat: no-repeat;
+        }
+
+        /* Food tray image clipping shape */
+        .food-clip {
+            clip-path: polygon(10% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 10%);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-900 overflow-x-hidden font-sans">
+
+    <!-- Header / Nav -->
+    <header class="bg-white relative z-50 border-b border-gray-100 lg:border-none">
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between">
+            
+            <!-- Official KPRIET Logo Image Integration -->
+            <div class="flex items-center">
+                <img src="Document/KPRIET Logo.jpg" alt="KPR Institute of Engineering and Technology Logo" class="h-14 sm:h-20 lg:h-24 w-auto object-contain" onerror="console.error('Image not found.')">
+            </div>
+
+            <!-- Hamburger Icon Button (Visible on mobile/tablet) -->
+            <button id="menu-btn" class="lg:hidden p-2 text-gray-700 hover:text-kpr-blue focus:outline-none" aria-label="Toggle navigation">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            
+            <!-- Main Nav & Actions Container (Responsive Layout switches from stack to row) -->
+            <div id="nav-menu" class="hidden w-full lg:flex lg:items-center lg:w-auto gap-6 lg:gap-8 mt-4 lg:mt-0 transition-all duration-300 ease-in-out">
+                <nav class="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-8 py-4 lg:py-0 w-full border-t border-gray-100 lg:border-none">
+                    <a href="#" class="text-sm font-semibold text-kpr-blue lg:relative lg:after:absolute lg:after:-bottom-1 lg:after:left-0 lg:after:w-full lg:after:h-px lg:after:bg-kpr-blue">Home</a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-kpr-blue transition-colors">About</a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-kpr-blue transition-colors">Food Court</a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-kpr-blue transition-colors">How It Works</a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-kpr-blue transition-colors">Contact</a>
+                </nav>
+
+                <!-- Login/Sign Up Button -->
+                <button class="flex items-center justify-center gap-2 border border-gray-300 rounded-full px-5 py-2.5 text-gray-700 hover:border-kpr-blue hover:text-kpr-blue transition-colors w-full lg:w-auto">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <span class="text-sm font-medium"><a href="Role/role.html">Login/sign up</a>></span>
+                   
+                </button>
+            </div>
+            
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="relative pt-8 sm:pt-16 lg:pt-20 pb-24 sm:pb-32 lg:pb-40">
+        <div class="absolute inset-0 wave-bg"></div>
+        
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 items-center gap-10 md:gap-16 relative z-10">
+            <!-- Left Text Content -->
+            <div class="max-w-2xl text-center md:text-left order-2 md:order-1">
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight">
+                    <span class="block">Welcome to</span>
+                    <span class="block text-kpr-teal">AI-Powered</span> 
+                    <span class="block text-kpr-blue">Pre-Order<br class="hidden sm:inline">for Food Court</span>
+                </h2>
+                <p class="mt-4 sm:mt-6 lg:mt-8 text-base sm:text-lg lg:text-xl text-gray-700 leading-relaxed max-w-lg mx-auto md:mx-0">
+                    Skip the line, save time, and enjoy your favorite food with the power of AI recommendations made just for you.
+                </p>
+                
+                <div class="mt-8 sm:mt-10 lg:mt-12 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 sm:gap-6">
+                    <!-- Order Now Button -->
+                    <button class="w-full sm:w-auto bg-kpr-teal text-white rounded-lg px-8 py-3.5 sm:py-4 flex items-center justify-center gap-3 font-semibold group hover:bg-opacity-90 transition-colors">
+                        Order Now 
+                        <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                    
+                    <!-- Explore Button -->
+                    <button class="w-full sm:w-auto bg-white border-2 border-kpr-teal text-kpr-teal rounded-lg px-8 py-3.5 sm:py-4 flex items-center justify-center gap-3 font-semibold hover:bg-teal-50 transition-colors">
+                        Explore Food Court
+                        <span class="font-normal text-lg">𓎩𓌉</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Right Image Area -->
+            <div class="relative w-full h-[300px] sm:h-[450px] lg:h-[550px] order-1 md:order-2 px-2 sm:px-0">
+                <div class="absolute inset-0 bg-gray-100 food-clip shadow-xl overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1594179047519-f347310d3322?q=80&w=800&auto=format&fit=crop" 
+                         alt="Food tray with burger and noodles"
+                         class="w-full h-full object-cover">
+                </div>
+                
+                <!-- Floating AI Recommendation Widget (Responsive scale/positions) -->
+                <div class="absolute top-6 right-2 sm:right-6 lg:right-[-30px] bg-kpr-blue rounded-2xl lg:rounded-3xl p-4 lg:p-6 text-white text-center shadow-lg w-44 sm:w-56 lg:w-64 transform scale-90 sm:scale-100">
+                    <h4 class="text-xl sm:text-2xl lg:text-3xl font-bold">AI <span class="text-xs sm:text-sm align-super">✨</span></h4>
+                    <p class="text-xs sm:text-sm mt-1 sm:mt-3 leading-snug">Recommendations Just for You!</p>
+                </div>
+                
+                <!-- Floating Robot Icon -->
+                <div class="absolute bottom-6 right-2 sm:right-4 lg:right-[-20px] bg-white rounded-full p-2 shadow-xl border border-gray-100 transform scale-75 sm:scale-100">
+                    <img src="https://img.icons8.com/color/96/000000/robot-3.png" alt="Robot AI Icon" class="w-14 h-14 sm:w-20 sm:h-20">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Features Section -->
+    <section class="footer-wave relative z-20 pb-12 sm:pb-20 mt-[-60px] sm:mt-[-100px]">
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6">
+            <div class="bg-gray-50 bg-opacity-95 rounded-2xl sm:rounded-[30px] p-6 sm:p-12 shadow-inner">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
+                    
+                    <!-- Feature 1 -->
+                    <div class="flex items-start gap-4 sm:gap-5">
+                        <div class="bg-teal-50 p-3 sm:p-4 rounded-full border border-teal-100 shrink-0">
+                            <svg class="w-6 h-6 sm:w-8 sm:h-8 text-kpr-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <h5 class="text-base sm:text-lg font-semibold text-kpr-teal">Pre-Order & Save Time</h5>
+                            <p class="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 leading-relaxed">Place your order in advance and skip the waiting line.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature 2 -->
+                    <div class="flex items-start gap-4 sm:gap-5">
+                        <div class="bg-teal-50 p-3 sm:p-4 rounded-full border border-teal-100 shrink-0">
+                            <svg class="w-6 h-6 sm:w-8 sm:h-8 text-kpr-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <div>
+                            <h5 class="text-base sm:text-lg font-semibold text-kpr-teal">AI Recommendations</h5>
+                            <p class="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 leading-relaxed">Get personalized food suggestions you'll love.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature 3 -->
+                    <div class="flex items-start gap-4 sm:gap-5">
+                        <div class="bg-teal-50 p-3 sm:p-4 rounded-full border border-teal-100 shrink-0">
+                            <svg class="w-6 h-6 sm:w-8 sm:h-8 text-kpr-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        </div>
+                        <div>
+                            <h5 class="text-base sm:text-lg font-semibold text-kpr-teal">Fresh & Fast</h5>
+                            <p class="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 leading-relaxed">Quality food ready when you are.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature 4 -->
+                    <div class="flex items-start gap-4 sm:gap-5">
+                        <div class="bg-teal-50 p-3 sm:p-4 rounded-full border border-teal-100 shrink-0">
+                            <svg class="w-6 h-6 sm:w-8 sm:h-8 text-kpr-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                        </div>
+                        <div>
+                            <h5 class="text-base sm:text-lg font-semibold text-kpr-teal">Secure Payments</h5>
+                            <p class="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 leading-relaxed">Enjoy safe and seamless payment options.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation Interactivity Script -->
+    <script>
+        const menuBtn = document.getElementById('menu-btn');
+        const navMenu = document.getElementById('nav-menu');
+
+        menuBtn.addEventListener('click', () => {
+            navMenu.classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>
