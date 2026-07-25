@@ -20,7 +20,7 @@
     <header class="w-full bg-white/80 backdrop-blur-md shadow-sm py-4 px-6 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 z-10">
         <!-- Logo Image Placeholder -->
         <div class="flex items-center">
-            <img src="logo.png" alt="Institution Logo" class="h-12 w-auto object-contain fallback-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback-text').style.display='block';">
+            <
             <span id="logo-fallback-text" class="hidden text-xl font-bold text-sky-900">KPRIET Food Court</span>
         </div>
         
@@ -78,14 +78,22 @@
                     </div>
 
                     <!-- Input Credentials Form -->
-                    <form onsubmit="event.preventDefault();" class="flex flex-col gap-5">
+                    <form onsubmit="event.preventDefault();" class="flex flex-col gap-5" id="loginForm">
                         <!-- Email Input Field -->
                         <div class="relative">
-                            <label class="sr-only">Institute Email ID</label>
+                            <label class="sr-only" >Institute Email ID</label>
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                                 <i class="fa-regular fa-envelope"></i>
                             </div>
-                            <input type="email" placeholder="Institute Email ID" class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder:text-slate-400 text-sm">
+                            <input
+                                type="email"
+                                id="email"
+                                placeholder="Institute Email ID"
+                                class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
+
+                            <p id="emailError" class="text-red-500 text-sm mt-1"></p>
+
                         </div>
 
                         <!-- Password Input Field -->
@@ -94,7 +102,14 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                                 <i class="fa-solid fa-lock"></i>
                             </div>
-                            <input type="password" placeholder="Password" class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder:text-slate-400 text-sm">
+                            <input
+                                type="password"
+                                id="password"
+                                placeholder="Password"
+                                class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
+
+                            <p id="passwordError" class="text-red-500 text-sm mt-1"></p>
                         </div>
 
                         <!-- Secondary Settings: Remember Me & Forgot Password -->
@@ -107,9 +122,12 @@
                         </div>
 
                         <!-- Main Primary Action Button -->
-                        <button type="submit" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-teal-700/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2">
-                            <a href="C:\Users\Nishanth\OneDrive\Desktop\AI-Powered-Pre-Ordered-App-for-College-Food-Court\Frontend\Role\Student\Dashboard\dashboard.html" class="flex items-center justify-center gap-2 w-full h-full">
-                            Login <i class="fa-solid fa-arrow-right text-sm"></i>
+                        <button
+                            type="submit"
+                            class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3.5 rounded-xl">
+                            <a href="C:\Users\Nishanth\OneDrive\Desktop\AI-Powered-Pre-Ordered-App-for-College-Food-Court\Frontend\Role\Student\Dashboard\dashboard.html" class="flex items-center justify-center gap-2">
+                            Login
+                            <i class="fa-solid fa-arrow-right"></i>
                             </a>
                         </button>
                     </form>
@@ -144,6 +162,60 @@
             <span>Your data is safe with us</span>
         </div>
     </footer>
+    <script>
 
+        document.getElementById("loginForm").addEventListener("submit",function(e){
+
+            e.preventDefault();
+
+            let email=document.getElementById("email").value.trim();
+
+            let password=document.getElementById("password").value.trim();
+
+            let emailError=document.getElementById("emailError");
+
+            let passwordError=document.getElementById("passwordError");
+
+            emailError.innerHTML="";
+            passwordError.innerHTML="";
+
+            let valid=true;
+
+            // Email Validation
+
+            if(email=="")
+            {
+                emailError.innerHTML="Email is required";
+                valid=false;
+            }
+            else{
+
+                const emailPattern=/^[a-zA-Z0-9._%+-]+@kpriet\.ac\.in$/;
+
+                if(!emailPattern.test(email))
+                {
+                    emailError.innerHTML="Enter a valid KPRIET Email";
+                    valid=false;
+                }
+
+            }
+
+            // Password Validation
+
+            if(password=="")
+            {
+                passwordError.innerHTML="Password is required";
+                valid=false;
+            }
+            else if(password.length<8)
+            {
+                passwordError.innerHTML="Password must contain at least 8 characters";
+                valid=false;
+            }
+
+
+});
+
+</script>
 </body>
 </html>
