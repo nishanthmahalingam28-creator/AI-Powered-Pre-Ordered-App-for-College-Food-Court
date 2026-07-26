@@ -381,11 +381,22 @@
             <input type="password" id="password" placeholder="Password" required>
           </div>
 
-          <div class="input-group">
-            <i class="fa-solid fa-lock"></i>
-            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
-          </div>
+          <h3 style="text-align:center; margin:15px 0;">OR</h3>
 
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+        <div id="g_id_onload"
+          data-client_id="YOUR_CLIENT_ID"
+          data-callback="handleCredentialResponse">
+        </div>
+
+        <div class="g_id_signin"
+          data-type="standard"
+          data-size="large"
+          data-theme="outline"
+          data-text="signup_with"
+          data-shape="rectangular">
+        </div>
           <div class="form-options">
             <label>
               <input type="checkbox" required>
@@ -444,6 +455,13 @@
       errorMsg.style.display = 'none';
       confirmPassword.style.borderColor = '#e2e8f0';
     });
+
+    // Google Sign-In Callback
+    function handleCredentialResponse(response) {
+      
+      console.log(response.credential);
+      alert("Google Sign-In Successful!");  
+    }
   </script>
 
 </body>
