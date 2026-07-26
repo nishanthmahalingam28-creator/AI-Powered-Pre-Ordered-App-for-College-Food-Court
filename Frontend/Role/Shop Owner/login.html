@@ -20,7 +20,7 @@
     <header class="w-full bg-white/80 backdrop-blur-md shadow-sm py-4 px-6 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 z-10">
         <!-- Logo Image -->
         <div class="flex items-center">
-            <img src="logo.png" alt="Institution Logo" class="h-12 w-auto object-contain fallback-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback-text').style.display='block';">
+            <img src="../../Document/KPRIET Logo.jpg" alt="Institution Logo" class="h-12 w-auto object-contain fallback-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback-text').style.display='block';">
             <span id="logo-fallback-text" class="hidden text-xl font-bold text-blue-900">KPRIET Food Court</span>
         </div>
         
@@ -111,6 +111,7 @@
                             <select id="vendorShop" required class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-600 text-sm appearance-none cursor-pointer">
                                 <option value="" disabled selected>Select Your Stall / Shop</option>
                                 <option value="YPR">YPR</option>
+                                <option value="campus kitchen">Campus Kitchen</option>
                                 <option value="German Cafe">German Cafe</option>
                                 <option value="Royal Kitchen">Royal Kitchen</option>
                                 <option value="Mario">Mario</option>
@@ -197,6 +198,7 @@
             // Simulated Central Admin Database Registry Records
             const adminVendorDatabase = {
                 "ypr": { shopName: "YPR", email: "ypr@kpriet.ac.in", pass: "ypr123" },
+                "campus kitchen":{shopName:"Campus Kitchen",email:"campus@kpriet.ac.in",pass:"cam123"},
                 "german cafe": { shopName: "German Cafe", email: "german@kpriet.ac.in", pass: "german123" },
                 "royal kitchen": { shopName: "Royal Kitchen", email: "royal@kpriet.ac.in", pass: "royal123" },
                 "mario": { shopName: "Mario", email: "mario@kpriet.ac.in", pass: "mario123" },
