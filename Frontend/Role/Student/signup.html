@@ -29,7 +29,10 @@
       justify-content: space-between;
       align-items: center;
       padding: 18px 40px;
-      background: transparent;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      position: relative; /* Context parent for absolute dropdown placement */
+      z-index: 10;
     }
 
     .brand-title {
@@ -69,100 +72,99 @@
       color: #0b4f46;
       font-weight: 800;
     }
+
     /* --- UNIVERSAL NAV MENU FIXED STYLING --- */
-  header {
-    position: relative; /* Context parent for the absolute dropdown placement */
-  }
-
-  .menu-container {
-    position: absolute;
-    right: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 40;
-  }
-
-  #menuBtn {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background-color: white;
-    color: #0b4f46;
-    font-size: 1.5rem;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 1;
-    transition: all 0.2s ease;
-    outline: none;
-  }
-
-  #menuBtn:hover {
-    background-color: #f7fafc;
-  }
-
-  #dropdownMenu {
-    display: none; /* Controlled via JS toggles */
-    position: absolute;
-    right: 0;
-    top: 100%;
-    margin-top: 12px;
-    width: 220px;
-    background-color: white;
-    border: 1px solid #edf2f7;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    padding: 8px 0;
-    z-index: 50;
-  }
-
-  #dropdownMenu.show {
-    display: block;
-  }
-
-  #dropdownMenu a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #4a5568;
-    text-decoration: none;
-    transition: background 0.2s;
-  }
-
-  #dropdownMenu a:hover {
-    background-color: #f7fafc;
-    color: #0b4f46;
-  }
-
-  #dropdownMenu hr {
-    border: 0;
-    border-top: 1px solid #edf2f7;
-    margin: 6px 0;
-  }
-
-  /* Adjust layout on small screens so text elements do not collide with menu */
-  @media (max-width: 600px) {
-    header {
-      flex-direction: column;
-      padding: 20px;
-      gap: 12px;
-    }
     .menu-container {
-      position: static;
-      transform: none;
-      margin-top: 5px;
+      position: absolute;
+      right: 40px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 40;
     }
-  }
+
+    #menuBtn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background-color: white;
+      color: #0b4f46;
+      font-size: 1.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    #menuBtn:hover {
+      background-color: #f7fafc;
+    }
+
+    #dropdownMenu {
+      display: none; /* Controlled via JS toggles */
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 12px;
+      width: 220px;
+      background-color: white;
+      border: 1px solid #edf2f7;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      padding: 8px 0;
+      z-index: 50;
+    }
+
+    #dropdownMenu.show {
+      display: block;
+    }
+
+    #dropdownMenu a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #4a5568;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    #dropdownMenu a:hover {
+      background-color: #f7fafc;
+      color: #0b4f46;
+    }
+
+    #dropdownMenu hr {
+      border: 0;
+      border-top: 1px solid #edf2f7;
+      margin: 6px 0;
+    }
+
+    /* Adjust layout on small screens so text elements do not collide with menu */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        padding: 20px;
+        gap: 12px;
+      }
+      .brand-badge {
+        margin: 5px 0;
+      }
+      .menu-container {
+        position: static;
+        transform: none;
+        margin-top: 5px;
+      }
+    }
 
     /* --- MAIN CONTAINER --- */
-    
     main {
       max-width: 1100px;
       width: 90%;
       margin: 0 auto;
-      padding: 10px 0;
+      padding: 30px 0;
       text-align: center;
     }
 
@@ -184,7 +186,7 @@
       justify-content: center;
     }
 
-    /* Left Card / Graphic Area */
+    /* Left Graphic Area */
     .illustration-card {
       flex: 1;
       max-width: 420px;
@@ -386,7 +388,6 @@
       gap: 6px;
     }
 
-    /* Responsive Design */
     @media (max-width: 768px) {
       .content-grid {
         flex-direction: column;
@@ -406,25 +407,24 @@
 <body>
 
   <!-- HEADER -->
-  <header class="w-full bg-white/80 backdrop-blur-md shadow-sm py-4 px-6 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 z-10 relative -left-8">
-    
+  <header>
     <div class="brand-title">KPRIET Food Court</div>
 
-    <div class="brand-badge" style="position: relative; left: -80px;">
+    <div class="brand-badge">
       <div class="badge-icon">
         <i class="fa-solid fa-utensils"></i>
       </div>
-      <div class="badge-text">
+      <div class="badge-text" style="margin-right: 70px; text-align: left;">
         <span>AI-POWERED</span>
         <strong>Food Court</strong>
       </div>
     </div>
-    <!-- Top Right Corner: Universal Menu Button for All Devices -->
     
+    <!-- Top Right Corner: Navigation Context Wrapper -->
     <div class="menu-container">
       <button id="menuBtn" aria-label="Toggle Navigation Options">≡</button>
 
-      <!-- Navigation Dropdown Structure -->
+      <!-- Navigation Dropdown Menu Container -->
       <div id="dropdownMenu">
         <a href="../index.html">
           <i class="fa-solid fa-house" style="color: #0b4f46; width: 16px;"></i>
@@ -436,8 +436,6 @@
         <a href="../contact.html">Contact Support</a>
       </div>
     </div>
-</header>
-            
   </header>
 
   <!-- MAIN SECTION -->
@@ -463,7 +461,7 @@
           Create an account to manage your profile, live orders, and personalized smart recommendations.
         </p>
 
-        <!-- Message Box for Incorrect Password -->
+        <!-- Message Box for Incorrect Password Matches -->
         <div id="errorMsg" class="error-msg">
           <i class="fa-solid fa-circle-exclamation"></i> Passwords do not match. Please try again!
         </div>
@@ -481,7 +479,7 @@
 
           <div class="input-group">
             <i class="fa-regular fa-id-card"></i>
-            <input type="text" placeholder="Roll Number / Student ID" required>
+            <input type="text" placeholder="Roll Number" required>
           </div>
 
           <div class="input-group">
@@ -489,22 +487,30 @@
             <input type="password" id="password" placeholder="Password" required>
           </div>
 
+          <!-- ADDED FIELD: Confirm Password field needed to satisfy script verification logic -->
+          <div class="input-group">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+          </div>
+
           <h3 style="text-align:center; margin:15px 0;">OR</h3>
 
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
+          <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-        <div id="g_id_onload"
-          data-client_id="YOUR_CLIENT_ID"
-          data-callback="handleCredentialResponse">
-        </div>
+          <div id="g_id_onload"
+            data-client_id="YOUR_CLIENT_ID"
+            data-callback="handleCredentialResponse">
+          </div>
 
-        <div class="g_id_signin"
-          data-type="standard"
-          data-size="large"
-          data-theme="outline"
-          data-text="signup_with"
-          data-shape="rectangular">
-        </div>
+          <div class="g_id_signin"
+            data-type="standard"
+            data-size="large"
+            data-theme="outline"
+            data-text="signup_with"
+            data-shape="rectangular"
+            style="margin-bottom:15px;">
+          </div>
+          
           <div class="form-options">
             <label>
               <input type="checkbox" required>
@@ -539,7 +545,7 @@
     </div>
   </footer>
 
-  <!-- JAVASCRIPT VALIDATION -->
+  <!-- JAVASCRIPT VALIDATION & DOM CONTROLS -->
   <script>
     const form = document.getElementById('signUpForm');
     const password = document.getElementById('password');
@@ -548,8 +554,8 @@
 
     form.addEventListener('submit', function(e) {
       if (password.value !== confirmPassword.value) {
-        e.preventDefault(); // Stop form submission
-        errorMsg.style.display = 'block'; // Show error message banner
+        e.preventDefault(); 
+        errorMsg.style.display = 'block'; 
         confirmPassword.style.borderColor = '#e74c3c';
       } else {
         errorMsg.style.display = 'none';
@@ -558,30 +564,28 @@
       }
     });
 
-    // Clear error message when user re-types
     confirmPassword.addEventListener('input', function() {
       errorMsg.style.display = 'none';
       confirmPassword.style.borderColor = '#e2e8f0';
     });
 
-    // Google Sign-In Callback
     function handleCredentialResponse(response) {
-      
       console.log(response.credential);
       alert("Google Sign-In Successful!");  
     }
+
+    // Toggle Dropdown Menu Visibility Configurations
     const menuBtn = document.getElementById('menuBtn');
     const dropdownMenu = document.getElementById('dropdownMenu');
 
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
-      });
+      dropdownMenu.classList.toggle('show'); 
+    });
 
-        // Close dropdown when clicking anywhere outside of it
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.add('hidden');
-        })
+    document.addEventListener('click', () => {
+      dropdownMenu.classList.remove('show');
+    });
   </script>
 
 </body>

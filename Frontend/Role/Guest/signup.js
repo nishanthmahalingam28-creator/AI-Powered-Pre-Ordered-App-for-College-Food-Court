@@ -84,3 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+const menuBtn = document.getElementById('menuBtn');
+const dropdownMenu = document.getElementById('dropdownMenu');
+
+menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdownMenu.classList.toggle('hidden');
+});
+
+// Close dropdown when clicking anywhere outside of it
+document.addEventListener('click', () => {
+    dropdownMenu.classList.add('hidden');
+});

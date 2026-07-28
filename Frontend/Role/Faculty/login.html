@@ -29,18 +29,7 @@
                 }
             }
         }
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
-        });
-
-        // Close dropdown when clicking anywhere outside of it
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.add('hidden');
-        })
+        
     </script>
     <link rel="stylesheet" href="login.css">
 </head>
@@ -192,5 +181,6 @@
 
     <!-- Custom External JavaScript -->
     <script src="login.js"></script>
+    
 </body>
 </html>

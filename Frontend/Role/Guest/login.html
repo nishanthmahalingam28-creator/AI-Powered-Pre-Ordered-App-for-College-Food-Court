@@ -29,18 +29,7 @@
                 }
             }
         }
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
-        });
-
-        // Close dropdown when clicking anywhere outside of it
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.add('hidden');
-        })
+        
     </script>
     <link rel="stylesheet" href="login.css">
 </head>
@@ -58,7 +47,7 @@
             </div>
             
             <!-- Right Side: Application Title Block -->
-            <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl -relative -left-8">
+            <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl relative -left-8">
                 <div class="bg-teal-700 p-2.5 rounded-lg text-white">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3h8v2h-8zm0 5h8v2h-8zm0 5h8v2h-8z"/>
