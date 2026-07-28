@@ -1,320 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Dashboard | AI Food Court</title>
-
-    <!-- CSS -->
-    <link rel="stylesheet" href="dashboard.css">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123c47">
+  <title>SmartCampus | Order food</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
 </head>
-
 <body>
-
-<!-- ================= HEADER ================= -->
-
-<header>
-
-    <div class="logo">
-
-        
-
-        <div class="logo-text">
-            <h2>KPRIET Food Court</h2>
-            <p>AI Powered Pre-Order</p>
-        </div>
-
-    </div>
-
-
-    <div class="search-box">
-
-        <i class="fa-solid fa-magnifying-glass"></i>
-
-        <input type="text" placeholder="Search food, shops...">
-
-    </div>
-
-
-    <div class="header-icons">
-
-        <div class="icon">
-
-            <i class="fa-regular fa-bell"></i>
-
-            <span>2</span>
-
-        </div>
-
-        <div class="icon">
-
-            <i class="fa-solid fa-cart-shopping"></i>
-
-            <span>1</span>
-
-        </div>
-
-        <div class="profile">
-
-            <img src="../../../Document/character.jpeg" alt="Profile">
-
-        </div>
-
-    </div>
-
-</header>
-
-<!-- ================= WELCOME ================= -->
-
-<section class="welcome">
-
-    <div>
-
-        <h1>Welcome, Student 👋</h1>
-
-        <p>
-            Skip the queue. Order your favourite food with AI recommendations.
-        </p>
-
-    </div>
-
-</section>
-
-<!-- ================= AI CARD ================= -->
-
-<section class="recommend">
-
-    <div class="recommend-card">
-
-        <div class="left">
-
-            <h2>
-                🤖 AI Recommendation
-            </h2>
-
-            <p>
-                Based on your previous orders,
-                we recommend
-                <strong>Masala Dosa + Coffee</strong>
-                from
-                <strong>YPR Restaurant.</strong>
-            </p>
-
-            <button>
-                Order Now
-            </button>
-
-        </div>
-
-        <div class="right">
-
-            <i class="fa-solid fa-robot"></i>
-
-        </div>
-
-    </div>
-
-</section>
-
-<!-- ================= SHOPS ================= -->
-
-<section class="shops">
-
-<h2>Food Court Shops</h2>
-
-<div class="shop-container">
-
-<!-- YPR -->
-
-<div class="shop-card">
-
-<h3>YPR Restaurant</h3>
-
-<p>South Indian Meals</p>
-
-<p>⭐ 4.8</p>
-
-<button>View Menu</button>
-
-</div>
-
-<!-- German -->
-
-<div class="shop-card">
-
-<h3>German Cafe</h3>
-
-<p>Food & Coffee</p>
-
-<p>⭐ 4.9</p>
-
-<button>View Menu</button>
-
-</div>
-
-<!-- Royal -->
-
-<div class="shop-card">
-
-<h3>Royal Kitchen</h3>
-
-<p>Meals & Snacks</p>
-
-<p>⭐ 4.7</p>
-
-<button>View Menu</button>
-
-</div>
-
-<!-- Ganesh -->
-
-<div class="shop-card">
-
-<h3>Ganesh Cafe</h3>
-
-<p>Tea & Snacks</p>
-
-<p>⭐ 4.6</p>
-
-<button>View Menu</button>
-
-</div>
-
-<!-- Saaral -->
-
-<div class="shop-card">
-
-<h3>Saaral</h3>
-
-<p>Snacks & Cakes</p>
-
-<p>⭐ 4.5</p>
-
-<button>View Menu</button>
-
-</div>
-
-<!-- Mario -->
-
-<div class="shop-card">
-
-<h3>Mario</h3>
-
-<p>Juices & Maggi</p>
-
-<p>⭐ 4.7</p>
-
-<button>View Menu</button>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- ================= QUICK ACTION ================= -->
-
-<section class="quick">
-
-<h2>Quick Actions</h2>
-
-<div class="quick-box">
-
-<div class="action">
-
-<i class="fa-solid fa-cart-shopping"></i>
-
-<h3>My Orders</h3>
-
-</div>
-
-<div class="action">
-
-<i class="fa-solid fa-clock-rotate-left"></i>
-
-<h3>Order History</h3>
-
-</div>
-
-<div class="action">
-
-<i class="fa-solid fa-heart"></i>
-
-<h3>Favourite</h3>
-
-</div>
-
-<div class="action">
-
-<i class="fa-solid fa-user"></i>
-
-<h3>Profile</h3>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- ================= RECENT ORDER ================= -->
-
-<section class="recent">
-
-<h2>Recent Order</h2>
-
-<div class="recent-card">
-
-<div>
-
-<h3>Masala Dosa</h3>
-
-<p>YPR Restaurant</p>
-
-</div>
-
-<div>
-
-₹70
-
-</div>
-
-<div>
-
-Completed
-
-</div>
-
-</div>
-
-</section>
-
-<!-- ================= FOOTER ================= -->
-
-<footer>
-
-<div>
-
-© 2026 AI Powered Food Court
-
-</div>
-
-<div>
-
-Secure • Fast • Smart
-
-</div>
-
-</footer>
-
-<script src="dashboard.js"></script>
-
+  <header class="topbar">
+    <a class="brand" href="../../../index.html" aria-label="SmartCampus home"><span class="brand-mark">S</span><span>smart<span>campus</span></span></a>
+    <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search dishes, shops…" autocomplete="off"></label>
+    <div class="top-actions"><button class="ghost" id="ordersBtn">My orders</button><button class="cart-button" id="cartBtn" aria-label="Open cart">Cart <span id="cartCount">0</span></button></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div><p class="eyebrow">TUESDAY, 28 JULY</p><h1>Lunch, made <em>effortless.</em></h1><p class="hero-copy">Pre-order from your campus favourites and collect it when it’s ready. No standing in line.</p><button class="primary" id="recommendBtn">Try today’s pick <span>→</span></button></div>
+      <div class="hero-card"><div class="sparkle">✦</div><p>YOUR AI PICK</p><h2>Masala Dosa<br><span>+ filter coffee</span></h2><div class="hero-meta"><span>YPR Restaurant</span><strong>₹85</strong></div></div>
+    </section>
+
+    <section class="content">
+      <div class="section-heading"><div><p class="eyebrow">CAMPUS FOOD COURT</p><h2>What are you craving?</h2></div><div class="filters" id="filters"><button class="active" data-category="All">All</button><button data-category="South Indian">South Indian</button><button data-category="Snacks">Snacks</button><button data-category="Beverages">Beverages</button><button data-category="Meals">Meals</button></div></div>
+      <p class="result-text" id="resultText">Popular around campus right now</p>
+      <div class="menu-grid" id="menuGrid"></div>
+    </section>
+  </main>
+
+  <aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+    <div class="drawer-head"><div><p class="eyebrow">YOUR ORDER</p><h2>Ready when you are</h2></div><button class="close" id="closeCart" aria-label="Close cart">×</button></div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="pickup"><label for="pickupTime">Pickup time</label><select id="pickupTime"><option>12:35 PM — 12:45 PM</option><option>12:45 PM — 12:55 PM</option><option>12:55 PM — 1:05 PM</option></select><p>Estimated preparation time: 10–15 min</p></div>
+    <div class="cart-footer"><div class="total"><span>Total</span><strong id="total">₹0</strong></div><button class="primary checkout" id="checkoutBtn" disabled>Place pre-order <span>→</span></button></div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+
+  <dialog id="confirmation"><div class="success-icon">✓</div><p class="eyebrow">ORDER CONFIRMED</p><h2>See you at the counter.</h2><p class="dialog-copy">Your order has been sent to <strong id="shopName">YPR Restaurant</strong>. Show this pickup code when your order is ready.</p><div class="otp" id="otp"></div><p class="order-id" id="orderId"></p><button class="primary" id="doneBtn">Back to menu</button></dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="dashboard.js"></script>
 </body>
-
 </html>
