@@ -5,7 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Login - AI-Powered Food Court</title>
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+        const menuBtn = document.getElementById('menuBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking anywhere outside of it
+        document.addEventListener('click', () => {
+            dropdownMenu.classList.add('hidden');
+        })
+    </script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -25,7 +38,7 @@
         </div>
         
         <!-- Right Side Brand Title -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 relative -left-8">
             <div class="bg-teal-600 text-white p-2.5 rounded-xl shadow-md shadow-teal-600/20">
                 <i class="fa-solid fa-utensils text-lg"></i>
             </div>
@@ -34,6 +47,27 @@
                 <h2 class="text-xl font-bold text-sky-900 tracking-tight">Food Court</h2>
             </div>
         </div>
+    
+        <!-- Top Right Corner: Universal Menu Button for All Devices -->
+            <div class="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40">
+                <button id="menuBtn" class="p-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-kpr-blue hover:bg-gray-50 transition-all text-2xl font-bold leading-none cursor-pointer focus:outline-none" aria-label="Toggle Navigation Options">
+                    ≡
+                </button>
+
+                <!-- Navigation Dropdown Menu Structure -->
+                <div id="dropdownMenu" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
+                    <a href="../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
+                        <svg class="w-4 h-4 text-kpr-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span>Home</span>
+                    </a>
+                    <hr class="border-gray-100">
+                    <a href="../about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
+                    <a href="../how it works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
+                    <a href="../contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
+                </div>
+            </div>
     </header>
 
     <!-- MAIN CONTENT CONTAINER -->

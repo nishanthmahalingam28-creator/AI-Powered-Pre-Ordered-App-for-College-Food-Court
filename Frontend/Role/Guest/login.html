@@ -29,6 +29,18 @@
                 }
             }
         }
+        const menuBtn = document.getElementById('menuBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking anywhere outside of it
+        document.addEventListener('click', () => {
+            dropdownMenu.classList.add('hidden');
+        })
     </script>
     <link rel="stylesheet" href="login.css">
 </head>
@@ -46,7 +58,7 @@
             </div>
             
             <!-- Right Side: Application Title Block -->
-            <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
+            <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl -relative -left-8">
                 <div class="bg-teal-700 p-2.5 rounded-lg text-white">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3h8v2h-8zm0 5h8v2h-8zm0 5h8v2h-8z"/>
@@ -55,6 +67,26 @@
                 <div class="text-left">
                     <span class="block text-xs font-semibold uppercase tracking-wider text-teal-700">AI-Powered</span>
                     <span class="block text-xl font-extrabold text-kpr-blue">Food Court</span>
+                </div>
+            </div>
+            <!-- Top Right Corner: Universal Menu Button for All Devices -->
+            <div class="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40">
+                <button id="menuBtn" class="p-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-kpr-blue hover:bg-gray-50 transition-all text-2xl font-bold leading-none cursor-pointer focus:outline-none" aria-label="Toggle Navigation Options">
+                    ≡
+                </button>
+
+                <!-- Navigation Dropdown Menu Structure -->
+                <div id="dropdownMenu" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
+                    <a href="../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
+                        <svg class="w-4 h-4 text-kpr-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span>Home</span>
+                    </a>
+                    <hr class="border-gray-100">
+                    <a href="../about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
+                    <a href="../how it works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
+                    <a href="../contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
                 </div>
             </div>
             
