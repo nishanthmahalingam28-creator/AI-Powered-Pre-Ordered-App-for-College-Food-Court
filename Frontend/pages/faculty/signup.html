@@ -7,31 +7,13 @@
     
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../../js/tailwind-config.js"></script>
     
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Tailwind Custom Configuration -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        kpr: {
-                            blue: '#113377',
-                            facultyBlue: '#0052cc',
-                            lightBg: '#f4f7f9'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
-        }
-        
-    </script>
-    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="../../css/components.css">
+    <link rel="stylesheet" href="../../Role/Faculty/login.css">
 </head>
 <body class="bg-kpr-lightBg min-h-screen flex flex-col justify-between font-sans overflow-x-hidden">
 
@@ -61,21 +43,21 @@
             <!-- Top Right Corner: Universal Menu Button for All Devices -->
             <div class="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40">
                 <button id="menuBtn" class="p-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-kpr-blue hover:bg-gray-50 transition-all text-2xl font-bold leading-none cursor-pointer focus:outline-none" aria-label="Toggle Navigation Options">
-                    ≡
+                    â‰¡
                 </button>
 
                 <!-- Navigation Dropdown Menu Structure -->
                 <div id="dropdownMenu" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
-                    <a href="../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
+                    <a href="../../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
                         <svg class="w-4 h-4 text-kpr-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
                         <span>Home</span>
                     </a>
                     <hr class="border-gray-100">
-                    <a href="../about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
-                    <a href="../how it works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
-                    <a href="../contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
+                    <a href="../public/about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
+                    <a href="../public/how-it-works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
+                    <a href="../public/contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
                 </div>
             </div>
             
@@ -110,7 +92,7 @@
                     <label for="fullName" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Full Name</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            👤
+                            ðŸ‘¤
                         </div>
                         <input type="text" id="fullName" required placeholder="Dr. Jane Doe" 
                             class="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-facultyBlue focus:border-kpr-facultyBlue outline-none transition-all text-sm text-gray-900">
@@ -122,7 +104,7 @@
                     <label for="email" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Institutional Email</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            📧
+                            ðŸ“§
                         </div>
                         <input type="email" id="email" required placeholder="jane.doe@kpriet.ac.in" 
                             class="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-facultyBlue focus:border-kpr-facultyBlue outline-none transition-all text-sm text-gray-900">
@@ -133,7 +115,7 @@
                     <label for="rollNumber" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Roll Number</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            🪪
+                            ðŸªª
                         </div>
                         <input type="text" id="rollNumber" required placeholder="e.g., 22BM045" 
                             class="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-facultyBlue focus:border-kpr-facultyBlue outline-none transition-all text-sm text-gray-900">
@@ -144,12 +126,12 @@
                     <label for="password" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Password</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            🔒
+                            ðŸ”’
                         </div>
                         <input type="password" id="password" required placeholder="Minimum 8 characters" 
                             class="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-facultyBlue focus:border-kpr-facultyBlue outline-none transition-all text-sm text-gray-900">
                         <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                            👁️
+                            ðŸ‘ï¸
                         </button>
                     </div>
                 </div>
@@ -158,18 +140,18 @@
                     <label for="confirmPassword" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Confirm Password</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            🔒
+                            ðŸ”’
                         </div>
                         <input type="password" id="confirmPassword" required placeholder="Re-enter your password" 
                             class="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-facultyBlue focus:border-kpr-facultyBlue outline-none transition-all text-sm text-gray-900">
                         <button type="button" id="toggleConfirmPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                            👁️
+                            ðŸ‘ï¸
                         </button>
                     </div>
             
                     <!-- Live validation mismatch helper text -->
                     <p id="passwordMismatchMessage" class="hidden text-xs text-red-500 mt-1 font-medium pl-1">
-                        ⚠️ Passwords do not match.
+                        âš ï¸ Passwords do not match.
                     </p>
                 </div>
                 <!-- Terms & Policies -->
@@ -221,11 +203,11 @@
                 <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                 </svg>
-                <span>Secure • Fast • Smart</span>
+                <span>Secure â€¢ Fast â€¢ Smart</span>
             </div>
             
             <div class="flex items-center gap-2 bg-blue-950/40 px-4 py-1.5 rounded-full border border-blue-800/50">
-                <span class="text-base">🤖</span>
+                <span class="text-base">ðŸ¤–</span>
                 <span>Powered by AI for a Better Food Experience</span>
             </div>
             
@@ -239,6 +221,7 @@
         </div>
     </footer>
 
-    <script src="signup.js"></script>
+    <script src="../../js/common.js"></script>
+    <script src="../../Role/Faculty/signup.js"></script>
 </body>
 </html>

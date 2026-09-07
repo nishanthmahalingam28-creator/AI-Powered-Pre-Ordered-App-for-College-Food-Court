@@ -6,49 +6,12 @@
     <title>KPR Food Court | AI-Powered Pre-Order</title>
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/pages/index.css">
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        kpr: {
-                            blue: '#113377',
-                            teal: '#008080',
-                            green: '#33AA44',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
-    <style>
-        .wave-bg {
-            background-color: #f1f8fc;
-            position: relative;
-            z-index: 1;
-        }
-        .wave-bg::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23FFFFFF" fill-opacity="1" d="M0,96L80,128C160,160,320,224,480,218.7C640,213,800,139,960,128C1120,117,1280,171,1360,197.3L1440,224L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path></svg>');
-            background-size: cover;
-            z-index: -1;
-            transform: translateY(-50%);
-        }
-        .food-clip {
-            clip-path: polygon(10% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 10%);
-            border-radius: 20px;
-        }
-    </style>
 </head>
 <body class="bg-white text-gray-900 overflow-x-hidden font-sans min-h-screen flex flex-col justify-between">
 
@@ -100,27 +63,27 @@
                 <a href="index.html" class="relative text-xs font-black text-slate-950 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 px-6 py-2.5 rounded-full shadow-[0_4px_15px_rgba(45,212,191,0.4)] transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
                     Home
                 </a>
-                <a href="about.html" class="text-xs font-bold text-slate-300 hover:text-teal-400 px-5 py-2.5 rounded-full hover:bg-white/5 transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
+                <a href="pages/public/about.html" class="text-xs font-bold text-slate-300 hover:text-teal-400 px-5 py-2.5 rounded-full hover:bg-white/5 transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
                     About
                 </a>
-                <a href="how it works.html" class="text-xs font-bold text-slate-300 hover:text-teal-400 px-5 py-2.5 rounded-full hover:bg-white/5 transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
+                <a href="pages/public/how-it-works.html" class="text-xs font-bold text-slate-300 hover:text-teal-400 px-5 py-2.5 rounded-full hover:bg-white/5 transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
                     How It Works
                 </a>
-                <a href="contact.html" class="text-xs font-bold text-slate-300 hover:text-teal-400 px-5 py-2.5 rounded-full hover:bg-white/5 transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
+                <a href="pages/public/contact.html" class="text-xs font-bold text-slate-300 hover:text-teal-400 px-5 py-2.5 rounded-full hover:bg-white/5 transition-all duration-300 whitespace-nowrap tracking-wider uppercase">
                     Contact
                 </a>
             </nav>
         
             <!-- Right Area: General Customer Portal Access -->
             <div class="shrink-0">
-                <a href="Role/login.html" class="hidden lg:flex items-center gap-2.5 bg-gradient-to-r from-teal-500 via-[#008080] to-[#33AA44] text-white font-black text-xs uppercase tracking-wider px-7 py-3.5 rounded-xl shadow-[0_4px_20px_rgba(0,128,128,0.3)] hover:shadow-[0_6px_25px_rgba(51,170,68,0.4)] hover:opacity-95 transform hover:-translate-y-0.5 transition-all duration-300 border border-white/10">
+                <a href="pages/auth/login.html" class="hidden lg:flex items-center gap-2.5 bg-gradient-to-r from-teal-500 via-[#008080] to-[#33AA44] text-white font-black text-xs uppercase tracking-wider px-7 py-3.5 rounded-xl shadow-[0_4px_20px_rgba(0,128,128,0.3)] hover:shadow-[0_6px_25px_rgba(51,170,68,0.4)] hover:opacity-95 transform hover:-translate-y-0.5 transition-all duration-300 border border-white/10">
                     <span>Login</span>
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                     </svg>
                 </a>
             
-                <a href="Role/login.html" class="lg:hidden flex items-center gap-1.5 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 text-slate-950 rounded-xl px-4 py-2.5 text-xs font-black tracking-wider uppercase shadow-[0_4px_15px_rgba(45,212,191,0.4)] active:scale-95 transition-all border border-white/20">
+                <a href="pages/auth/login.html" class="lg:hidden flex items-center gap-1.5 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 text-slate-950 rounded-xl px-4 py-2.5 text-xs font-black tracking-wider uppercase shadow-[0_4px_15px_rgba(45,212,191,0.4)] active:scale-95 transition-all border border-white/20">
                     <svg class="w-3.5 h-3.5 text-slate-950 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14"></path>
                     </svg>
@@ -152,7 +115,7 @@
                         </svg>
                     </button>
                     <button class="w-full sm:w-auto bg-white border-2 border-kpr-teal text-kpr-teal rounded-lg px-6 py-3 flex items-center justify-center gap-2 font-semibold hover:bg-teal-50 transition-colors">
-                        Explore Food Court <span class="font-normal text-base">𓎩𓌉</span>
+                        Explore Food Court <span class="font-normal text-base">ð“Ž©ð“Œ‰</span>
                     </button>
                 </div>
             </div>
@@ -163,7 +126,7 @@
                 </div>
                 <!-- Floating AI Recommendation Widget -->
                 <div class="absolute top-4 right-2 sm:right-6 lg:right-[-20px] bg-kpr-blue rounded-xl p-3 text-white text-center shadow-lg w-36 sm:w-48 transform scale-90 sm:scale-100">
-                    <h4 class="text-lg font-bold">AI <span class="text-xs align-super">✨</span></h4>
+                    <h4 class="text-lg font-bold">AI <span class="text-xs align-super">âœ¨</span></h4>
                     <p class="text-xs mt-1 leading-tight">Recommendations Just for You!</p>
                 </div>
                 <!-- Floating Robot Icon -->
@@ -266,7 +229,7 @@
             </a>
             
             <!-- Tab 5: Profile -->
-            <a href="Role/login.html" class="flex flex-col items-center justify-center flex-1 py-1 group">
+            <a href="pages/auth/login.html" class="flex flex-col items-center justify-center flex-1 py-1 group">
                 <svg class="w-5 h-5 text-slate-400 group-hover:text-teal-400 transition-all duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
                 </svg>
@@ -312,13 +275,13 @@
                 <div class="space-y-3.5">
                     <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-kpr-green pl-2">Administration</h6>
                     <div class="flex flex-col gap-2.5 max-w-[240px]">
-                        <a href="vendor/login.html" class="text-xs text-gray-300 hover:text-teal-400 transition-all duration-200 flex items-center gap-2 p-2.5 bg-white/5 rounded-xl border border-white/5 shadow-sm hover:bg-white/10 hover:border-white/10">
+                        <a href="pages/vendor/login.html" class="text-xs text-gray-300 hover:text-teal-400 transition-all duration-200 flex items-center gap-2 p-2.5 bg-white/5 rounded-xl border border-white/5 shadow-sm hover:bg-white/10 hover:border-white/10">
                             <svg class="w-4 h-4 text-teal-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
                             </svg>
                             <span>Vendor Management Hub</span>
                         </a>
-                        <a href="shopowner/login.html" class="text-xs text-gray-300 hover:text-teal-400 transition-all duration-200 flex items-center gap-2 p-2.5 bg-white/5 rounded-xl border border-white/5 shadow-sm hover:bg-white/10 hover:border-white/10">
+                        <a href="pages/vendor/login.html" class="text-xs text-gray-300 hover:text-teal-400 transition-all duration-200 flex items-center gap-2 p-2.5 bg-white/5 rounded-xl border border-white/5 shadow-sm hover:bg-white/10 hover:border-white/10">
                             <svg class="w-4 h-4 text-teal-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72M6.75 18h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .414.336.75.75.75z"/>
                             </svg>
@@ -331,10 +294,10 @@
                 <div class="space-y-3.5">
                     <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-cyan-400 pl-2">Institutional</h6>
                     <ul class="space-y-2 text-xs">
-                        <li><a href="about.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">About Institution</a></li>
-                        <li><a href="how-it-works.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">How It Works</a></li>
-                        <li><a href="contact.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">Support Center</a></li>
-                        <li><a href="terms.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">Dining Policies</a></li>
+                        <li><a href="pages/public/about.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">About Institution</a></li>
+                        <li><a href="pages/public/how-it-works.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">How It Works</a></li>
+                        <li><a href="pages/public/contact.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">Support Center</a></li>
+                        <li><a href="pages/student/terms-and-condition.html" class="text-slate-400 hover:text-teal-400 transition-colors duration-200 font-medium">Dining Policies</a></li>
                     </ul>
                 </div>
             </div>
@@ -348,8 +311,8 @@
                     &copy; 2026 KPR Institute of Engineering and Technology. All Rights Reserved.
                 </p>
                 <div class="flex gap-6 text-[11px] text-slate-500 font-medium">
-                    <a href="privacy.html" class="hover:text-slate-300 transition-colors">Privacy Framework</a>
-                    <a href="terms.html" class="hover:text-slate-300 transition-colors">Usage Agreement</a>
+                    <a href="#" class="hover:text-slate-300 transition-colors">Privacy Framework</a>
+                    <a href="pages/student/terms-and-condition.html" class="hover:text-slate-300 transition-colors">Usage Agreement</a>
                 </div>
             </div>
         </div>

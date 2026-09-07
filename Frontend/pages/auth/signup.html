@@ -6,35 +6,10 @@
     <title>Customer Sign Up - AI-Powered Food Court</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'kpr-blue': '#0c4a6e',
-                        'kpr-green': '#10b981'
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0', transform: 'translateY(-8px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        }
-                    },
-                    animation: {
-                        fadeIn: 'fadeIn 0.2s ease-out forwards',
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="../../js/tailwind-config.js"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        body {
-            background: linear-gradient(135deg, #f0f7f9 0%, #e2eff3 100%);
-        }
-    </style>
+    <link rel="stylesheet" href="../../css/pages/role-signup.css">
 </head>
 <body class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 relative overflow-x-hidden pb-16 lg:pb-0">
     
@@ -43,9 +18,9 @@
         <div class="max-w-[1500px] mx-auto flex items-center justify-between gap-4">
             
             <!-- Left: Logo & Sub-Brand -->
-            <a href="../index.html" class="flex items-center gap-3">
+            <a href="../../index.html" class="flex items-center gap-3">
                 <div class="bg-white rounded-lg p-1.5 flex items-center justify-center">
-                    <img src="../Document/KPRIET Logo.jpg" alt="KPR Logo" class="h-9 w-auto object-contain" onerror="this.src='https://placehold.co/180x50/ffffff/113377?text=KPR+Logo'">
+                    <img src="../../Document/KPRIET Logo.jpg" alt="KPR Logo" class="h-9 w-auto object-contain" onerror="this.src='https://placehold.co/180x50/ffffff/113377?text=KPR+Logo'">
                 </div>
                 <div class="hidden lg:flex flex-col">
                     <div class="flex items-center gap-1.5">
@@ -58,10 +33,10 @@
 
             <!-- Desktop Navigation Pill (Center - Large Screens Only) -->
             <nav class="hidden lg:flex items-center bg-[#071638]/60 backdrop-blur-md px-2 py-1.5 rounded-full border border-white/10 gap-1">
-                <a href="../about.html" class="bg-teal-400 text-slate-950 font-bold text-xs uppercase px-5 py-2 rounded-full tracking-wider transition-all">Home</a>
-                <a href="../about.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">About</a>
-                <a href="../how-it-works.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">How It Works</a>
-                <a href="../contact.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">Contact</a>
+                <a href="../public/about.html" class="bg-teal-400 text-slate-950 font-bold text-xs uppercase px-5 py-2 rounded-full tracking-wider transition-all">Home</a>
+                <a href="../public/about.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">About</a>
+                <a href="../public/how-it-works.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">How It Works</a>
+                <a href="../public/contact.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">Contact</a>
             </nav>
 
             <!-- Search Bar (Visible on Mobile & Tablet) -->
@@ -105,7 +80,7 @@
                 <div class="absolute w-96 h-96 bg-teal-200/40 rounded-full blur-3xl -z-10"></div>
                 
                 <div class="relative w-full max-w-md flex justify-center items-center">
-                    <img src="../Document/character.jpeg" alt="Customer portrait" class="w-full h-auto max-h-[480px] drop-shadow-2xl object-contain transform scale-110 transition-transform duration-300" onerror="this.src='https://placehold.co/400x480/e2eff3/008080?text=Customer+Avatar'">
+                    <img src="../../Document/character.jpeg" alt="Customer portrait" class="w-full h-auto max-h-[480px] drop-shadow-2xl object-contain transform scale-110 transition-transform duration-300" onerror="this.src='https://placehold.co/400x480/e2eff3/008080?text=Customer+Avatar'">
                     
                     <!-- Floating 'AI Smart Picks' Badge -->
                     <div class="absolute top-4 -right-4 bg-white p-3 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce duration-1000 z-20">
@@ -291,7 +266,7 @@
                                 <input
                                     type="password"
                                     id="password"
-                                    placeholder="••••••••"
+                                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                     class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                                 >
                             </div>
@@ -310,7 +285,7 @@
                                 <input
                                     type="password"
                                     id="confirmPassword"
-                                    placeholder="••••••••"
+                                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                     class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                                 >
                             </div>
@@ -362,7 +337,7 @@
                 <div class="space-y-3">
                     <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-teal-400 pl-2">EXPLORE</h6>
                     <ul class="space-y-2 text-xs text-slate-400">
-                        <li><a href="../index.html" class="hover:text-teal-400 transition-colors">Home Portal</a></li>
+                        <li><a href="../../index.html" class="hover:text-teal-400 transition-colors">Home Portal</a></li>
                         <li><a href="../menu.html" class="hover:text-teal-400 transition-colors">Digital Menu Matrix</a></li>
                         <li><a href="../preorder.html" class="hover:text-teal-400 transition-colors">Smart Pre-Order Hub</a></li>
                         <li><a href="../orders.html" class="hover:text-teal-400 transition-colors">Active Orders Monitor</a></li>
@@ -373,8 +348,8 @@
                 <div class="space-y-3">
                     <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-emerald-400 pl-2">ADMINISTRATION</h6>
                     <ul class="space-y-2 text-xs text-slate-400">
-                        <li><a href="vendor/login.html" class="hover:text-teal-400 transition-colors">Vendor Management Hub</a></li>
-                        <li><a href="shopowner/login.html" class="hover:text-teal-400 transition-colors">Stall Owner Portal</a></li>
+                        <li><a href="../vendor/login.html" class="hover:text-teal-400 transition-colors">Vendor Management Hub</a></li>
+                        <li><a href="../vendor/login.html" class="hover:text-teal-400 transition-colors">Stall Owner Portal</a></li>
                     </ul>
                 </div>
 
@@ -382,9 +357,9 @@
                 <div class="space-y-3">
                     <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-cyan-400 pl-2">INSTITUTIONAL</h6>
                     <ul class="space-y-2 text-xs text-slate-400">
-                        <li><a href="../about.html" class="hover:text-teal-400 transition-colors">About Institution</a></li>
-                        <li><a href="../how-it-works.html" class="hover:text-teal-400 transition-colors">How It Works</a></li>
-                        <li><a href="../contact.html" class="hover:text-teal-400 transition-colors">Support Center</a></li>
+                        <li><a href="../public/about.html" class="hover:text-teal-400 transition-colors">About Institution</a></li>
+                        <li><a href="../public/how-it-works.html" class="hover:text-teal-400 transition-colors">How It Works</a></li>
+                        <li><a href="../public/contact.html" class="hover:text-teal-400 transition-colors">Support Center</a></li>
                     </ul>
                 </div>
 
@@ -403,7 +378,7 @@
         <div class="grid grid-cols-5 items-center text-center relative">
             
             <!-- Home Option -->
-            <a href="../index.html" class="flex flex-col items-center text-teal-400 relative py-1">
+            <a href="../../index.html" class="flex flex-col items-center text-teal-400 relative py-1">
                 <span class="absolute -top-2 w-6 h-0.5 bg-teal-400 rounded-full"></span>
                 <i class="fa-solid fa-house text-base mb-1"></i>
                 <span class="text-[9px] font-bold uppercase tracking-wider">HOME</span>
@@ -442,7 +417,8 @@
     </nav>
 
     <!-- INTERACTIVE SCRIPTS -->
-    <script>
+    <script src="../../js/pages/role-signup.js"></script>
+    <!--
         const customerTypeSelect = document.getElementById("customerType");
         const emailLabel = document.getElementById("emailLabel");
         const emailInput = document.getElementById("email");
@@ -529,7 +505,7 @@
 
             if (enteredOtp === generatedOtp) {
                 isOtpVerified = true;
-                otpSuccess.innerHTML = "Mobile number verified successfully! ✓";
+                otpSuccess.innerHTML = "Mobile number verified successfully! âœ“";
                 mobileNumberInput.disabled = true;
                 sendOtpBtn.disabled = true;
                 sendOtpBtn.classList.add("opacity-50", "cursor-not-allowed");
@@ -640,6 +616,6 @@
                 window.location.href = "login.html";
             }
         });
-    </script>
+    -->
 </body>
 </html>
