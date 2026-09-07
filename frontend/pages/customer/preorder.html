@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Order - KPR Food Court</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/base/reset.css">
+  <link rel="stylesheet" href="../../css/pages/customer.css">
+</head>
+<body class="customer-page">
+  <header class="customer-header"><div class="customer-shell flex items-center justify-between gap-4 py-4"><a href="../../index.html" class="text-lg font-black">KPRIET Food Court</a><a href="menu.html" class="text-sm font-bold hover:text-teal-300"><i class="fa-solid fa-arrow-left mr-1"></i> Back to menu</a></div></header>
+  <main class="customer-shell py-8 pb-12">
+    <div class="mb-8"><p class="text-sm font-bold uppercase tracking-widest text-teal-700">Pre-Order Hub</p><h1 class="mt-2 text-3xl font-black">Review your order</h1><p class="mt-2 text-slate-500">This frontend demo prepares the checkout flow without submitting payment or order data.</p></div>
+    <div class="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+      <section class="customer-card p-5"><h2 class="text-xl font-extrabold">Selected items</h2><div id="cart-items" class="mt-2"></div><p id="empty-cart" class="rounded-lg bg-slate-50 p-5 text-center text-slate-500">Your cart is empty. <a href="menu.html" class="font-bold text-teal-700 underline">Browse the menu</a>.</p></section>
+      <aside class="space-y-6">
+        <section class="customer-card p-5"><h2 class="text-xl font-extrabold">Payment method</h2><label class="mt-4 flex items-center gap-3 rounded-lg border border-teal-200 bg-teal-50 p-4"><input type="radio" name="payment" checked> <span><strong>Campus wallet</strong><small class="block text-slate-500">Demo option for future payment integration</small></span></label><label class="mt-3 flex items-center gap-3 rounded-lg border border-slate-200 p-4"><input type="radio" name="payment"> <span><strong>Online payment</strong><small class="block text-slate-500">Payment gateway can be connected later</small></span></label></section>
+        <section class="customer-card p-5"><div class="flex justify-between text-slate-500"><span>Subtotal</span><strong id="cart-subtotal" class="text-slate-800">₹0.00</strong></div><div class="mt-3 flex justify-between border-t border-slate-100 pt-3 text-lg"><span class="font-bold">Total</span><strong id="cart-total" class="text-teal-700">₹0.00</strong></div><button id="confirm-order" type="button" class="customer-button customer-button-primary mt-5 w-full"><i class="fa-solid fa-lock"></i> Confirm demo order</button></section>
+      </aside>
+    </div>
+    <section id="confirmation" class="customer-card mt-6 hidden border-teal-200 bg-teal-50 p-6"><h2 class="text-xl font-extrabold text-teal-900"><i class="fa-solid fa-circle-check mr-2"></i>Demo order prepared</h2><p class="mt-2 text-slate-600">No payment or backend request was made. Use these references to demonstrate the future pickup flow.</p><div class="mt-4 grid gap-4 sm:grid-cols-2"><div class="rounded-lg bg-white p-4"><span class="text-sm text-slate-500">Order reference</span><strong id="order-reference" class="mt-1 block text-lg">—</strong></div><div class="rounded-lg bg-white p-4"><span class="text-sm text-slate-500">Pickup OTP</span><strong id="pickup-otp" class="mt-1 block text-lg tracking-widest">—</strong></div></div></section>
+  </main>
+  <script src="../../js/customer/preorder.js"></script>
+</body>
+</html>
