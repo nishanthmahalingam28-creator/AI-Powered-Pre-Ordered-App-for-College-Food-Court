@@ -9,11 +9,7 @@ document.getElementById('adminLoginForm').addEventListener('submit', function (e
 
     if (user === "admin" && pass === "admin123") {
         alertBox.classList.add('bg-emerald-50', 'text-emerald-700');
-        alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Authorization Granted! Redirecting...`;
-
-        setTimeout(() => {
-            window.location.href = "admin-dashboard.html";
-        }, 1500);
+        alertBox.innerHTML = `<i class="fa-solid fa-circle-info"></i> The admin dashboard is not available in this frontend build yet.`;
     } else {
         alertBox.classList.add('bg-red-50', 'text-red-700');
         alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Denied: Invalid root access identifiers.`;

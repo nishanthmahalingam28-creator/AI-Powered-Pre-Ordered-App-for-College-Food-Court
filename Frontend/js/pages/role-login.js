@@ -53,6 +53,12 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
     }
 
     if (valid) {
-        window.location.href = "Dashboard/dashboard.html";
+        const destinations = {
+            student: "../student/dashboard.html",
+            faculty: "../customer/menu.html",
+            guest: "../customer/menu.html"
+        };
+
+        window.location.href = destinations[customerType];
     }
 });

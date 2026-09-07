@@ -1,4 +1,4 @@
-document.getElementById('vendorLoginForm').addEventListener('submit', function (event) {
+document.getElementById('shopOwnerLoginForm').addEventListener('submit', function (event) {
     event.preventDefault();
 
     const alertBox = document.getElementById('alert-box');
@@ -24,10 +24,8 @@ document.getElementById('vendorLoginForm').addEventListener('submit', function (
         alertBox.classList.add('bg-emerald-50', 'text-emerald-700');
         alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Authentication Successful! Loading ${record.shopName} Terminal...`;
 
-        const fileFriendlyName = record.shopName.toLowerCase().replace(/\s+/g, '-');
-
         setTimeout(() => {
-            window.location.href = `${fileFriendlyName}-dashboard.html`;
+            window.location.href = `dashboard.html?shop=${encodeURIComponent(record.shopName)}`;
         }, 1500);
     } else {
         alertBox.classList.add('bg-red-50', 'text-red-700');
