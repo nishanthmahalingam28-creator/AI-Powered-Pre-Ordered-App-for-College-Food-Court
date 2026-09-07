@@ -5,27 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shop Owner Portal Login - KPRIET Food Court</title>
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com">
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
-        });
-
-        // Close dropdown when clicking anywhere outside of it
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.add('hidden');
-        })
-    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../../js/tailwind-config.js"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f0f4f9 0%, #e2eaf5 100%);
-        }
-    </style>
+    <link rel="stylesheet" href="../../css/pages/shop-owner-login.css">
 </head>
 <body class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 relative overflow-x-hidden">
 
@@ -50,21 +34,21 @@
         <!-- Top Right Corner: Universal Menu Button for All Devices -->
             <div class="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40">
                 <button id="menuBtn" class="p-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-kpr-blue hover:bg-gray-50 transition-all text-2xl font-bold leading-none cursor-pointer focus:outline-none" aria-label="Toggle Navigation Options">
-                    ≡
+                    â‰¡
                 </button>
 
                 <!-- Navigation Dropdown Menu Structure -->
                 <div id="dropdownMenu" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
-                    <a href="../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
+                    <a href="../../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
                         <svg class="w-4 h-4 text-kpr-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
                         <span>Home</span>
                     </a>
                     <hr class="border-gray-100">
-                    <a href="../about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
-                    <a href="../how it works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
-                    <a href="../contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
+                    <a href="../public/about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
+                    <a href="../public/how-it-works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
+                    <a href="../public/contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
                 </div>
             </div>
     </header>
@@ -183,7 +167,7 @@
                         </div>
 
                         <!-- Main Primary Action Link Element Styled as a Button -->
-                        <a href="Dashboard/dashboard.html" id="submitAnchorBtn" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-700/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2 cursor-pointer">
+                        <a href="dashboard.html" id="submitAnchorBtn" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-700/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2 cursor-pointer">
                             Open Dashboard <i class="fa-solid fa-arrow-right text-sm"></i>
                         </a>
                         
@@ -221,47 +205,7 @@
     </footer>
 
     <!-- INTERACTIVE SCRIPTS: ADMIN DATABASE SIMULATION AND LOGIC ROUTING -->
-    <script>
-        document.getElementById('vendorLoginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const alertBox = document.getElementById('alert-box');
-            const shop = document.getElementById('vendorShop').value;
-            const email = document.getElementById('vendorEmail').value.trim().toLowerCase();
-            const password = document.getElementById('vendorPassword').value;
-
-            // Simulated Central Admin Database Registry Records
-            const adminVendorDatabase = {
-                "ypr": { shopName: "YPR", email: "ypr@kpriet.ac.in", pass: "ypr123" },
-                "campus kitchen":{shopName:"Campus Kitchen",email:"campus@kpriet.ac.in",pass:"cam123"},
-                "german cafe": { shopName: "German Cafe", email: "german@kpriet.ac.in", pass: "german123" },
-                "royal kitchen": { shopName: "Royal Kitchen", email: "royal@kpriet.ac.in", pass: "royal123" },
-                "mario": { shopName: "Mario", email: "mario@kpriet.ac.in", pass: "mario123" },
-                "saaral": { shopName: "Saaral", email: "saaral@kpriet.ac.in", pass: "saaral123" }
-            };
-
-            const targetKey = shop.toLowerCase();
-            const record = adminVendorDatabase[targetKey];
-
-            alertBox.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-emerald-50', 'text-emerald-700');
-
-            // Verification Sequence against Admin Pre-Registered Data Rows
-            if (record && record.email === email && record.pass === password) {
-                alertBox.classList.add('bg-emerald-50', 'text-emerald-700');
-                alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Authentication Successful! Loading ${record.shopName} Terminal...`;
-                
-                // Formats the selected name to target dedicated individual pages
-                // e.g. "German Cafe" -> "german-cafe-dashboard.html"
-                const fileFriendlyName = record.shopName.toLowerCase().replace(/\s+/g, '-');
-                
-                setTimeout(() => {
-                    window.location.href = `${fileFriendlyName}-dashboard.html`;
-                }, 1500);
-            } else {
-                alertBox.classList.add('bg-red-50', 'text-red-700');
-                alertBox.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Access Denied: Unrecognized credentials for stall "${shop}" in Admin database record registry.`;
-            }
-        });
-    </script>
+    <script src="../../js/common.js"></script>
+    <script src="../../js/pages/shop-owner-login.js"></script>
 </body>
 </html>

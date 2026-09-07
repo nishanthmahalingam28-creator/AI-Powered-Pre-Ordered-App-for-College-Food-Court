@@ -7,24 +7,8 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="dashboard.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f0f4f9 0%, #e2eaf5 100%);
-        }
-    </style>
-</head><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendor Dashboard - KPRIET Food Court</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 relative overflow-x-hidden">
 
@@ -45,7 +29,7 @@
                     <h2 id="outlet-name" class="text-xl font-bold text-blue-900 tracking-tight">Loading Stall...</h2>
                 </div>
             </div>
-            <a href="index.html" class="bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 px-3.5 py-2 rounded-xl transition-colors font-bold text-xs flex items-center gap-2">
+            <a href="../../index.html" class="bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 px-3.5 py-2 rounded-xl transition-colors font-bold text-xs flex items-center gap-2">
                 <i class="fa-solid fa-right-from-bracket"></i> Exit Terminal
             </a>
         </div>
@@ -161,7 +145,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
                         <p class="text-xs text-slate-400 font-semibold">Today's Revenue</p>
-                        <h4 id="today-revenue" class="text-lg font-black text-slate-800">₹6,200</h4>
+                        <h4 id="today-revenue" class="text-lg font-black text-slate-800">â‚¹6,200</h4>
                     </div>
 
                     <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
@@ -191,7 +175,7 @@
                 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Price (₹)</label>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Price (â‚¹)</label>
                         <input type="number" id="item-price" min="1" required placeholder="120" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
                     </div>
                     <div>
@@ -241,6 +225,6 @@
     </footer>
 
     <!-- JavaScript -->
-    <script src="dashboard.js"></script>
+    <script src="../../Role/Shop Owner/Dashboard/dashboard.js"></script>
 </body>
 </html>

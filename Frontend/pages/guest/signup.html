@@ -3,40 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guest Login | KPR Food Court</title>
+    <title>Guest Sign Up | KPR Food Court</title>
     
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../../js/tailwind-config.js"></script>
     
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Tailwind Custom Configuration -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        kpr: {
-                            blue: '#113377',
-                            teal: '#008080',
-                            lightBg: '#f4f7f9'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
-        }
-        
-    </script>
-    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="../../css/components.css">
+    <link rel="stylesheet" href="../../Role/Guest/signup.css">
 </head>
 <body class="bg-kpr-lightBg min-h-screen flex flex-col justify-between font-sans overflow-x-hidden">
-
-    <!-- Header Branding -->
-    <!-- Header Section -->
     <header class="bg-white border-b border-gray-100 shadow-sm relative z-20">
         <div class="max-w-[1500px] mx-auto px-4 sm:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
             
@@ -61,26 +40,28 @@
             <!-- Top Right Corner: Universal Menu Button for All Devices -->
             <div class="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40">
                 <button id="menuBtn" class="p-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-kpr-blue hover:bg-gray-50 transition-all text-2xl font-bold leading-none cursor-pointer focus:outline-none" aria-label="Toggle Navigation Options">
-                    ≡
+                    â‰¡
                 </button>
 
                 <!-- Navigation Dropdown Menu Structure -->
                 <div id="dropdownMenu" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
-                    <a href="../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
+                    <a href="../../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
                         <svg class="w-4 h-4 text-kpr-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
                         <span>Home</span>
                     </a>
                     <hr class="border-gray-100">
-                    <a href="../about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
-                    <a href="../how it works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
-                    <a href="../contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
+                    <a href="../public/about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
+                    <a href="../public/how-it-works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
+                    <a href="../public/contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
                 </div>
             </div>
             
         </div>
     </header>
+    
+
     <!-- Main Content Container -->
     <main class="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10">
         <div class="max-w-md w-full bg-white rounded-[24px] shadow-xl border border-gray-100 p-8 border-t-[6px] border-t-kpr-teal">
@@ -89,58 +70,91 @@
             <div class="flex flex-col items-center mb-6">
                 <div class="w-16 h-16 bg-[#e6f2f2] rounded-full flex items-center justify-center mb-3">
                     <svg class="w-8 h-8 text-kpr-teal" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Welcome Guest</h2>
-                <p class="text-sm text-gray-500 mt-1">Sign in to order food from the campus court</p>
+                <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Guest Registration</h2>
+                <p class="text-sm text-gray-500 mt-1">Create an account for quick digital checkout</p>
             </div>
 
             
-
-            <!-- Login Form -->
-            <form id="guestLoginForm" class="space-y-4">
+            
+            <!-- Registration Form -->
+            <form id="guestSignUpForm" class="space-y-4">
                 
-                <!-- Email/Phone Input -->
+                <!-- Full Name Input -->
                 <div>
-                    <label for="email" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Email / Phone</label>
+                    <label for="fullName" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Full Name</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            📧
+                            ðŸ‘¤
                         </div>
-                        <input type="text" id="email" required placeholder="yourname@email.com or Mobile" 
+                        <input type="text" id="fullName" required placeholder="John Doe" 
+                            class="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-teal focus:border-kpr-teal outline-none transition-all text-sm text-gray-900">
+                    </div>
+                </div>
+
+                <!-- Email Address Input -->
+                <div>
+                    <label for="guestEmail" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Email Address</label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            ðŸ“§
+                        </div>
+                        <input type="email" id="guestEmail" required placeholder="john.doe@gmail.com" 
                             class="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-teal focus:border-kpr-teal outline-none transition-all text-sm text-gray-900">
                     </div>
                 </div>
 
                 <!-- Password Input -->
                 <div>
-                    <label for="password" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Password</label>
+                    <label for="guestPassword" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Password</label>
                     <div class="relative rounded-xl shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            🔒
+                            ðŸ”’
                         </div>
-                        <input type="password" id="password" required placeholder="••••••••" 
+                        <input type="password" id="guestPassword" required placeholder="Min. 8 characters" 
                             class="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-teal focus:border-kpr-teal outline-none transition-all text-sm text-gray-900">
-                        <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                            👁️
+                        <button type="button" id="toggleGuestPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                            ðŸ‘ï¸
                         </button>
                     </div>
                 </div>
 
+                <!-- Confirm Password Input -->
+                <div>
+                    <label for="confirmGuestPassword" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Confirm Password</label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            ðŸ”’
+                        </div>
+                        <input type="password" id="confirmGuestPassword" required placeholder="Re-enter password" 
+                            class="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-teal focus:border-kpr-teal outline-none transition-all text-sm text-gray-900">
+                        <button type="button" id="toggleConfirmGuestPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                            ðŸ‘ï¸
+                        </button>
+                    </div>
+                    <!-- Live validation mismatch helper text -->
+                    <p id="guestMismatchMessage" class="hidden text-xs text-red-500 mt-1 font-medium pl-1">
+                        âš ï¸ Passwords do not match.
+                    </p>
+                </div>
+
                 <!-- Submit Button -->
                 <button type="submit" class="w-full bg-kpr-teal hover:bg-[#006666] text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md mt-4">
-                    Sign In <span class="text-lg font-light">&rarr;</span>
+                    Register <span class="text-lg font-light">&rarr;</span>
                 </button>
             </form>
+            
+            
             <!-- Form Separator Divider -->
             <div class="relative flex items-center justify-center my-5">
                 <div class="border-t border-gray-200 w-full"></div>
-                <span class="absolute bg-white px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Or credentials</span>
+                <span class="absolute bg-white px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Or enter details</span>
             </div>
-            <!-- OAuth Google Login -->
+            <!-- OAuth Google Sign Up -->
             <div class="mb-5">
-                <button type="button" id="googleGuestBtn" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 border border-gray-200 rounded-xl flex items-center justify-center gap-3 transition-all shadow-sm text-sm">
+                <button type="button" id="googleGuestSignUpBtn" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 border border-gray-200 rounded-xl flex items-center justify-center gap-3 transition-all shadow-sm text-sm">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.28c1.92,-1.78 3.03,-4.41 3.03,-7.4C21.65,11.73 21.54,11.37 21.35,11.1z" fill="#4285F4"/>
                         <path d="M12,20.5c2.3,0 4.23,-0.76 5.64,-2.08l-3.28,-2.6c-0.91,0.61 -2.07,0.98 -3.36,0.98 -2.59,0 -4.78,-1.75 -5.57,-4.1H2.02v2.68C3.47,18.25 7.47,20.5 12,20.5z" fill="#34A853"/>
@@ -150,21 +164,20 @@
                     Continue with Google
                 </button>
             </div>
-
-            
-            
-            <!-- Redirect Link to Signup -->
+            <!-- Redirect Link to Login -->
             <div class="mt-6 pt-5 border-t border-gray-100 text-center text-sm">
-                <span class="text-gray-500">New visitor?</span>
-                <a href="signup.html" class="ml-1 font-semibold text-kpr-teal hover:underline">
-                    Create Guest Account
+                <span class="text-gray-500">Already registered?</span>
+                <a href="login.html" class="ml-1 font-semibold text-kpr-teal hover:underline">
+                    Sign In
                 </a>
             </div>
+
             
         </div>
+        
+
     </main>
 
-    <!-- Footer Security Banner -->
     <footer class="wave-footer text-white py-6 px-6 relative z-10 mt-auto">
         <div class="max-w-[1500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-blue-100 font-medium">
             
@@ -172,11 +185,11 @@
                 <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                 </svg>
-                <span>Secure • Fast • Smart</span>
+                <span>Secure â€¢ Fast â€¢ Smart</span>
             </div>
             
             <div class="flex items-center gap-2 bg-blue-950/40 px-4 py-1.5 rounded-full border border-blue-800/50">
-                <span class="text-base">🤖</span>
+                <span class="text-base">ðŸ¤–</span>
                 <span>Powered by AI for a Better Food Experience</span>
             </div>
             
@@ -190,6 +203,7 @@
         </div>
     </footer>
 
-    <script src="login.js"></script>
+    <script src="../../js/common.js"></script>
+    <script src="../../Role/Guest/signup.js"></script>
 </body>
 </html>
