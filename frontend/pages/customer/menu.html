@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Menu - KPRIET Food Court</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/base/reset.css">
+  <link rel="stylesheet" href="../../css/pages/customer.css">
+</head>
+<body class="customer-page">
+  <header class="customer-header">
+    <div class="customer-shell flex items-center justify-between gap-4 py-4">
+      <a href="../../index.html" class="text-lg font-black tracking-wide">KPRIET Food Court</a>
+      <nav class="flex items-center gap-3 text-sm font-semibold">
+        <a href="orders.html" class="hidden sm:inline hover:text-teal-300">Orders</a>
+        <a href="profile.html" class="hidden sm:inline hover:text-teal-300">Profile</a>
+        <a href="preorder.html" class="customer-button customer-button-primary border border-teal-300 px-3 py-2">
+          <i class="fa-solid fa-bag-shopping"></i> Cart (<span id="cart-count">0</span>)
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="customer-shell py-8 pb-28">
+    <div class="mb-8">
+      <p class="text-sm font-bold uppercase tracking-widest text-teal-700">Customer Menu</p>
+      <h1 class="mt-2 text-3xl font-black text-slate-900">Choose from the food court</h1>
+      <p class="mt-2 max-w-2xl text-slate-500">Demo menu data for the customer experience. Availability can be connected to the vendor system later.</p>
+    </div>
+
+    <section class="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Available shops">
+      <div class="customer-card p-5"><i class="fa-solid fa-store text-2xl text-teal-700"></i><h2 class="mt-3 font-bold">Saral</h2><p class="text-sm text-slate-500">Snacks and cakes</p></div>
+      <div class="customer-card p-5"><i class="fa-solid fa-utensils text-2xl text-teal-700"></i><h2 class="mt-3 font-bold">Royal Kitchen</h2><p class="text-sm text-slate-500">Meals and snacks</p></div>
+      <div class="customer-card p-5"><i class="fa-solid fa-mug-hot text-2xl text-teal-700"></i><h2 class="mt-3 font-bold">Mario</h2><p class="text-sm text-slate-500">Juices and food</p></div>
+      <div class="customer-card p-5"><i class="fa-solid fa-bowl-food text-2xl text-teal-700"></i><h2 class="mt-3 font-bold">YPR</h2><p class="text-sm text-slate-500">Fresh food</p></div>
+    </section>
+
+    <section>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-extrabold text-slate-900">Available today</h2>
+        <span class="text-sm text-slate-500">Select items to preorder</span>
+      </div>
+      <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <article class="customer-card p-5">
+          <div class="flex items-start justify-between gap-3"><div><h3 class="text-lg font-bold">Special Meal</h3><p class="text-sm text-slate-500">Royal Kitchen · Main Course</p></div><span class="customer-badge customer-badge-available">Available</span></div>
+          <div class="mt-5 flex items-center justify-between"><strong class="text-lg text-teal-700">₹120</strong><button type="button" class="customer-button customer-button-primary" data-add-item='{"id":"royal-special-meal","name":"Special Meal","shop":"Royal Kitchen","price":120}'>Add</button></div>
+        </article>
+        <article class="customer-card p-5">
+          <div class="flex items-start justify-between gap-3"><div><h3 class="text-lg font-bold">Snack Combo</h3><p class="text-sm text-slate-500">Saral · Snacks</p></div><span class="customer-badge customer-badge-available">Available</span></div>
+          <div class="mt-5 flex items-center justify-between"><strong class="text-lg text-teal-700">₹80</strong><button type="button" class="customer-button customer-button-primary" data-add-item='{"id":"saral-snack-combo","name":"Snack Combo","shop":"Saral","price":80}'>Add</button></div>
+        </article>
+        <article class="customer-card p-5">
+          <div class="flex items-start justify-between gap-3"><div><h3 class="text-lg font-bold">Fresh Mango Juice</h3><p class="text-sm text-slate-500">Mario · Beverages</p></div><span class="customer-badge customer-badge-unavailable">Out of stock</span></div>
+          <div class="mt-5 flex items-center justify-between"><strong class="text-lg text-slate-400">₹50</strong><button type="button" class="customer-button customer-button-secondary cursor-not-allowed" disabled>Unavailable</button></div>
+        </article>
+      </div>
+    </section>
+  </main>
+  <nav class="customer-bottom-nav fixed inset-x-0 bottom-0 z-20 flex justify-around p-3 text-xs font-bold text-white sm:hidden">
+    <a href="../../index.html"><i class="fa-solid fa-house mr-1"></i> Home</a>
+    <a href="menu.html" class="text-teal-300"><i class="fa-solid fa-list mr-1"></i> Menu</a>
+    <a href="preorder.html"><i class="fa-solid fa-bag-shopping mr-1"></i> Preorder</a>
+    <a href="profile.html"><i class="fa-solid fa-user mr-1"></i> Profile</a>
+  </nav>
+  <script src="../../js/customer/menu.js"></script>
+</body>
+</html>

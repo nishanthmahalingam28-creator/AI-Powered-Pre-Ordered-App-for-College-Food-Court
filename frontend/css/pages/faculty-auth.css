@@ -1,0 +1,9 @@
+/* Custom focus rules configuration */
+input:focus {
+    box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.15);
+}
+
+/* Structural alignment configuration */
+body {
+    background-image: radial-gradient(circle at 80% 20%, rgba(0, 82, 204, 0.03) 0%, transparent 50%);
+}
