@@ -13,9 +13,8 @@
   }
 
   function getTarget(name) {
-    var id = name === 'navbar' ? 'navbar' : 'footer';
-    var selector = name === 'navbar' ? 'header' : 'footer';
-    return document.getElementById(id) || document.querySelector(selector);
+    var id = name === 'navbar' ? 'navbar-container' : 'footer-container';
+    return document.getElementById(id);
   }
 
   async function loadComponent(name) {
@@ -31,20 +30,25 @@
     var markup = await response.text();
     var target = getTarget(name);
 
-    if (target) {
-      target.insertAdjacentHTML('beforebegin', markup);
-      target.remove();
-    } else {
-      document.body.insertAdjacentHTML('beforeend', markup);
+    if (!target) {
+      throw new Error('Missing ' + name + ' component container.');
     }
+
+    target.innerHTML = markup;
   }
 
   function resolveSitePaths() {
     document.querySelectorAll('[data-site-path]').forEach(function (element) {
       var path = element.dataset.sitePath;
+      if (/^(?:[a-z]+:|#|\/)/i.test(path)) {
+        return;
+      }
+
       var resolved = new URL(getFrontendRoot() + path, window.location.href).href;
       if (element.tagName === 'IMG') {
         element.setAttribute('src', resolved);
+      } else if (element.hasAttribute('action')) {
+        element.setAttribute('action', resolved);
       } else {
         element.setAttribute('href', resolved);
       }
@@ -84,6 +88,7 @@
       });
       resolveSitePaths();
       setActiveNavigation();
+      document.dispatchEvent(new CustomEvent('componentsReady'));
     } catch (error) {
       console.error('Shared layout component error:', error);
     }
