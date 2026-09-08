@@ -102,10 +102,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const page = link.dataset.page;
 
-            // Reset link
+            // Reset
             link.className = inactiveNavClasses;
 
-            // Apply active style
+            // Active
             if (page === currentPage) {
                 link.className = activeNavClasses;
             }
@@ -115,115 +115,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // MOBILE / TABLET NAVIGATION
+    // MOBILE BOTTOM NAVIGATION
     // =========================================================
 
     function highlightMobileNavigation() {
 
-        const mobileDock =
-            document.querySelector(".fixed.bottom-4 nav");
+        const mobileLinks =
+            document.querySelectorAll(".mobile-nav-link");
 
-        if (!mobileDock) {
+        if (!mobileLinks.length) {
             return;
         }
 
-        const mobileLinks =
-            mobileDock.querySelectorAll("a");
+        mobileLinks.forEach((link) => {
 
+            const page = link.dataset.page;
 
-        mobileLinks.forEach((tab) => {
-
-            const href =
-                (tab.getAttribute("href") || "").toLowerCase();
-
-            const activePill =
-                tab.querySelector("span.absolute.-top-2");
+            const activeIndicator =
+                link.querySelector(".nav-active-indicator");
 
             const icon =
-                tab.querySelector("svg");
+                link.querySelector(".mobile-nav-icon");
 
             const label =
-                tab.querySelector("span:not(.absolute)");
+                link.querySelector(".mobile-nav-label");
 
 
-            // =================================================
-            // DETERMINE ACTIVE TAB
-            // =================================================
+            // -------------------------------------------------
+            // RESET
+            // -------------------------------------------------
 
-            let isActive = false;
-
-
-            // HOME
-            if (
-                currentPage === "home" &&
-                href.includes("index.html")
-            ) {
-                isActive = true;
-            }
-
-
-            // MENU
-            if (
-                currentPage === "menu" &&
-                href.includes("menu.html")
-            ) {
-                isActive = true;
-            }
-
-
-            // PRE-ORDER
-            if (
-                currentPage === "preorder" &&
-                href.includes("preorder.html")
-            ) {
-                isActive = true;
-            }
-
-
-            // ORDERS
-            if (
-                currentPage === "orders" &&
-                href.includes("orders.html")
-            ) {
-                isActive = true;
-            }
-
-
-            // PROFILE / LOGIN
-            if (
-                (
-                    currentPage === "profile" ||
-                    currentPage === "login"
-                ) &&
-                href.includes("login.html")
-            ) {
-                isActive = true;
-            }
-
-
-            // =================================================
-            // RESET TAB
-            // =================================================
-
-            if (activePill) {
-                activePill.classList.add("hidden");
+            if (activeIndicator) {
+                activeIndicator.classList.add("hidden");
             }
 
             if (icon) {
-
-                icon.classList.remove(
-                    "text-[#14b8a6]"
-                );
-
-                icon.classList.add(
-                    "text-slate-400"
-                );
+                icon.classList.remove("text-teal-400");
+                icon.classList.add("text-slate-400");
             }
 
             if (label) {
-
                 label.classList.remove(
-                    "text-[#14b8a6]",
+                    "text-teal-400",
                     "font-black"
                 );
 
@@ -234,36 +167,46 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // =================================================
-            // APPLY ACTIVE TAB
-            // =================================================
+            // -------------------------------------------------
+            // PROFILE / LOGIN
+            // -------------------------------------------------
+
+            let isActive = page === currentPage;
+
+            if (
+                page === "profile" &&
+                (
+                    currentPage === "profile" ||
+                    currentPage === "login"
+                )
+            ) {
+                isActive = true;
+            }
+
+
+            // -------------------------------------------------
+            // APPLY ACTIVE
+            // -------------------------------------------------
 
             if (isActive) {
 
-                if (activePill) {
-                    activePill.classList.remove("hidden");
+                if (activeIndicator) {
+                    activeIndicator.classList.remove("hidden");
                 }
 
                 if (icon) {
-
-                    icon.classList.remove(
-                        "text-slate-400"
-                    );
-
-                    icon.classList.add(
-                        "text-[#14b8a6]"
-                    );
+                    icon.classList.remove("text-slate-400");
+                    icon.classList.add("text-teal-400");
                 }
 
                 if (label) {
-
                     label.classList.remove(
                         "text-slate-400",
                         "font-bold"
                     );
 
                     label.classList.add(
-                        "text-[#14b8a6]",
+                        "text-teal-400",
                         "font-black"
                     );
                 }
@@ -278,123 +221,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
 
     function initializeNavigation() {
-
         highlightDesktopNavigation();
         highlightMobileNavigation();
-
     }
 
 
     // =========================================================
-    // LOAD NAVBAR COMPONENT
+    // START
     // =========================================================
 
-    const navbarContainer =
-        document.getElementById("navbar");
-
-
-    if (navbarContainer) {
-
-        const isNested =
-            currentPath.includes("/pages/");
-
-        const componentPath =
-            isNested
-                ? "../../components/"
-                : "components/";
-
-
-        fetch(componentPath + "navbar.html")
-
-            .then((response) => {
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "Navbar component failed to load."
-                    );
-
-                }
-
-                return response.text();
-
-            })
-
-            .then((html) => {
-
-                navbarContainer.innerHTML = html;
-
-                initializeNavigation();
-
-            })
-
-            .catch((error) => {
-
-                console.error(
-                    "Navbar loading error:",
-                    error
-                );
-
-            });
-
-    } else {
-
-        // Navbar already exists in HTML
-        initializeNavigation();
-
-    }
-
-
-    // =========================================================
-    // LOAD FOOTER COMPONENT
-    // =========================================================
-
-    const footerContainer =
-        document.getElementById("footer");
-
-
-    if (footerContainer) {
-
-        const isNested =
-            currentPath.includes("/pages/");
-
-        const componentPath =
-            isNested
-                ? "../../components/"
-                : "components/";
-
-
-        fetch(componentPath + "footer.html")
-
-            .then((response) => {
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "Footer component failed to load."
-                    );
-
-                }
-
-                return response.text();
-
-            })
-
-            .then((html) => {
-
-                footerContainer.innerHTML = html;
-
-            })
-
-            .catch((error) => {
-
-                console.error(
-                    "Footer loading error:",
-                    error
-                );
-
-            });
-
-    }
+    initializeNavigation();
 
 });
