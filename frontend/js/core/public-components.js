@@ -79,7 +79,7 @@
   async function initialize() {
     try {
       await Promise.all([loadComponent('navbar'), loadComponent('footer')]);
-      document.querySelectorAll('body > .fixed.bottom-3, body > .fixed.bottom-4, body > .customer-bottom-nav').forEach(function (element) {
+      document.querySelectorAll('body > .fixed.bottom-3:not(.mobile-layout-dock), body > .fixed.bottom-4:not(.mobile-layout-dock), body > .customer-bottom-nav:not(.mobile-layout-dock)').forEach(function (element) {
         element.remove();
       });
       resolveSitePaths();

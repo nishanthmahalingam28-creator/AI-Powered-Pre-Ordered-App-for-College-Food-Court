@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guest Login | KPR Food Court</title>
-    
+
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../../js/core/tailwind-config.js"></script>
-    
+
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="../../css/components/common.css">
     <script src="../../js/core/public-components.js" defer></script>
     <link rel="stylesheet" href="../../css/pages/guest-auth.css">
@@ -20,54 +20,11 @@
 
     <!-- Header Branding -->
     <!-- Header Section -->
-    <header class="bg-white border-b border-gray-100 shadow-sm relative z-20">
-        <div class="max-w-[1500px] mx-auto px-4 sm:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
-            
-            <!-- Left Side: Clean Institution Branding Image Container -->
-            <div class="flex items-center">
-                <!-- Replace 'KPRIET Logo_3.jpg' with your local deployment path -->
-                <img class="h-16 sm:h-20 w-auto object-contain" src="../../assets/logo/kpriet-logo.jpg" alt="KPR Institute of Engineering and Technology Logo" >
-            </div>
-            
-            <!-- Right Side: Application Title Block -->
-            <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl relative -left-8">
-                <div class="bg-teal-700 p-2.5 rounded-lg text-white">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3h8v2h-8zm0 5h8v2h-8zm0 5h8v2h-8z"/>
-                    </svg>
-                </div>
-                <div class="text-left">
-                    <span class="block text-xs font-semibold uppercase tracking-wider text-teal-700">AI-Powered</span>
-                    <span class="block text-xl font-extrabold text-kpr-blue">Food Court</span>
-                </div>
-            </div>
-            <!-- Top Right Corner: Universal Menu Button for All Devices -->
-            <div class="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40">
-                <button id="menuBtn" class="p-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-kpr-blue hover:bg-gray-50 transition-all text-2xl font-bold leading-none cursor-pointer focus:outline-none" aria-label="Toggle Navigation Options">
-                    â‰¡
-                </button>
-
-                <!-- Navigation Dropdown Menu Structure -->
-                <div id="dropdownMenu" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
-                    <a href="../../index.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition-colors">
-                        <svg class="w-4 h-4 text-kpr-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                        </svg>
-                        <span>Home</span>
-                    </a>
-                    <hr class="border-gray-100">
-                    <a href="../public/about.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">About Us</a>
-                    <a href="../public/how-it-works.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">How It Works</a>
-                    <a href="../public/contact.html" class="block px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-kpr-blue transition-all">Contact Support</a>
-                </div>
-            </div>
-            
-        </div>
-    </header>
+    <div id="navbar"></div>
     <!-- Main Content Container -->
     <main class="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10">
         <div class="max-w-md w-full bg-white rounded-[24px] shadow-xl border border-gray-100 p-8 border-t-[6px] border-t-kpr-teal">
-            
+
             <!-- Icon & Page Header -->
             <div class="flex flex-col items-center mb-6">
                 <div class="w-16 h-16 bg-[#e6f2f2] rounded-full flex items-center justify-center mb-3">
@@ -79,11 +36,11 @@
                 <p class="text-sm text-gray-500 mt-1">Sign in to order food from the campus court</p>
             </div>
 
-            
+
 
             <!-- Login Form -->
             <form id="guestLoginForm" class="space-y-4">
-                
+
                 <!-- Email/Phone Input -->
                 <div>
                     <label for="email" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Email / Phone</label>
@@ -91,7 +48,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                             ðŸ“§
                         </div>
-                        <input type="text" id="email" required placeholder="yourname@email.com or Mobile" 
+                        <input type="text" id="email" required placeholder="yourname@email.com or Mobile"
                             class="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-teal focus:border-kpr-teal outline-none transition-all text-sm text-gray-900">
                     </div>
                 </div>
@@ -103,7 +60,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                             ðŸ”’
                         </div>
-                        <input type="password" id="password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
+                        <input type="password" id="password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                             class="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-kpr-teal focus:border-kpr-teal outline-none transition-all text-sm text-gray-900">
                         <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
                             ðŸ‘ï¸
@@ -134,8 +91,8 @@
                 </button>
             </div>
 
-            
-            
+
+
             <!-- Redirect Link to Signup -->
             <div class="mt-6 pt-5 border-t border-gray-100 text-center text-sm">
                 <span class="text-gray-500">New visitor?</span>
@@ -143,35 +100,12 @@
                     Create Guest Account
                 </a>
             </div>
-            
+
         </div>
     </main>
 
     <!-- Footer Security Banner -->
-    <footer class="wave-footer text-white py-6 px-6 relative z-10 mt-auto">
-        <div class="max-w-[1500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-blue-100 font-medium">
-            
-            <div class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                </svg>
-                <span>Secure â€¢ Fast â€¢ Smart</span>
-            </div>
-            
-            <div class="flex items-center gap-2 bg-blue-950/40 px-4 py-1.5 rounded-full border border-blue-800/50">
-                <span class="text-base">ðŸ¤–</span>
-                <span>Powered by AI for a Better Food Experience</span>
-            </div>
-            
-            <div class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                </svg>
-                <span>Your data is safe with us</span>
-            </div>
-            
-        </div>
-    </footer>
+    <div id="footer"></div>
 
     <script src="../../js/core/common.js"></script>
     <script src="../../js/auth/guest-login.js"></script>

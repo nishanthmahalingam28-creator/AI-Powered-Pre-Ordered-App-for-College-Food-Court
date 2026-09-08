@@ -12,59 +12,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../css/pages/auth.css">
 </head>
-<body class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 relative overflow-x-hidden pb-16 lg:pb-0">
-    
+<body class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 relative overflow-x-hidden">
+
     <!-- HEADER COMPONENT -->
-    <header class="bg-[#0b224d] text-white px-4 lg:px-8 py-3 w-full shadow-md z-40">
-        <div class="max-w-[1500px] mx-auto flex items-center justify-between gap-4">
-            
-            <!-- Left: Logo & Sub-Brand -->
-            <a href="../../index.html" class="flex items-center gap-3">
-                <div class="bg-white rounded-lg p-1.5 flex items-center justify-center">
-                    <img src="../../assets/logo/kpriet-logo.jpg" alt="KPR Logo" class="h-9 w-auto object-contain" onerror="this.src='https://placehold.co/180x50/ffffff/113377?text=KPR+Logo'">
-                </div>
-                <div class="hidden lg:flex flex-col">
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-sm font-black uppercase tracking-wider text-white">Campus Dining</span>
-                        <span class="h-2 w-2 rounded-full bg-teal-400"></span>
-                    </div>
-                    <span class="text-[10px] text-slate-300 font-medium">Smart Pre-Order</span>
-                </div>
-            </a>
-
-            <!-- Desktop Navigation Pill (Center - Large Screens Only) -->
-            <nav class="hidden lg:flex items-center bg-[#071638]/60 backdrop-blur-md px-2 py-1.5 rounded-full border border-white/10 gap-1">
-                <a href="../public/about.html" class="bg-teal-400 text-slate-950 font-bold text-xs uppercase px-5 py-2 rounded-full tracking-wider transition-all">Home</a>
-                <a href="../public/about.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">About</a>
-                <a href="../public/how-it-works.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">How It Works</a>
-                <a href="../public/contact.html" class="text-slate-300 hover:text-white font-bold text-xs uppercase px-4 py-2 rounded-full tracking-wider transition-all">Contact</a>
-            </nav>
-
-            <!-- Search Bar (Visible on Mobile & Tablet) -->
-            <div class="flex-1 max-w-[220px] lg:hidden">
-                <div class="relative flex items-center">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs"></i>
-                    <input type="text" placeholder="Search dis..." class="w-full bg-[#071638]/80 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none">
-                </div>
-            </div>
-
-            <!-- Right: Login/Back Action Button -->
-            <div class="shrink-0">
-                <!-- Desktop Button -->
-                <a href="login.html" class="hidden lg:inline-flex items-center gap-2 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg transition-all">
-                    <span>Login</span>
-                    <i class="fa-solid fa-arrow-right text-xs"></i>
-                </a>
-
-                <!-- Mobile/Tablet Button -->
-                <button onclick="window.history.back()" class="lg:hidden inline-flex items-center gap-1.5 bg-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-md cursor-pointer">
-                    <i class="fa-solid fa-arrow-left text-xs"></i>
-                    <span>Back</span>
-                </button>
-            </div>
-
-        </div>
-    </header>
+    <div id="navbar"></div>
 
     <!-- MAIN CONTENT CONTAINER -->
     <main class="flex-grow flex flex-col items-center justify-center px-4 py-8 lg:py-12 z-10 max-w-7xl mx-auto w-full">
@@ -75,14 +26,14 @@
 
         <!-- Split Layout: Illustration & Sign Up Form Card -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center w-full px-4 lg:px-12">
-            
+
             <!-- LEFT SIDE: Large Illustration Panel (Visible only on Large Screens) -->
             <div class="lg:col-span-6 flex-col items-center justify-center relative hidden lg:flex">
                 <div class="absolute w-96 h-96 bg-teal-200/40 rounded-full blur-3xl -z-10"></div>
-                
+
                 <div class="relative w-full max-w-md flex justify-center items-center">
                     <img src="../../assets/images/character.jpeg" alt="Customer portrait" class="w-full h-auto max-h-[480px] drop-shadow-2xl object-contain transform scale-110 transition-transform duration-300" onerror="this.src='https://placehold.co/400x480/e2eff3/008080?text=Customer+Avatar'">
-                    
+
                     <!-- Floating 'AI Smart Picks' Badge -->
                     <div class="absolute top-4 -right-4 bg-white p-3 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce duration-1000 z-20">
                         <div class="bg-teal-50 text-teal-600 p-2 rounded-xl">
@@ -99,7 +50,7 @@
             <!-- RIGHT SIDE: Interactive Sign Up Card -->
             <div class="lg:col-span-6 w-full max-w-md mx-auto">
                 <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 lg:p-8 shadow-xl shadow-sky-900/5 border border-white flex flex-col gap-6 relative">
-                    
+
                     <!-- Card Top Header with Dedicated Back Button -->
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                         <button onclick="window.history.back()" class="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-teal-600 bg-slate-100 hover:bg-slate-200/70 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer">
@@ -145,7 +96,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                                     <i class="fa-solid fa-user-tag"></i>
                                 </div>
-                                <select 
+                                <select
                                     id="customerType"
                                     class="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer text-sm"
                                 >
@@ -322,100 +273,10 @@
     </main>
 
     <!-- FOOTER COMPONENT -->
-    <footer class="bg-[#030d22] border-t border-white/10 text-white pt-10 pb-24 lg:pb-10 px-4 lg:px-8 mt-auto z-10">
-        <div class="max-w-[1500px] mx-auto">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
-                
-                <!-- Col 1: Brand -->
-                <div class="space-y-3">
-                    <h6 class="text-sm font-black text-teal-400 uppercase tracking-widest">KPRIET FOOD COURT</h6>
-                    <p class="text-xs text-slate-400 leading-relaxed">
-                        Next-Gen Intelligent Pre-Ordering System running optimized modern architecture.
-                    </p>
-                </div>
-
-                <!-- Col 2: Explore -->
-                <div class="space-y-3">
-                    <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-teal-400 pl-2">EXPLORE</h6>
-                    <ul class="space-y-2 text-xs text-slate-400">
-                        <li><a href="../../index.html" class="hover:text-teal-400 transition-colors">Home Portal</a></li>
-                        <li><a href="../customer/menu.html" class="hover:text-teal-400 transition-colors">Digital Menu Matrix</a></li>
-                        <li><a href="../customer/preorder.html" class="hover:text-teal-400 transition-colors">Smart Pre-Order Hub</a></li>
-                        <li><a href="../customer/orders.html" class="hover:text-teal-400 transition-colors">Active Orders Monitor</a></li>
-                    </ul>
-                </div>
-
-                <!-- Col 3: Administration -->
-                <div class="space-y-3">
-                    <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-emerald-400 pl-2">ADMINISTRATION</h6>
-                    <ul class="space-y-2 text-xs text-slate-400">
-                        <li><a href="../vendor/login.html" class="hover:text-teal-400 transition-colors">Vendor Management Hub</a></li>
-                        <li><a href="../vendor/login.html" class="hover:text-teal-400 transition-colors">Stall Owner Portal</a></li>
-                    </ul>
-                </div>
-
-                <!-- Col 4: Institutional -->
-                <div class="space-y-3">
-                    <h6 class="text-xs font-black text-slate-200 uppercase tracking-widest border-l-2 border-cyan-400 pl-2">INSTITUTIONAL</h6>
-                    <ul class="space-y-2 text-xs text-slate-400">
-                        <li><a href="../public/about.html" class="hover:text-teal-400 transition-colors">About Institution</a></li>
-                        <li><a href="../public/how-it-works.html" class="hover:text-teal-400 transition-colors">How It Works</a></li>
-                        <li><a href="../public/contact.html" class="hover:text-teal-400 transition-colors">Support Center</a></li>
-                    </ul>
-                </div>
-
-            </div>
-
-            <div class="h-[1px] w-full bg-white/10 mb-6"></div>
-
-            <div class="text-center sm:text-left text-[11px] text-slate-500">
-                &copy; 2026 KPR Institute of Engineering and Technology. All Rights Reserved.
-            </div>
-        </div>
-    </footer>
+    <div id="footer"></div>
 
     <!-- MOBILE & TABLET BOTTOM NAVIGATION DOCK -->
-    <nav class="lg:hidden fixed bottom-3 left-4 right-4 bg-[#0a192f]/95 backdrop-blur-lg border border-white/10 rounded-2xl z-50 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
-        <div class="grid grid-cols-5 items-center text-center relative">
-            
-            <!-- Home Option -->
-            <a href="../../index.html" class="flex flex-col items-center text-teal-400 relative py-1">
-                <span class="absolute -top-2 w-6 h-0.5 bg-teal-400 rounded-full"></span>
-                <i class="fa-solid fa-house text-base mb-1"></i>
-                <span class="text-[9px] font-bold uppercase tracking-wider">HOME</span>
-            </a>
 
-            <!-- Menu Option -->
-            <a href="../customer/menu.html" class="flex flex-col items-center text-slate-400 hover:text-white py-1 transition-colors">
-                <i class="fa-solid fa-clipboard-list text-base mb-1"></i>
-                <span class="text-[9px] font-bold uppercase tracking-wider">MENU</span>
-            </a>
-
-            <!-- Center Floating Pre-Order Action Button -->
-            <a href="../customer/preorder.html" class="flex flex-col items-center justify-center -mt-6">
-                <div class="w-12 h-12 rounded-full bg-teal-400 text-slate-950 flex items-center justify-center shadow-[0_0_15px_rgba(45,212,191,0.6)] border-4 border-[#0a192f]">
-                    <i class="fa-solid fa-bag-shopping text-lg"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase tracking-wider text-teal-400 mt-0.5">PRE-ORDER</span>
-            </a>
-
-            <!-- Orders Option with Notification Badge -->
-            <a href="../customer/orders.html" class="flex flex-col items-center text-slate-400 hover:text-white py-1 transition-colors relative">
-                <div class="relative">
-                    <i class="fa-solid fa-receipt text-base mb-1"></i>
-                    <span class="absolute -top-1 -right-2 bg-emerald-500 text-slate-950 font-black text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center">3</span>
-                </div>
-                <span class="text-[9px] font-bold uppercase tracking-wider">ORDERS</span>
-            </a>
-
-            <!-- Profile Option -->
-            <a href="../customer/profile.html" class="flex flex-col items-center text-slate-400 hover:text-white py-1 transition-colors">
-                <i class="fa-regular fa-user text-base mb-1"></i>
-                <span class="text-[9px] font-bold uppercase tracking-wider">PROFILE</span>
-            </a>
-
-        </div>
-    </nav>
 
     <!-- INTERACTIVE SCRIPTS -->
     <script src="../../js/auth/signup.js"></script>

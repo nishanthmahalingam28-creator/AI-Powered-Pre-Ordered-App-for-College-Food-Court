@@ -14,14 +14,6 @@ body {
   color: #333;
 }
 
-.terms-page > header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 40px;
-  background: transparent;
-}
-
 .brand-title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -124,16 +116,6 @@ body {
 
 .back-btn:hover { background-color: #0b685d; }
 
-.terms-page > footer {
-  background-color: #072e29;
-  color: #a3b8b5;
-  padding: 12px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-}
-
 .footer-features {
   display: flex;
   gap: 15px;
@@ -152,11 +134,5 @@ body {
 }
 
 @media (max-width: 768px) {
-  .terms-page > footer {
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
-  }
-
   .terms-card { padding: 25px; }
 }

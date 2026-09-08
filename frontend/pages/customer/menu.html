@@ -11,18 +11,7 @@
   <script src="../../js/core/public-components.js" defer></script>
 </head>
 <body class="customer-page">
-  <header class="customer-header">
-    <div class="customer-shell flex items-center justify-between gap-4 py-4">
-      <a href="../../index.html" class="text-lg font-black tracking-wide">KPRIET Food Court</a>
-      <nav class="flex items-center gap-3 text-sm font-semibold">
-        <a href="orders.html" class="hidden sm:inline hover:text-teal-300">Orders</a>
-        <a href="profile.html" class="hidden sm:inline hover:text-teal-300">Profile</a>
-        <a href="preorder.html" class="customer-button customer-button-primary border border-teal-300 px-3 py-2">
-          <i class="fa-solid fa-bag-shopping"></i> Cart (<span id="cart-count">0</span>)
-        </a>
-      </nav>
-    </div>
-  </header>
+  <div id="navbar"></div>
 
   <main class="customer-shell py-8 pb-28">
     <div class="mb-8">
@@ -59,12 +48,7 @@
       </div>
     </section>
   </main>
-  <nav class="customer-bottom-nav fixed inset-x-0 bottom-0 z-20 flex justify-around p-3 text-xs font-bold text-white sm:hidden">
-    <a href="../../index.html"><i class="fa-solid fa-house mr-1"></i> Home</a>
-    <a href="menu.html" class="text-teal-300"><i class="fa-solid fa-list mr-1"></i> Menu</a>
-    <a href="preorder.html"><i class="fa-solid fa-bag-shopping mr-1"></i> Preorder</a>
-    <a href="profile.html"><i class="fa-solid fa-user mr-1"></i> Profile</a>
-  </nav>
+  <div id="footer"></div>
   <script src="../../js/customer/menu.js"></script>
 </body>
 </html>
