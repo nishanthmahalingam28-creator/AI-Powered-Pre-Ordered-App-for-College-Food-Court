@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendor Dashboard - KPRIET Food Court</title>
+    <title>Vendor Terminal | KPRIET Food Court</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
@@ -23,13 +23,13 @@
             <h1 class="text-2xl md:text-4xl font-extrabold text-slate-900">
                 <span id="title-shop-name" class="text-blue-600">Selected Shop</span> Terminal
             </h1>
-            <p class="text-slate-500 text-sm mt-2">Manage live operations, menu availability, stock quantities, and view sales analytics.</p>
+            <p class="text-slate-500 text-sm mt-2">Manage live operations, menu availability, verify customer pickup OTPs, and view sales analytics.</p>
         </div>
 
         <!-- 4 MAIN UTILITY CARDS GRID -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-4 md:px-12">
 
-            <!-- 1. MANAGE ORDERS CARD -->
+            <!-- 1. MANAGE ORDERS & OTP VERIFICATION CARD -->
             <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white flex flex-col gap-4">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div class="flex items-center gap-3">
@@ -44,8 +44,21 @@
                     <span id="active-orders-count" class="bg-blue-100 text-blue-700 text-xs font-extrabold px-3 py-1 rounded-full">0 Active</span>
                 </div>
 
-                <div id="orders-list" class="flex flex-col gap-3">
-                    <!-- Orders dynamically rendered via script.js -->
+                <!-- OTP Verification Bar -->
+                <div class="bg-blue-50/80 p-3 rounded-2xl border border-blue-100 flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="verify-otp-input" placeholder="Customer 6-Digit Pickup OTP" maxlength="6"
+                            class="bg-white px-3 py-2 rounded-xl border border-blue-200 text-xs font-bold text-slate-800 flex-grow focus:outline-none focus:border-blue-600">
+                        <button onclick="handleVerifyOtp()"
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all whitespace-nowrap flex items-center gap-1.5">
+                            <i class="fa-solid fa-qrcode"></i> Verify & Complete
+                        </button>
+                    </div>
+                    <div id="otp-alert" class="hidden text-xs font-bold px-3 py-1.5 rounded-xl"></div>
+                </div>
+
+                <div id="orders-list" class="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
+                    <!-- Orders dynamically rendered via dashboard.js -->
                 </div>
             </div>
 
@@ -66,8 +79,8 @@
                     </button>
                 </div>
 
-                <div id="menu-items-list" class="flex flex-col gap-3 max-h-72 overflow-y-auto pr-1">
-                    <!-- Menu items dynamically rendered via script.js -->
+                <div id="menu-items-list" class="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
+                    <!-- Menu items dynamically rendered via dashboard.js -->
                 </div>
             </div>
 
@@ -79,31 +92,28 @@
                             <i class="fa-solid fa-boxes-stacked"></i>
                         </div>
                         <div>
-                            <h3 class="font-bold text-slate-800 text-lg">Manage Inventory</h3>
-                            <p class="text-xs text-slate-500">Stock limits & supply sync</p>
+                            <h3 class="font-bold text-slate-800 text-lg">Inventory Status</h3>
+                            <p class="text-xs text-slate-500">Stock limits & availability sync</p>
                         </div>
                     </div>
-                    <span class="bg-amber-100 text-amber-700 text-xs font-extrabold px-3 py-1 rounded-full">Tracked</span>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1 rounded-full">Active</span>
                 </div>
 
-                <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-3.5">
                     <div>
                         <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                            <span>Main Raw Stock</span>
-                            <span>90%</span>
+                            <span>Available Dishes In Stock</span>
+                            <span id="available-dishes-count">0</span>
                         </div>
                         <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                            <div class="bg-blue-600 h-full w-[90%]"></div>
+                            <div id="stock-progress-bar" class="bg-blue-600 h-full w-[80%]"></div>
                         </div>
                     </div>
 
                     <div>
                         <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                            <span>Secondary Stock</span>
-                            <span class="text-amber-600">20% (Low)</span>
-                        </div>
-                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                            <div class="bg-amber-500 h-full w-[20%]"></div>
+                            <span>Total Units in Stock</span>
+                            <span id="total-units-count" class="text-blue-600">0</span>
                         </div>
                     </div>
                 </div>
@@ -118,7 +128,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-lg">Sales Analytics</h3>
-                            <p class="text-xs text-slate-500">Revenue & traffic overview</p>
+                            <p class="text-xs text-slate-500">Revenue & volume overview</p>
                         </div>
                     </div>
                     <span class="bg-purple-100 text-purple-700 text-xs font-extrabold px-3 py-1 rounded-full">Real-time</span>
@@ -126,13 +136,13 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                        <p class="text-xs text-slate-400 font-semibold">Today's Revenue</p>
-                        <h4 id="today-revenue" class="text-lg font-black text-slate-800">â‚¹6,200</h4>
+                        <p class="text-xs text-slate-400 font-semibold">Total Revenue</p>
+                        <h4 id="today-revenue" class="text-lg font-black text-slate-800">₹0.00</h4>
                     </div>
 
                     <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
                         <p class="text-xs text-slate-400 font-semibold">Total Orders</p>
-                        <h4 id="total-orders-count" class="text-lg font-black text-slate-800">112</h4>
+                        <h4 id="total-orders-count" class="text-lg font-black text-slate-800">0</h4>
                     </div>
                 </div>
             </div>
@@ -157,8 +167,8 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Price (â‚¹)</label>
-                        <input type="number" id="item-price" min="1" required placeholder="120" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Price (₹)</label>
+                        <input type="number" id="item-price" min="1" step="0.5" required placeholder="120" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Initial Quantity (Qty)</label>
@@ -172,7 +182,9 @@
                         <option value="Main Course">Main Course</option>
                         <option value="Snacks">Snacks</option>
                         <option value="Beverages">Beverages</option>
+                        <option value="Fast Food">Fast Food</option>
                         <option value="Desserts">Desserts</option>
+                        <option value="Breakfast">Breakfast</option>
                     </select>
                 </div>
 
@@ -189,10 +201,10 @@
         </div>
     </div>
 
-    <!-- FOOTER SECURITY & COMPLIANCE BAR -->
+    <!-- FOOTER BAR -->
     <div id="footer-container"></div>
 
-    <!-- JavaScript -->
+    <!-- JavaScript Controller -->
     <script src="../../js/core/dashboard.js"></script>
 </body>
 </html>

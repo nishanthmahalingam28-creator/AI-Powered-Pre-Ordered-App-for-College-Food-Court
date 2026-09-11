@@ -1,3 +1,5 @@
+const API_BASE_URL = window.FOOD_COURT_API_BASE || 'http://127.0.0.1:5000/api';
+
 const customerTypeSelect = document.getElementById("customerType");
 const emailLabel = document.getElementById("emailLabel");
 const emailInput = document.getElementById("email");
@@ -18,7 +20,6 @@ const mobileError = document.getElementById("mobileError");
 const otpError = document.getElementById("otpError");
 const otpSuccess = document.getElementById("otpSuccess");
 
-let generatedOtp = null;
 let isOtpVerified = false;
 
 customerTypeSelect.addEventListener("change", function () {
@@ -45,7 +46,7 @@ customerTypeSelect.addEventListener("change", function () {
     document.getElementById("emailError").innerHTML = "";
 });
 
-sendOtpBtn.addEventListener("click", function () {
+sendOtpBtn.addEventListener("click", async function () {
     const mobileVal = mobileNumberInput.value.trim();
     const phonePattern = /^[6-9]\d{9}$/;
 
@@ -58,37 +59,80 @@ sendOtpBtn.addEventListener("click", function () {
         return;
     }
 
-    generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
-    otpContainer.classList.remove("hidden");
-    alert("Your OTP for registration is: " + generatedOtp);
-    otpSuccess.innerHTML = "OTP sent successfully to +91 " + mobileVal;
+    sendOtpBtn.disabled = true;
+    sendOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...';
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mobile: mobileVal, purpose: 'signup' })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            otpContainer.classList.remove("hidden");
+            otpSuccess.innerHTML = `OTP sent to +91 ${mobileVal}. ${data.demo_otp ? '(Demo OTP: <strong>' + data.demo_otp + '</strong>)' : ''}`;
+            if (data.demo_otp) {
+                otpInput.value = data.demo_otp;
+            }
+        } else {
+            mobileError.innerHTML = data.message || "Failed to dispatch OTP.";
+        }
+    } catch (e) {
+        mobileError.innerHTML = "Unable to connect to OTP service.";
+    } finally {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.innerHTML = 'Send OTP';
+    }
 });
 
-verifyOtpBtn.addEventListener("click", function () {
+verifyOtpBtn.addEventListener("click", async function () {
     const enteredOtp = otpInput.value.trim();
+    const mobileVal = mobileNumberInput.value.trim();
+
     otpError.innerHTML = "";
     otpSuccess.innerHTML = "";
 
     if (enteredOtp === "") {
-        otpError.innerHTML = "Please enter the OTP";
+        otpError.innerHTML = "Please enter the OTP code";
         return;
     }
 
-    if (enteredOtp === generatedOtp) {
-        isOtpVerified = true;
-        otpSuccess.innerHTML = "Mobile number verified successfully! ✓";
-        mobileNumberInput.disabled = true;
-        sendOtpBtn.disabled = true;
-        sendOtpBtn.classList.add("opacity-50", "cursor-not-allowed");
-        verifyOtpBtn.disabled = true;
-        verifyOtpBtn.classList.add("opacity-50", "cursor-not-allowed");
-        otpInput.disabled = true;
-    } else {
-        otpError.innerHTML = "Invalid OTP. Please try again.";
+    verifyOtpBtn.disabled = true;
+    verifyOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Verifying...';
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mobile: mobileVal, code: enteredOtp })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            isOtpVerified = true;
+            otpSuccess.innerHTML = "Mobile number verified successfully! ✓";
+            mobileNumberInput.disabled = true;
+            sendOtpBtn.disabled = true;
+            sendOtpBtn.classList.add("opacity-50", "cursor-not-allowed");
+            verifyOtpBtn.disabled = true;
+            verifyOtpBtn.classList.add("opacity-50", "cursor-not-allowed");
+            otpInput.disabled = true;
+        } else {
+            otpError.innerHTML = data.message || "Invalid OTP code.";
+        }
+    } catch (e) {
+        otpError.innerHTML = "Unable to verify OTP.";
+    } finally {
+        if (!isOtpVerified) {
+            verifyOtpBtn.disabled = false;
+            verifyOtpBtn.innerHTML = 'Verify OTP';
+        }
     }
 });
 
-document.getElementById("signupForm").addEventListener("submit", function (event) {
+document.getElementById("signupForm").addEventListener("submit", async function (event) {
     event.preventDefault();
 
     const fullName = fullNameInput.value.trim();
@@ -98,6 +142,7 @@ document.getElementById("signupForm").addEventListener("submit", function (event
     const customerType = customerTypeSelect.value;
     const identityValue = identityInput.value.trim();
     const mobileVal = mobileNumberInput.value.trim();
+    const submitBtn = this.querySelector('button[type="submit"]');
 
     document.getElementById("nameError").innerHTML = "";
     document.getElementById("emailError").innerHTML = "";
@@ -168,7 +213,37 @@ document.getElementById("signupForm").addEventListener("submit", function (event
         valid = false;
     }
 
-    if (valid) {
-        window.location.href = "login.html";
+    if (!valid) return;
+
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>Registering Account...</span><i class="fa-solid fa-spinner fa-spin ml-2"></i>';
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/auth/customer/signup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fullName,
+                email,
+                password,
+                customerType,
+                identifier: identityValue,
+                mobile: mobileVal
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            alert("Account registered successfully! Please log in.");
+            window.location.href = data.redirect || "login.html";
+        } else {
+            document.getElementById("emailError").innerHTML = data.message || "Registration failed.";
+        }
+    } catch (e) {
+        document.getElementById("emailError").innerHTML = "Connection error. Ensure the Flask API is running.";
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 });
