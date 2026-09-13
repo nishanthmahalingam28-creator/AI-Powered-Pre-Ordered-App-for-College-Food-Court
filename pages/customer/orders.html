@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders | KPR Food Court</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../js/core/tailwind-config.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/base/reset.css">
+  <link rel="stylesheet" href="../../css/pages/customer.css">
+  <script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+  <div id="navbar-container"></div>
+
+  <main class="customer-shell py-8 pb-20 max-w-4xl mx-auto px-4 sm:px-6 w-full flex-grow">
+    
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <span class="text-xs font-black uppercase tracking-widest text-teal-700 block">Personal History</span>
+        <h1 class="mt-1 text-3xl font-black text-slate-900">My Orders & Tickets</h1>
+        <p class="mt-1 text-slate-500 text-sm">Review your active pickup tokens, orders progress, and past transactions.</p>
+      </div>
+      <a href="menu.html" class="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 w-fit">
+        <i class="fa-solid fa-plus"></i> New Order
+      </a>
+    </div>
+
+    <!-- Dynamic Orders List Container -->
+    <div id="orders-container" class="space-y-4">
+      <!-- Dynamically loaded via orders.js -->
+      <div class="bg-white p-8 rounded-3xl border border-slate-100 animate-pulse text-center text-xs text-slate-400">
+        Loading order history...
+      </div>
+    </div>
+
+  </main>
+
+  <div id="footer-container"></div>
+  <script src="../../js/customer/orders.js"></script>
+</body>
+</html>

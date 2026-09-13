@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - KPR Food Court</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/base/reset.css">
+  <link rel="stylesheet" href="../../css/pages/customer.css">
+  <script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="customer-page">
+  <div id="navbar-container"></div>
+  <main class="customer-shell py-8 pb-12">
+    <div class="mb-8"><p class="text-sm font-bold uppercase tracking-widest text-teal-700">Customer Account</p><h1 class="mt-2 text-3xl font-black">My profile</h1><p class="mt-2 text-slate-500">Edit your details for the future account API integration.</p></div>
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="customer-card p-6"><h2 class="text-xl font-extrabold">Personal details</h2><form id="profile-form" class="mt-5 space-y-4"><label class="block text-sm font-bold">Name<input class="customer-input mt-2" name="name" value="Demo Customer"></label><label class="block text-sm font-bold">Email<input class="customer-input mt-2" type="email" name="email" value="student@kpriet.ac.in"></label><label class="block text-sm font-bold">Mobile number<input class="customer-input mt-2" type="tel" name="mobile" value="+91 98765 43210"></label><label class="block text-sm font-bold">Customer type<select class="customer-input mt-2" name="customerType"><option selected>Student</option><option>Faculty</option><option>Guest</option></select></label><button class="customer-button customer-button-primary" type="submit">Save profile</button><p id="profile-message" class="hidden rounded-lg bg-teal-50 p-3 text-sm text-teal-800"></p></form></section>
+      <section class="customer-card p-6"><h2 class="text-xl font-extrabold">Change password</h2><p class="mt-2 text-sm text-slate-500">Password values are never stored by this frontend demo.</p><form id="password-form" class="mt-5 space-y-4"><label class="block text-sm font-bold">Current password<input class="customer-input mt-2" type="password" autocomplete="current-password" required></label><label class="block text-sm font-bold">New password<input class="customer-input mt-2" type="password" autocomplete="new-password" required></label><label class="block text-sm font-bold">Confirm new password<input class="customer-input mt-2" type="password" autocomplete="new-password" required></label><button class="customer-button customer-button-secondary" type="submit">Request password change</button><p id="password-message" class="hidden rounded-lg bg-amber-50 p-3 text-sm text-amber-800"></p></form></section>
+    </div>
+  </main>
+  <div id="footer-container"></div>
+  <script src="../../js/customer/profile.js"></script>
+</body>
+</html>

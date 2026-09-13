@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Food Court Digital Menu | KPRIET Smart Dining</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../js/core/tailwind-config.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/base/reset.css">
+  <link rel="stylesheet" href="../../css/pages/customer.css">
+  <script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+
+  <!-- Shared Header Navbar -->
+  <div id="navbar-container"></div>
+
+  <main class="customer-shell py-8 pb-28 max-w-7xl mx-auto px-4 sm:px-6 w-full">
+    
+    <!-- Title & Search Hero Header -->
+    <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <span class="text-xs font-black uppercase tracking-widest text-teal-700 block">Food Court Directory</span>
+        <h1 class="mt-1 text-3xl sm:text-4xl font-black text-slate-900">Campus Menu Matrix</h1>
+        <p class="mt-1 text-slate-500 text-sm">Explore fresh dishes across all 6 campus stalls with live kitchen availability.</p>
+      </div>
+
+      <!-- Quick Cart Bar -->
+      <a href="preorder.html" class="inline-flex items-center gap-2.5 bg-teal-700 hover:bg-teal-800 text-white px-5 py-3 rounded-2xl shadow-lg shadow-teal-700/20 transition-all text-xs font-bold w-fit">
+        <i class="fa-solid fa-basket-shopping text-sm"></i>
+        <span>View Cart (<span id="cart-count">0</span> items)</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+
+    <!-- Search & Filters Container -->
+    <div class="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm mb-8 space-y-4">
+      <!-- Search Input Bar -->
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+          <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </div>
+        <input type="text" id="menu-search-input" placeholder="Search dish name, ingredients, or stall..."
+          class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+      </div>
+
+      <!-- Stall Selection Filter Pills -->
+      <div>
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Filter By Stall</span>
+        <div id="stall-filters" class="flex flex-wrap gap-2">
+          <!-- Dynamically loaded from /api/shops -->
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div>
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Filter By Category</span>
+        <div id="category-filters" class="flex flex-wrap gap-2">
+          <!-- Dynamically populated categories -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Dishes Grid -->
+    <section>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 id="menu-results-header" class="text-xl font-black text-slate-900">Available Today</h2>
+        <span id="items-count-badge" class="text-xs text-slate-500 font-bold bg-slate-200/60 px-3 py-1 rounded-full">Loading...</span>
+      </div>
+
+      <div id="dishes-grid" class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <!-- Dynamically rendered via menu.js -->
+        <div class="bg-white p-8 rounded-3xl border border-slate-100 animate-pulse text-center text-xs text-slate-400 col-span-3">
+          Loading live menu items...
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Shared Footer -->
+  <div id="footer-container"></div>
+
+  <!-- Menu Controller Script -->
+  <script src="../../js/customer/menu.js"></script>
+</body>
+</html>

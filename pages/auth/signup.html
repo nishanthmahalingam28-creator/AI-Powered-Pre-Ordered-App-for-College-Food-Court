@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Sign Up - AI-Powered Food Court</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../../js/core/tailwind-config.js"></script>
+    <script src="../../js/core/public-components.js" defer></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/pages/auth.css">
+</head>
+<body class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 relative overflow-x-hidden">
+
+    <!-- HEADER COMPONENT -->
+    <div id="navbar-container"></div>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow flex flex-col items-center justify-center px-4 py-8 lg:py-12 z-10 max-w-7xl mx-auto w-full">
+        <!-- Main Heading Title -->
+        <h1 class="text-2xl lg:text-4xl font-extrabold text-center text-sky-950 mb-8 lg:mb-12">
+            Create Account - <span class="text-teal-600">Join Your Food Adventure</span>
+        </h1>
+
+        <!-- Split Layout: Illustration & Sign Up Form Card -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center w-full px-4 lg:px-12">
+
+            <!-- LEFT SIDE: Large Illustration Panel (Visible only on Large Screens) -->
+            <div class="lg:col-span-6 flex-col items-center justify-center relative hidden lg:flex">
+                <div class="absolute w-96 h-96 bg-teal-200/40 rounded-full blur-3xl -z-10"></div>
+
+                <div class="relative w-full max-w-md flex justify-center items-center">
+                    <img src="../../assets/images/character.jpeg" alt="Customer portrait" class="w-full h-auto max-h-[480px] drop-shadow-2xl object-contain transform scale-110 transition-transform duration-300" onerror="this.src='https://placehold.co/400x480/e2eff3/008080?text=Customer+Avatar'">
+
+                    <!-- Floating 'AI Smart Picks' Badge -->
+                    <div class="absolute top-4 -right-4 bg-white p-3 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce duration-1000 z-20">
+                        <div class="bg-teal-50 text-teal-600 p-2 rounded-xl">
+                            <i class="fa-solid fa-user-plus text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="bg-teal-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">NEW</span>
+                            <p class="text-xs font-semibold text-slate-700 mt-0.5">Quick Registration</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDE: Interactive Sign Up Card -->
+            <div class="lg:col-span-6 w-full max-w-md mx-auto">
+                <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 lg:p-8 shadow-xl shadow-sky-900/5 border border-white flex flex-col gap-6 relative">
+
+                    <!-- Card Top Header with Dedicated Back Button -->
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <button onclick="window.history.back()" class="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-teal-600 bg-slate-100 hover:bg-slate-200/70 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span>Back</span>
+                        </button>
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registration</span>
+                    </div>
+
+                    <div>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                            Sign up to start pre-ordering meals, earning rewards, and enjoying personalized smart recommendations.
+                        </p>
+                    </div>
+
+                    <!-- Input Credentials Form -->
+                    <form id="signupForm" class="flex flex-col gap-4">
+                        <!-- Full Name Input Field -->
+                        <div>
+                            <label for="fullName" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Full Name
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-regular fa-user"></i>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="fullName"
+                                    placeholder="John Doe"
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                >
+                            </div>
+                            <p id="nameError" class="text-red-500 text-xs mt-1 pl-1"></p>
+                        </div>
+
+                        <!-- Customer Type Dropdown -->
+                        <div>
+                            <label for="customerType" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Customer Type
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-user-tag"></i>
+                                </div>
+                                <select
+                                    id="customerType"
+                                    class="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer text-sm"
+                                >
+                                    <option value="student">Student</option>
+                                    <option value="faculty">Faculty</option>
+                                    <option value="guest">Guest</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic ID Field (Roll Number / Faculty ID) -->
+                        <div id="identityContainer">
+                            <label id="identityLabel" for="identityInput" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Roll Number
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-id-card"></i>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="identityInput"
+                                    placeholder="e.g. 21CS001"
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                >
+                            </div>
+                            <p id="identityError" class="text-red-500 text-xs mt-1 pl-1"></p>
+                        </div>
+
+                        <!-- Mobile Number & OTP Section -->
+                        <div>
+                            <label for="mobileNumber" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Mobile Number
+                            </label>
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        id="mobileNumber"
+                                        placeholder="9876543210"
+                                        class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    >
+                                </div>
+                                <button
+                                    type="button"
+                                    id="sendOtpBtn"
+                                    class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition-all shrink-0 cursor-pointer"
+                                >
+                                    Send OTP
+                                </button>
+                            </div>
+                            <p id="mobileError" class="text-red-500 text-xs mt-1 pl-1"></p>
+
+                            <!-- Hidden OTP Input (Revealed after Send OTP is pressed) -->
+                            <div id="otpContainer" class="mt-3 hidden">
+                                <label for="otpInput" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                    Enter 4-Digit OTP
+                                </label>
+                                <div class="flex gap-2">
+                                    <div class="relative flex-1">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                            <i class="fa-solid fa-key"></i>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            id="otpInput"
+                                            maxLength="4"
+                                            placeholder="1234"
+                                            class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                        >
+                                    </div>
+                                    <button
+                                        type="button"
+                                        id="verifyOtpBtn"
+                                        class="bg-sky-900 hover:bg-sky-950 text-white text-xs font-bold px-4 py-3 rounded-xl transition-all shrink-0 cursor-pointer"
+                                    >
+                                        Verify OTP
+                                    </button>
+                                </div>
+                                <p id="otpSuccess" class="text-emerald-600 font-semibold text-xs mt-1 pl-1"></p>
+                                <p id="otpError" class="text-red-500 text-xs mt-1 pl-1"></p>
+                            </div>
+                        </div>
+
+                        <!-- Email Input Field -->
+                        <div>
+                            <label id="emailLabel" for="email" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Institute Email ID
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-regular fa-envelope"></i>
+                                </div>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    placeholder="example@kpriet.ac.in"
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                >
+                            </div>
+                            <p id="emailError" class="text-red-500 text-xs mt-1 pl-1"></p>
+                        </div>
+
+                        <!-- Password Input Field -->
+                        <div>
+                            <label for="password" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    placeholder="password"
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                >
+                            </div>
+                            <p id="passwordError" class="text-red-500 text-xs mt-1 pl-1"></p>
+                        </div>
+
+                        <!-- Confirm Password Input Field -->
+                        <div>
+                            <label for="confirmPassword" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 pl-1">
+                                Confirm Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <input
+                                    type="password"
+                                    id="confirmPassword"
+                                    placeholder="confirm password"
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                >
+                            </div>
+                            <p id="confirmPasswordError" class="text-red-500 text-xs mt-1 pl-1"></p>
+                        </div>
+
+                        <!-- Terms & Conditions Checkbox -->
+                        <div class="flex items-center gap-2 text-xs font-medium px-1 mt-1">
+                            <input type="checkbox" id="terms" class="rounded text-teal-600 focus:ring-teal-500 border-slate-300 w-4 h-4 cursor-pointer">
+                            <label for="terms" class="cursor-pointer text-slate-600">
+                                I agree to the <a href="#" class="text-teal-600 hover:underline font-bold">Terms of Service</a> & <a href="#" class="text-teal-600 hover:underline font-bold">Privacy Policy</a>
+                            </label>
+                        </div>
+                        <p id="termsError" class="text-red-500 text-xs pl-1"></p>
+
+                        <!-- Main Primary Action Button -->
+                        <button
+                            type="submit"
+                            class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-teal-700/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2">
+                            <span>Create Account</span>
+                            <i class="fa-solid fa-arrow-right text-sm"></i>
+                        </button>
+                    </form>
+
+                    <!-- Info/Help Quick Links -->
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-medium pt-3 px-1 border-t border-slate-100">
+                        <span>Already have an account? <a href="login.html" class="text-teal-600 hover:underline font-bold">Login Here</a></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FOOTER COMPONENT -->
+    <div id="footer-container"></div>
+
+    <!-- MOBILE & TABLET BOTTOM NAVIGATION DOCK -->
+
+
+    <!-- INTERACTIVE SCRIPTS -->
+    <script src="../../js/auth/signup.js"></script>
+</body>
+</html>
