@@ -58,18 +58,25 @@ class RazorpayProvider(PaymentProvider):
     and HMAC-SHA256 signature verification standards.
     """
 
-    def __init__(self, key_id: str = None, key_secret: str = None, webhook_secret: str = None, environment: str = None):
+    def __init__(self, key_id: str = None, key_secret: str = None, webhook_secret: str = None, environment: str = None, is_prod: bool = None):
         flask_env = os.getenv("FLASK_ENV", "production").lower()
         self.is_development = flask_env in ("development", "dev", "test", "testing")
         self.environment = environment or os.getenv("PAYMENT_ENVIRONMENT", "test" if self.is_development else "production").lower()
-        is_prod = (not self.is_development) or (self.environment == "production")
+        if is_prod is None:
+            is_prod = (not self.is_development) or (self.environment == "production")
+        self.is_prod = is_prod
 
         self.key_id = (key_id or os.getenv("RAZORPAY_KEY_ID") or "").strip()
         self.key_secret = (key_secret or os.getenv("RAZORPAY_KEY_SECRET") or "").strip()
         self.webhook_secret = (webhook_secret or os.getenv("RAZORPAY_WEBHOOK_SECRET") or "").strip()
 
         # Strict Production Guard: Fail closed if production lacks real credentials
-        if is_prod:
+        if self.is_prod:
+            if not RAZORPAY_INSTALLED:
+                raise RuntimeError(
+                    "FATAL: The official 'razorpay' package is required in production mode. "
+                    "Cannot initialize payment provider without the official Razorpay SDK."
+                )
             if not self.key_id or not self.key_secret:
                 raise RuntimeError(
                     "FATAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production mode. "
@@ -116,6 +123,12 @@ class RazorpayProvider(PaymentProvider):
             "payment_capture": 1,
             "notes": notes or {}
         }
+
+        # If in production mode and client is not initialized, fail safely
+        if (self.is_prod or not self.is_development) and not self.client:
+            raise RuntimeError(
+                "FATAL: Official Razorpay client is unavailable in production mode. Refusing insecure sandbox order generation."
+            )
 
         # If live client is configured and not running in offline test harness, call Razorpay API
         if self.client and not self.is_development:

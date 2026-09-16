@@ -10,7 +10,7 @@ def get_shops():
     shops = DB.query(
         """
         SELECT s.id, s.name, s.slug, s.description, s.category, s.image_url, s.is_active,
-               s.created_at, s.updated_at,
+               s.operational_status, s.created_at, s.updated_at,
                COUNT(m.id) as total_items
         FROM shops s
         LEFT JOIN menu_items m ON m.shop_id = s.id AND m.is_available = 1
@@ -30,6 +30,7 @@ def get_shops():
             "category": s.get("category") or "Multi-Cuisine",
             "image_url": s.get("image_url"),
             "is_active": bool(s.get("is_active", 1)),
+            "operational_status": str(s.get("operational_status") or "OPEN").upper(),
             "total_items": int(s.get("total_items") or 0),
             "created_at": str(s.get("created_at") or ""),
             "updated_at": str(s.get("updated_at") or ""),
@@ -43,7 +44,7 @@ def get_shop_by_id(shop_id):
     shop = DB.get_one(
         """
         SELECT s.id, s.name, s.slug, s.description, s.category, s.image_url, s.is_active,
-               s.created_at, s.updated_at,
+               s.operational_status, s.created_at, s.updated_at,
                COUNT(m.id) as total_items
         FROM shops s
         LEFT JOIN menu_items m ON m.shop_id = s.id AND m.is_available = 1
@@ -66,6 +67,7 @@ def get_shop_by_id(shop_id):
             "category": shop.get("category") or "Multi-Cuisine",
             "image_url": shop.get("image_url"),
             "is_active": bool(shop.get("is_active", 1)),
+            "operational_status": str(shop.get("operational_status") or "OPEN").upper(),
             "total_items": int(shop.get("total_items") or 0),
             "created_at": str(shop.get("created_at") or ""),
             "updated_at": str(shop.get("updated_at") or ""),

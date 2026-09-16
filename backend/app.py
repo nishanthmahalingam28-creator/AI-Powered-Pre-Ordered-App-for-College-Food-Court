@@ -1,11 +1,11 @@
 import os
 import secrets
 import logging
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-from db import DatabaseConnectionError, DatabaseError
+from db import DB, DatabaseConnectionError, DatabaseError
 from routes.auth import auth_bp
 from routes.menu import menu_bp
 from routes.orders import orders_bp
@@ -14,6 +14,8 @@ from routes.admin import admin_bp
 from routes.recommendations import recommend_bp
 from routes.customer import customer_bp
 from routes.payments import payments_bp
+from routes.notifications import notifications_bp
+from routes.ai import ai_bp
 
 load_dotenv()
 
@@ -87,12 +89,34 @@ app.register_blueprint(admin_bp, url_prefix="/api/admin")
 app.register_blueprint(recommend_bp, url_prefix="/api/recommendations")
 app.register_blueprint(customer_bp, url_prefix="/api/customer")
 app.register_blueprint(payments_bp, url_prefix="/api/payments")
+app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
+app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
 
 @app.before_request
-def log_request_info():
-    if request.path != "/api/health":
-        logger.debug("Request: %s %s from %s", request.method, request.path, request.remote_addr)
+def before_request_func():
+    req_id = request.headers.get("X-Request-ID") or secrets.token_hex(8)
+    g.request_id = req_id
+    if request.path not in ("/api/health", "/api/ready"):
+        logger.debug("[%s] Request: %s %s from %s", req_id, request.method, request.path, request.remote_addr)
+
+
+@app.after_request
+def after_request_func(response):
+    # Attach correlation ID
+    if hasattr(g, "request_id"):
+        response.headers["X-Request-ID"] = g.request_id
+
+    # Production HTTP Security Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Enforce HSTS in production or over HTTPS
+    if not is_development or request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    return response
 
 
 @app.errorhandler(DatabaseConnectionError)
@@ -135,7 +159,27 @@ def not_found_handler(e):
 
 @app.errorhandler(405)
 def method_not_allowed_handler(e):
-    return jsonify({"success": False, "message": "Method not allowed."}), 405
+    return jsonify({"success": False, "message": "Method not allowed for this resource."}), 405
+
+
+@app.errorhandler(409)
+def conflict_handler(e):
+    return jsonify({"success": False, "message": getattr(e, "description", "Resource conflict.")}), 409
+
+
+@app.errorhandler(422)
+def unprocessable_handler(e):
+    return jsonify({"success": False, "message": getattr(e, "description", "Unprocessable entity.")}), 422
+
+
+@app.errorhandler(429)
+def rate_limit_handler(e):
+    return jsonify({"success": False, "message": getattr(e, "description", "Too many requests. Please try again later.")}), 429
+
+
+@app.errorhandler(503)
+def service_unavailable_handler(e):
+    return jsonify({"success": False, "message": getattr(e, "description", "Service temporarily unavailable. Please try again later.")}), 503
 
 
 @app.errorhandler(500)
@@ -146,13 +190,46 @@ def server_error_handler(e):
 
 @app.errorhandler(Exception)
 def unhandled_exception_handler(e):
-    logger.error("Unhandled server exception on %s %s: %s", request.method, request.path, type(e).__name__)
-    return jsonify({"success": False, "message": "An unexpected error occurred. Please try again."}), 500
+    logger.error("Unhandled error: %s", type(e).__name__)
+    return jsonify({"success": False, "message": "An unexpected error occurred."}), 500
 
 
 @app.get("/api/health")
 def health():
-    return jsonify({"status": "ok", "service": "food-court-api", "version": "2.0.0"})
+    return jsonify({
+        "status": "ok",
+        "service": "food-court-api",
+        "version": "2.0.0",
+        "environment": flask_env
+    }), 200
+
+
+@app.get("/api/ready")
+def ready():
+    """
+    Readiness Probe: Tests database connectivity with a lightweight query.
+    Returns HTTP 200 when ready to accept traffic, or HTTP 503 when dependencies are unavailable.
+    """
+    try:
+        row = DB.get_one("SELECT 1 as is_ready")
+        if row and (row.get("is_ready") == 1 or row.get("1") == 1):
+            return jsonify({
+                "status": "ready",
+                "database": "connected",
+                "service": "food-court-api"
+            }), 200
+        return jsonify({
+            "status": "not_ready",
+            "database": "unexpected_result",
+            "service": "food-court-api"
+        }), 503
+    except Exception as e:
+        logger.error("Readiness probe check failed: %s", type(e).__name__)
+        return jsonify({
+            "status": "not_ready",
+            "database": "disconnected",
+            "service": "food-court-api"
+        }), 503
 
 
 @app.get("/")
@@ -161,6 +238,7 @@ def root():
         "name": "AI-Powered Pre-Ordered App for College Food Court",
         "status": "running",
         "health": "/api/health",
+        "ready": "/api/ready",
         "endpoints": {
             "auth": "/api/auth",
             "shops": "/api/shops",
@@ -169,7 +247,9 @@ def root():
             "vendor": "/api/vendor",
             "admin": "/api/admin",
             "customer": "/api/customer",
-            "recommendations": "/api/recommendations"
+            "notifications": "/api/notifications",
+            "recommendations": "/api/recommendations",
+            "ai": "/api/ai"
         }
     })
 

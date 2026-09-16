@@ -5,6 +5,12 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+*.egg-info/
+dist/
+build/
+
+# Testing & Cache
+.pytest_cache/
 
 # Environment / secrets
 .env
@@ -14,6 +20,11 @@ venv/
 # Local database / tooling
 *.sqlite3
 *.db
+food_court_local.db
+backend/food_court_local.db
+
+# Logs
+*.log
 
 # OS files
 .DS_Store

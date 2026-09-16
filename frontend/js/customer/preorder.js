@@ -202,7 +202,7 @@ function initiateRazorpayPayment(order) {
     }
 
     const gatewayOrderId = order.payment?.razorpay_order_id || order.razorpay_order_id || order.payment?.gateway_order_id;
-    const keyId = order.payment?.key_id || order.key_id || 'rzp_test_collegefoodcourt2026';
+    const keyId = order.payment?.key_id || order.key_id || window.RAZORPAY_KEY_ID || '';
     const amountPaise = order.payment?.amount_paise || order.amount_paise || Math.round(order.total_amount * 100);
 
     const options = {

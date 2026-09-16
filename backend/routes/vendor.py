@@ -4,9 +4,12 @@ from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request, session
 from db import DB
 from routes.auth import role_required
+from services.audit import AuditService
 
 logger = logging.getLogger("food_court.vendor")
 vendor_bp = Blueprint("vendor", __name__)
+
+ALLOWED_OPERATIONAL_STATUSES = {"OPEN", "CLOSED", "TEMPORARILY_UNAVAILABLE"}
 
 
 def validate_price(val):
@@ -57,7 +60,7 @@ def _get_active_shop_id():
     Resolves the authoritative shop_id for vendor operations.
     - Vendor role: Strictly resolved from the active database assignment for this user.
       Never trusts client-supplied shop_id in parameters or JSON bodies.
-      If stall is deactivated or unassigned, returns None.
+      If stall is deactivated (is_active = 0) or unassigned, returns None.
     - Admin role: Can specify shop_id or shop name via query params or JSON body.
     - NEVER defaults to shop_id = 1.
     """
@@ -94,6 +97,92 @@ def _get_active_shop_id():
     return None
 
 
+# ============================================================================
+# SHOP PROFILE & OPERATIONAL STATUS
+# ============================================================================
+
+@vendor_bp.get("/shop")
+@role_required(["vendor", "admin"])
+def get_vendor_shop():
+    """Returns vendor's assigned stall details, status, and operational mode."""
+    shop_id = _get_active_shop_id()
+    if not shop_id:
+        return jsonify({
+            "success": False,
+            "message": "Forbidden: No active stall assigned to this vendor or stall is currently deactivated."
+        }), 403
+
+    shop = DB.get_one("SELECT * FROM shops WHERE id = %s", (shop_id,))
+    if not shop:
+        return jsonify({"success": False, "message": "Assigned stall not found."}), 404
+
+    return jsonify({
+        "success": True,
+        "shop": {
+            "id": shop["id"],
+            "name": shop["name"],
+            "slug": shop["slug"],
+            "category": shop.get("category") or "Multi-Cuisine",
+            "description": shop.get("description") or "",
+            "is_active": int(shop.get("is_active", 1)),
+            "operational_status": str(shop.get("operational_status") or "OPEN").upper(),
+            "created_at": str(shop.get("created_at") or ""),
+        }
+    }), 200
+
+
+@vendor_bp.put("/shop/operational-status")
+@role_required(["vendor", "admin"])
+def update_vendor_operational_status():
+    """
+    Allows vendor to toggle operational status of their assigned stall
+    between OPEN, CLOSED, and TEMPORARILY_UNAVAILABLE.
+    Strictly isolated to vendor's own stall.
+    """
+    shop_id = _get_active_shop_id()
+    if not shop_id:
+        return jsonify({
+            "success": False,
+            "message": "Forbidden: No active stall assigned or stall is deactivated."
+        }), 403
+
+    shop = DB.get_one("SELECT id, name, operational_status FROM shops WHERE id = %s", (shop_id,))
+    if not shop:
+        return jsonify({"success": False, "message": "Shop not found."}), 404
+
+    data = request.get_json(silent=True) or {}
+    new_status = str(data.get("operational_status") or data.get("status") or "").strip().upper()
+
+    if new_status not in ALLOWED_OPERATIONAL_STATUSES:
+        return jsonify({
+            "success": False,
+            "message": f"Invalid operational status. Must be one of {sorted(list(ALLOWED_OPERATIONAL_STATUSES))}."
+        }), 400
+
+    old_status = str(shop.get("operational_status") or "OPEN").upper()
+    DB.execute("UPDATE shops SET operational_status = %s WHERE id = %s", (new_status, shop_id))
+
+    actor_id = session.get("user_id")
+    AuditService.log_action(
+        actor_id=actor_id,
+        action="SHOP_OPERATIONAL_STATUS_CHANGED",
+        entity_type="shop",
+        entity_id=shop_id,
+        details={"shop_name": shop["name"], "old_status": old_status, "new_status": new_status, "role": session.get("role")}
+    )
+
+    return jsonify({
+        "success": True,
+        "message": f"Stall '{shop['name']}' status updated to {new_status}.",
+        "shop_id": shop_id,
+        "operational_status": new_status
+    }), 200
+
+
+# ============================================================================
+# VENDOR ANALYTICS
+# ============================================================================
+
 @vendor_bp.get("/analytics")
 @role_required(["vendor", "admin"])
 def get_vendor_analytics():
@@ -107,13 +196,18 @@ def get_vendor_analytics():
 
     shop = DB.get_one("SELECT * FROM shops WHERE id = %s", (shop_id,))
     shop_name = shop["name"] if shop else "Stall"
+    operational_status = str(shop.get("operational_status") or "OPEN").upper() if shop else "OPEN"
 
     # Orders count and revenue
     revenue_row = DB.get_one(
         """
         SELECT COALESCE(SUM(total_amount), 0) as total_revenue,
                COUNT(id) as total_orders,
-               SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders
+               SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders,
+               SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+               SUM(CASE WHEN order_status = 'preparing' THEN 1 ELSE 0 END) as preparing_orders,
+               SUM(CASE WHEN order_status = 'ready' THEN 1 ELSE 0 END) as ready_orders,
+               SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders
         FROM orders
         WHERE shop_id = %s
         """,
@@ -138,11 +232,16 @@ def get_vendor_analytics():
         "shop": {
             "id": shop_id,
             "name": shop_name,
+            "operational_status": operational_status,
         },
         "analytics": {
             "today_revenue": float(revenue_row.get("total_revenue") or 0.0),
             "total_orders": int(revenue_row.get("total_orders") or 0),
             "active_orders": int(revenue_row.get("active_orders") or 0),
+            "pending_orders": int(revenue_row.get("pending_orders") or 0),
+            "preparing_orders": int(revenue_row.get("preparing_orders") or 0),
+            "ready_orders": int(revenue_row.get("ready_orders") or 0),
+            "completed_orders": int(revenue_row.get("completed_orders") or 0),
             "total_dishes": int(menu_stats.get("total_dishes") or 0),
             "available_dishes": int(menu_stats.get("available_dishes") or 0),
             "out_of_stock_dishes": int(menu_stats.get("out_of_stock_dishes") or 0),
@@ -151,10 +250,77 @@ def get_vendor_analytics():
     }), 200
 
 
+# ============================================================================
+# KITCHEN ORDER QUEUE
+# ============================================================================
+
+@vendor_bp.get("/orders")
+@role_required(["vendor", "admin"])
+def get_vendor_kitchen_orders():
+    """
+    Returns live kitchen queue for vendor's authoritative stall.
+    Vendors can view and fulfill active in-flight orders even when stall is closed.
+    """
+    shop_id = _get_active_shop_id()
+    if not shop_id:
+        return jsonify({
+            "success": False,
+            "message": "Forbidden: No active stall assigned or stall is deactivated."
+        }), 403
+
+    status_filter = request.args.get("status")
+    include_all = request.args.get("include_all", "0") in ("1", "true")
+
+    sql = """
+        SELECT o.id, o.order_reference, o.customer_id, o.shop_id, o.total_amount,
+               o.order_status, o.payment_status, o.payment_method, o.pickup_otp,
+               o.created_at, o.payment_time, o.preparing_time, o.ready_time,
+               o.completed_time, o.cancellation_time,
+               cp.full_name as customer_name, cp.customer_type, cp.identifier, cp.mobile
+        FROM orders o
+        LEFT JOIN customer_profiles cp ON cp.user_id = o.customer_id
+        WHERE o.shop_id = %s
+    """
+    params = [shop_id]
+
+    if status_filter:
+        sql += " AND o.order_status = %s"
+        params.append(status_filter.lower())
+
+    if not include_all and session.get("role") == "vendor":
+        sql += " AND (o.payment_status = 'paid' OR LOWER(o.payment_method) LIKE '%counter%' OR LOWER(o.payment_method) LIKE '%cash%')"
+
+    sql += """
+        ORDER BY CASE o.order_status
+            WHEN 'pending' THEN 1
+            WHEN 'preparing' THEN 2
+            WHEN 'ready' THEN 3
+            ELSE 4 END,
+            o.id DESC
+        LIMIT 100
+    """
+
+    orders = DB.query(sql, tuple(params))
+    for order in orders:
+        order["total_amount"] = float(order.get("total_amount") or 0.0)
+        items = DB.query(
+            "SELECT item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
+            (order["id"],),
+        )
+        order["items"] = items
+        order["items_summary"] = ", ".join(f"{i['quantity']}x {i['item_name']}" for i in items)
+
+    return jsonify({"success": True, "orders": orders, "shop_id": shop_id}), 200
+
+
+# ============================================================================
+# MENU & STOCK MANAGEMENT
+# ============================================================================
+
 @vendor_bp.post("/menu/item")
 @role_required(["vendor", "admin"])
 def add_menu_item():
-    """Adds a new dish to the vendor's assigned active stall."""
+    """Adds a new dish to the vendor's assigned active stall and logs audit action."""
     shop_id = _get_active_shop_id()
     if not shop_id:
         return jsonify({
@@ -207,6 +373,15 @@ def add_menu_item():
         (shop_id, name, description, price, category, quantity, available),
     )
 
+    actor_id = session.get("user_id")
+    AuditService.log_action(
+        actor_id=actor_id,
+        action="MENU_ITEM_CREATED",
+        entity_type="menu_item",
+        entity_id=item_id,
+        details={"name": name, "price": price, "quantity": quantity, "shop_id": shop_id}
+    )
+
     return jsonify({
         "success": True,
         "message": f"'{name}' added to menu successfully!",
@@ -228,7 +403,7 @@ def add_menu_item():
 def update_menu_item(item_id):
     """
     Updates price, stock, category, or availability of a dish.
-    Enforces strict stall ownership (IDOR prevention).
+    Enforces strict stall ownership (IDOR prevention) and logs audit action.
     """
     data = request.get_json(silent=True) or {}
     item = DB.get_one("SELECT * FROM menu_items WHERE id = %s", (item_id,))
@@ -306,6 +481,15 @@ def update_menu_item(item_id):
         (name, description, price, quantity, category, is_available, item_id),
     )
 
+    actor_id = session.get("user_id")
+    AuditService.log_action(
+        actor_id=actor_id,
+        action="MENU_ITEM_UPDATED",
+        entity_type="menu_item",
+        entity_id=item_id,
+        details={"name": name, "price": price, "quantity": quantity, "is_available": is_available}
+    )
+
     return jsonify({
         "success": True,
         "message": f"Updated '{name}' successfully.",
@@ -329,6 +513,7 @@ def delete_menu_item(item_id):
     Deletes or deactivates a menu item.
     Enforces strict stall ownership (IDOR prevention).
     If item has historical orders, soft-deactivates to preserve order history.
+    Logs audit action.
     """
     item = DB.get_one("SELECT id, name, shop_id FROM menu_items WHERE id = %s", (item_id,))
     if not item:
@@ -348,11 +533,20 @@ def delete_menu_item(item_id):
             "message": "Forbidden: You cannot delete dishes belonging to another stall."
         }), 403
 
+    actor_id = session.get("user_id")
+
     # Check if item exists in historical orders
     historical_order = DB.get_one("SELECT id FROM order_items WHERE menu_item_id = %s LIMIT 1", (item_id,))
     if historical_order:
         # Safe soft-deactivation to preserve order history records
         DB.execute("UPDATE menu_items SET is_available = 0, quantity = 0 WHERE id = %s", (item_id,))
+        AuditService.log_action(
+            actor_id=actor_id,
+            action="MENU_ITEM_ARCHIVED",
+            entity_type="menu_item",
+            entity_id=item_id,
+            details={"name": item["name"], "soft_delete": True}
+        )
         return jsonify({
             "success": True,
             "message": f"'{item['name']}' archived and marked unavailable to preserve order history."
@@ -360,6 +554,13 @@ def delete_menu_item(item_id):
     else:
         # No historical orders exist; safe to physically delete
         DB.execute("DELETE FROM menu_items WHERE id = %s", (item_id,))
+        AuditService.log_action(
+            actor_id=actor_id,
+            action="MENU_ITEM_DELETED",
+            entity_type="menu_item",
+            entity_id=item_id,
+            details={"name": item["name"], "physical_delete": True}
+        )
         return jsonify({
             "success": True,
             "message": f"'{item['name']}' removed from menu."

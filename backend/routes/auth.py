@@ -91,6 +91,21 @@ def send_otp():
     purpose = str(data.get("purpose", "signup")).strip() or "signup"
 
     # Rate limit: max 5 OTP requests per target per 60 seconds
+    # Multi-worker safe check: queries otp_codes within last 60 seconds
+    try:
+        one_min_ago = (datetime.now() - timedelta(seconds=60)).strftime("%Y-%m-%d %H:%M:%S")
+        recent_db = DB.get_one(
+            "SELECT COUNT(id) as cnt FROM otp_codes WHERE target = %s AND created_at >= %s",
+            (target, one_min_ago)
+        )
+        if recent_db and int(recent_db.get("cnt", 0)) >= 5:
+            return jsonify({
+                "success": False,
+                "message": "Too many OTP requests. Please wait a minute before requesting again."
+            }), 429
+    except Exception:
+        pass
+
     now_ts = datetime.now().timestamp()
     send_history = [t for t in _otp_send_limits.get(target, []) if now_ts - t < 60]
     if len(send_history) >= 5:

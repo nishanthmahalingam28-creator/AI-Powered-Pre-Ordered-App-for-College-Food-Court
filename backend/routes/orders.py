@@ -6,6 +6,8 @@ from flask import Blueprint, jsonify, request, session
 from db import DB
 from routes.auth import login_required, role_required
 from services.payment import PaymentService
+from services.audit import AuditService
+from services.notification import NotificationService
 
 logger = logging.getLogger("food_court.orders")
 orders_bp = Blueprint("orders", __name__)
@@ -30,7 +32,7 @@ def place_order():
     detected_shop_id = None
 
     for entry in items_input:
-        item_id = entry.get("id") or entry.get("item_id")
+        item_id = entry.get("id") or entry.get("item_id") or entry.get("menu_item_id")
         raw_qty = entry.get("quantity") if entry.get("quantity") is not None else entry.get("qty")
         try:
             qty = int(raw_qty) if raw_qty is not None else 1
@@ -45,7 +47,7 @@ def place_order():
 
         item = DB.get_one(
             """
-            SELECT m.*, s.name as shop_name, s.is_active as shop_is_active
+            SELECT m.*, s.name as shop_name, s.is_active as shop_is_active, s.operational_status as shop_operational_status
             FROM menu_items m
             INNER JOIN shops s ON s.id = m.shop_id
             WHERE m.id = %s
@@ -55,10 +57,12 @@ def place_order():
         if not item:
             return jsonify({"success": False, "message": f"Menu item #{item_id} not found."}), 404
 
-        if not item.get("shop_is_active"):
+        op_status = str(item.get("shop_operational_status") or "OPEN").upper()
+        if not item.get("shop_is_active") or op_status != "OPEN":
+            status_desc = "closed or temporarily unavailable" if op_status in ("CLOSED", "TEMPORARILY_UNAVAILABLE") else "closed or inactive"
             return jsonify({
                 "success": False,
-                "message": f"Stall '{item['shop_name']}' is currently closed or inactive. Orders cannot be placed."
+                "message": f"Stall '{item['shop_name']}' is currently {status_desc}. Orders cannot be placed."
             }), 400
 
         # Enforce single-stall orders: one cart = one shop
@@ -156,6 +160,33 @@ def place_order():
 
     shop = DB.get_one("SELECT name FROM shops WHERE id = %s", (shop_id,))
     shop_name = shop["name"] if shop else "Food Court"
+
+    # Dispatch persistent notifications safely (non-blocking)
+    try:
+        NotificationService.notify_customer(
+            customer_id=customer_id,
+            notif_type="ORDER_PLACED",
+            title=f"Order Placed #{order_ref}",
+            message=f"Your order at {shop_name} for ₹{total_amount:.2f} has been placed successfully.",
+            order_id=order_id
+        )
+        NotificationService.notify_vendor(
+            shop_id=shop_id,
+            notif_type="ORDER_PLACED",
+            title=f"New Order #{order_ref}",
+            message=f"New order received ({sum(i['quantity'] for i in validated_items)} items, ₹{total_amount:.2f}).",
+            order_id=order_id
+        )
+        if payment_result.get("status") == "paid":
+            NotificationService.notify_customer(
+                customer_id=customer_id,
+                notif_type="PAYMENT_SUCCESS",
+                title=f"Payment Successful #{order_ref}",
+                message=f"Payment of ₹{total_amount:.2f} via {payment_result.get('method', payment_method_label)} was successful.",
+                order_id=order_id
+            )
+    except Exception as ne:
+        logger.warning("Notification dispatch failed in place_order (non-fatal): %s", ne)
 
     return jsonify({
         "success": True,
@@ -349,6 +380,35 @@ def cancel_order(order_id):
 
             # 3. Refund or cancel payment record
             PaymentService.cancel_or_refund_payment(order_id, reason="Customer cancelled", customer_id=order["customer_id"], tx=tx)
+
+        actor_id = session.get("user_id")
+        AuditService.log_action(
+            actor_id=actor_id,
+            action="ORDER_CANCELLED",
+            entity_type="order",
+            entity_id=order_id,
+            details={"order_reference": order["order_reference"], "cancelled_by": current_role}
+        )
+
+        was_paid = (order.get("payment_status") == "paid")
+        refund_msg = f" ₹{float(order['total_amount']):.2f} has been refunded to your Campus Wallet." if (was_paid and "wallet" in order.get("payment_method", "").lower()) else ""
+        try:
+            NotificationService.notify_customer(
+                customer_id=order["customer_id"],
+                notif_type="ORDER_CANCELLED",
+                title=f"Order Cancelled #{order['order_reference']}",
+                message=f"Your order has been cancelled.{refund_msg}",
+                order_id=order_id
+            )
+            NotificationService.notify_vendor(
+                shop_id=order["shop_id"],
+                notif_type="ORDER_CANCELLED",
+                title=f"Order Cancelled #{order['order_reference']}",
+                message=f"Order #{order['order_reference']} was cancelled by the customer.",
+                order_id=order_id
+            )
+        except Exception as ne:
+            logger.warning("Notification dispatch error in cancel_order (non-fatal): %s", ne)
 
         return jsonify({
             "success": True,
@@ -669,6 +729,26 @@ def verify_pickup_otp():
         (order["id"],),
     )
 
+    actor_id = session.get("user_id")
+    AuditService.log_action(
+        actor_id=actor_id,
+        action="ORDER_OTP_VERIFIED",
+        entity_type="order",
+        entity_id=order["id"],
+        details={"order_reference": order["order_reference"], "shop_id": order["shop_id"], "verified_by": current_role}
+    )
+
+    try:
+        NotificationService.notify_customer(
+            customer_id=order["customer_id"],
+            notif_type="ORDER_COMPLETED",
+            title=f"Order Completed #{order['order_reference']}",
+            message=f"Your order from {order['shop_name']} has been collected and completed. Thank you for dining with us!",
+            order_id=order["id"]
+        )
+    except Exception as ne:
+        logger.warning("Notification dispatch error in verify_pickup_otp (non-fatal): %s", ne)
+
     return jsonify({
         "success": True,
         "message": f"OTP Verified! Order #{order['order_reference']} successfully completed.",
@@ -691,7 +771,7 @@ def update_order_status(order_id):
 
     allowed_statuses = {"pending", "preparing", "ready", "completed", "cancelled"}
     if new_status not in allowed_statuses:
-        return jsonify({"success": False, "message": f"Invalid status. Must be one of {allowed_statuses}"}), 400
+        return jsonify({"success": False, "message": f"Invalid status. Must be one of {sorted(list(allowed_statuses))}"}), 400
 
     order = DB.get_one("SELECT * FROM orders WHERE id = %s", (order_id,))
     if not order:
@@ -703,10 +783,50 @@ def update_order_status(order_id):
         if not vendor_shop_id or order["shop_id"] != vendor_shop_id:
             return jsonify({"success": False, "message": "Forbidden: You cannot alter orders belonging to another shop."}), 403
 
+    current_status = str(order["order_status"]).strip().lower()
+
+    if current_status == new_status:
+        return jsonify({
+            "success": True,
+            "message": f"Order is already in {new_status} status.",
+            "status": new_status
+        }), 200
+
+    # Terminal states: Completed or cancelled orders cannot undergo status changes
+    if current_status == "completed":
+        return jsonify({"success": False, "message": "Order has already been completed and cannot be changed."}), 400
+    if current_status == "cancelled":
+        return jsonify({"success": False, "message": "Order is already cancelled and cannot be changed."}), 400
+
+    # Strict workflow transition rules: PENDING -> PREPARING -> READY -> PICKUP OTP -> COMPLETED
+    status_order = {"pending": 1, "preparing": 2, "ready": 3, "completed": 4}
+
+    if new_status != "cancelled":
+        # Reject invalid backward transitions
+        if status_order.get(new_status, 0) < status_order.get(current_status, 0):
+            return jsonify({
+                "success": False,
+                "message": f"Invalid backward status transition from '{current_status}' to '{new_status}'."
+            }), 400
+
+        # Disallow forward skips (e.g. pending directly to ready)
+        if current_status == "pending" and new_status == "ready":
+            return jsonify({
+                "success": False,
+                "message": "Invalid status transition: Order must be set to 'preparing' before 'ready'."
+            }), 400
+
+        # Completion requires pickup OTP verification
+        if new_status == "completed":
+            return jsonify({
+                "success": False,
+                "message": "Order completion requires customer pickup OTP verification."
+            }), 400
+
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Handle cancellation by vendor: restore stock
-    if new_status == "cancelled" and order["order_status"] != "cancelled":
+    # Handle cancellation by vendor: restore stock and refund
+    if new_status == "cancelled" and current_status != "cancelled":
         with DB.transaction() as tx:
             tx.execute(
                 "UPDATE orders SET order_status = 'cancelled', cancellation_time = %s WHERE id = %s",
@@ -725,6 +845,35 @@ def update_order_status(order_id):
                         (i["quantity"], i["menu_item_id"])
                     )
             PaymentService.cancel_or_refund_payment(order_id, reason="Vendor cancelled", customer_id=order["customer_id"], tx=tx)
+
+        actor_id = session.get("user_id")
+        AuditService.log_action(
+            actor_id=actor_id,
+            action="ORDER_CANCELLED",
+            entity_type="order",
+            entity_id=order_id,
+            details={"order_reference": order["order_reference"], "old_status": current_status, "cancelled_by": session.get("role")}
+        )
+
+        was_paid = (order.get("payment_status") == "paid")
+        refund_msg = f" ₹{float(order['total_amount']):.2f} has been refunded to your Campus Wallet." if (was_paid and "wallet" in order.get("payment_method", "").lower()) else ""
+        try:
+            NotificationService.notify_customer(
+                customer_id=order["customer_id"],
+                notif_type="ORDER_CANCELLED",
+                title=f"Order Cancelled #{order['order_reference']}",
+                message=f"Your order has been cancelled by the kitchen.{refund_msg}",
+                order_id=order_id
+            )
+            NotificationService.notify_vendor(
+                shop_id=order["shop_id"],
+                notif_type="ORDER_CANCELLED",
+                title=f"Order Cancelled #{order['order_reference']}",
+                message=f"Order #{order['order_reference']} was cancelled by the kitchen.",
+                order_id=order_id
+            )
+        except Exception as ne:
+            logger.warning("Notification dispatch error in kitchen cancel (non-fatal): %s", ne)
         return jsonify({"success": True, "message": "Order cancelled and stock restored.", "status": "cancelled"}), 200
 
     # Timestamp update per lifecycle state
@@ -737,14 +886,43 @@ def update_order_status(order_id):
     elif new_status == "ready":
         sql += ", ready_time = COALESCE(ready_time, %s)"
         params.append(now_str)
-    elif new_status == "completed":
-        sql += ", completed_time = COALESCE(completed_time, %s)"
-        params.append(now_str)
 
     sql += " WHERE id = %s"
     params.append(order_id)
 
     DB.execute(sql, tuple(params))
+
+    actor_id = session.get("user_id")
+    AuditService.log_action(
+        actor_id=actor_id,
+        action="ORDER_STATUS_CHANGED",
+        entity_type="order",
+        entity_id=order_id,
+        details={"order_reference": order["order_reference"], "old_status": current_status, "new_status": new_status, "role": session.get("role")}
+    )
+
+    shop_rec = DB.get_one("SELECT name FROM shops WHERE id = %s", (order["shop_id"],))
+    order_shop_name = shop_rec["name"] if shop_rec else "Food Court"
+
+    try:
+        if new_status == "preparing":
+            NotificationService.notify_customer(
+                customer_id=order["customer_id"],
+                notif_type="ORDER_PREPARING",
+                title=f"Order Preparing #{order['order_reference']}",
+                message=f"Your order at {order_shop_name} is now being prepared in the kitchen.",
+                order_id=order_id
+            )
+        elif new_status == "ready":
+            NotificationService.notify_customer(
+                customer_id=order["customer_id"],
+                notif_type="ORDER_READY",
+                title=f"Order Ready for Pickup #{order['order_reference']}",
+                message=f"Your order is fresh and ready for pickup at {order_shop_name}! Please present your pickup OTP ({order['pickup_otp']}) at the counter.",
+                order_id=order_id
+            )
+    except Exception as ne:
+        logger.warning("Notification dispatch error in status change (non-fatal): %s", ne)
 
     return jsonify({
         "success": True,
@@ -752,3 +930,4 @@ def update_order_status(order_id):
         "status": new_status,
         "updated_at": now_str
     }), 200
+

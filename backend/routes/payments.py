@@ -108,6 +108,20 @@ def razorpay_webhook():
             )
         logger.info("Webhook successfully confirmed payment for order_id=%s", local_order_id)
 
+        try:
+            order_row = DB.get_one("SELECT customer_id, order_reference, total_amount FROM orders WHERE id = %s", (local_order_id,))
+            if order_row:
+                from services.notification import NotificationService
+                NotificationService.notify_customer(
+                    customer_id=order_row["customer_id"],
+                    notif_type="PAYMENT_SUCCESS",
+                    title=f"Payment Successful #{order_row['order_reference']}",
+                    message=f"Your payment of ₹{float(payment['amount']):.2f} via Razorpay was verified and confirmed.",
+                    order_id=local_order_id
+                )
+        except Exception as ne:
+            logger.warning("Webhook notification error (non-fatal): %s", ne)
+
     # 2. Payment failed
     elif event_type == "payment.failed":
         gateway_order_id = payment_entity.get("order_id")

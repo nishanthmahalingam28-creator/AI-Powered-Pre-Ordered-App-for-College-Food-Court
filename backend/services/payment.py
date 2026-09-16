@@ -179,7 +179,7 @@ class PaymentService:
         executor = tx if tx is not None else DB
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        order = executor.get_one("SELECT id, customer_id, total_amount, payment_status FROM orders WHERE id = %s", (order_id,))
+        order = executor.get_one("SELECT id, customer_id, order_reference, total_amount, payment_status FROM orders WHERE id = %s", (order_id,))
         if not order:
             raise ValueError("Order not found.")
 
@@ -258,6 +258,19 @@ class PaymentService:
             (now_str, order_id),
         )
 
+        try:
+            from services.notification import NotificationService
+            NotificationService.notify_customer(
+                customer_id=order["customer_id"],
+                notif_type="PAYMENT_SUCCESS",
+                title=f"Payment Successful #{order['order_reference']}",
+                message=f"Your payment of ₹{float(payment['amount']):.2f} has been verified and confirmed.",
+                order_id=order_id,
+                tx=executor
+            )
+        except Exception as ne:
+            logger.warning("Notification error in verify_gateway_payment (non-fatal): %s", ne)
+
         return {
             "success": True,
             "status": "paid",
@@ -277,7 +290,7 @@ class PaymentService:
         executor = tx if tx is not None else DB
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        order = executor.get_one("SELECT id, payment_status, order_status FROM orders WHERE id = %s", (order_id,))
+        order = executor.get_one("SELECT id, customer_id, order_reference, payment_status, order_status FROM orders WHERE id = %s", (order_id,))
         if not order:
             return False
 
@@ -316,6 +329,20 @@ class PaymentService:
                 )
 
         logger.info("Order %s payment marked failed. Reserved stock safely restored.", order_id)
+
+        try:
+            from services.notification import NotificationService
+            NotificationService.notify_customer(
+                customer_id=order["customer_id"],
+                notif_type="PAYMENT_FAILED",
+                title=f"Payment Failed #{order.get('order_reference', order_id)}",
+                message=f"Payment for your order failed ({failure_reason}). Reserved stock was safely restored.",
+                order_id=order_id,
+                tx=executor
+            )
+        except Exception as ne:
+            logger.warning("Notification error in handle_payment_failure (non-fatal): %s", ne)
+
         return True
 
     @classmethod

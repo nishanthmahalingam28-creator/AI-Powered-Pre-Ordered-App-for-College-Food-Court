@@ -83,6 +83,8 @@ def get_mysql_connection():
 
 def get_sqlite_connection():
     """Creates a connection to the local development SQLite database."""
+    if is_production():
+        raise DatabaseConnectionError("FATAL: SQLite connection attempted in production mode.")
     conn = sqlite3.connect(SQLITE_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")

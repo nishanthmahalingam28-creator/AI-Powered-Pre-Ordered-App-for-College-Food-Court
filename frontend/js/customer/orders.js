@@ -214,7 +214,7 @@ async function payPendingOrder(orderId) {
         }
 
         const options = {
-            key: 'rzp_test_collegefoodcourt2026',
+            key: payment.key_id || window.RAZORPAY_KEY_ID || '',
             amount: Math.round(payment.amount * 100),
             currency: 'INR',
             name: 'KPR Food Court',

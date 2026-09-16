@@ -67,6 +67,7 @@ if not c_user:
     )
 else:
     cust_id = c_user["id"]
+    DB.execute("UPDATE users SET password_hash = %s, is_active = 1 WHERE id = %s", (generate_password_hash(cust_pwd), cust_id))
     DB.execute("UPDATE customer_profiles SET wallet_balance = 500.00 WHERE user_id = %s", (cust_id,))
 
 # Ensure YPR Stall & Vendor

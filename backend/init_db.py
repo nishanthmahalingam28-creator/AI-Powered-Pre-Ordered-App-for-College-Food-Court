@@ -140,6 +140,28 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    order_id INTEGER NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    is_read INTEGER NOT NULL DEFAULT 0,
+    delivery_status TEXT NOT NULL DEFAULT 'delivered',
+    delivered_at TIMESTAMP NULL,
+    failure_reason TEXT NULL,
+    read_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_user_unread ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notification_user_created ON notifications(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_notification_order ON notifications(order_id);
+CREATE INDEX IF NOT EXISTS idx_notification_type ON notifications(type);
 """
 
 DEFAULT_STALLS = [
@@ -205,56 +227,34 @@ def init_sqlite():
     cur.executescript(SQLITE_SCHEMA)
 
     # Ensure schema migrations on pre-existing tables
-    try:
-        cur.execute("PRAGMA table_info(otp_codes)")
-        cols = [r[1] for r in cur.fetchall()]
-        if "is_consumed" not in cols:
-            cur.execute("ALTER TABLE otp_codes ADD COLUMN is_consumed INTEGER NOT NULL DEFAULT 0")
-        if "verified_at" not in cols:
-            cur.execute("ALTER TABLE otp_codes ADD COLUMN verified_at TIMESTAMP NULL")
+    def _safe_add_column(table, col, col_def):
+        try:
+            cur.execute(f"PRAGMA table_info({table})")
+            existing_cols = [r[1] for r in cur.fetchall()]
+            if col not in existing_cols:
+                cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+        except Exception as err:
+            pass
 
-        cur.execute("PRAGMA table_info(customer_profiles)")
-        cp_cols = [r[1] for r in cur.fetchall()]
-        if "wallet_balance" not in cp_cols:
-            cur.execute("ALTER TABLE customer_profiles ADD COLUMN wallet_balance REAL NOT NULL DEFAULT 500.00")
-
-        cur.execute("PRAGMA table_info(orders)")
-        ord_cols = [r[1] for r in cur.fetchall()]
-        if "payment_time" not in ord_cols:
-            cur.execute("ALTER TABLE orders ADD COLUMN payment_time TIMESTAMP NULL")
-        if "preparing_time" not in ord_cols:
-            cur.execute("ALTER TABLE orders ADD COLUMN preparing_time TIMESTAMP NULL")
-        if "ready_time" not in ord_cols:
-            cur.execute("ALTER TABLE orders ADD COLUMN ready_time TIMESTAMP NULL")
-        if "completed_time" not in ord_cols:
-            cur.execute("ALTER TABLE orders ADD COLUMN completed_time TIMESTAMP NULL")
-        if "cancellation_time" not in ord_cols:
-            cur.execute("ALTER TABLE orders ADD COLUMN cancellation_time TIMESTAMP NULL")
-
-        cur.execute("PRAGMA table_info(payments)")
-        pay_cols = [r[1] for r in cur.fetchall()]
-        if "gateway_token" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN gateway_token TEXT NULL")
-        if "customer_id" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN customer_id INTEGER NULL")
-        if "provider" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN provider TEXT NOT NULL DEFAULT 'razorpay'")
-        if "currency" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN currency TEXT NOT NULL DEFAULT 'INR'")
-        if "gateway_order_id" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN gateway_order_id TEXT NULL")
-        if "gateway_payment_id" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN gateway_payment_id TEXT NULL")
-        if "failure_reason" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN failure_reason TEXT NULL")
-        if "paid_at" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN paid_at TIMESTAMP NULL")
-        if "refunded_at" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN refunded_at TIMESTAMP NULL")
-        if "updated_at" not in pay_cols:
-            cur.execute("ALTER TABLE payments ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    except Exception:
-        pass
+    _safe_add_column("otp_codes", "is_consumed", "INTEGER NOT NULL DEFAULT 0")
+    _safe_add_column("otp_codes", "verified_at", "TIMESTAMP NULL")
+    _safe_add_column("customer_profiles", "wallet_balance", "REAL NOT NULL DEFAULT 500.00")
+    _safe_add_column("orders", "payment_time", "TIMESTAMP NULL")
+    _safe_add_column("orders", "preparing_time", "TIMESTAMP NULL")
+    _safe_add_column("orders", "ready_time", "TIMESTAMP NULL")
+    _safe_add_column("orders", "completed_time", "TIMESTAMP NULL")
+    _safe_add_column("orders", "cancellation_time", "TIMESTAMP NULL")
+    _safe_add_column("payments", "gateway_token", "TEXT NULL")
+    _safe_add_column("payments", "customer_id", "INTEGER NULL")
+    _safe_add_column("payments", "provider", "TEXT NOT NULL DEFAULT 'razorpay'")
+    _safe_add_column("payments", "currency", "TEXT NOT NULL DEFAULT 'INR'")
+    _safe_add_column("payments", "gateway_order_id", "TEXT NULL")
+    _safe_add_column("payments", "gateway_payment_id", "TEXT NULL")
+    _safe_add_column("payments", "failure_reason", "TEXT NULL")
+    _safe_add_column("payments", "paid_at", "TIMESTAMP NULL")
+    _safe_add_column("payments", "refunded_at", "TIMESTAMP NULL")
+    _safe_add_column("payments", "updated_at", "TIMESTAMP NULL")
+    _safe_add_column("shops", "operational_status", "TEXT NOT NULL DEFAULT 'OPEN'")
 
     cur.executemany("INSERT OR REPLACE INTO users (id, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)", DEFAULT_USERS)
     cur.execute("INSERT OR REPLACE INTO customer_profiles (id, user_id, customer_type, full_name, identifier, mobile) VALUES (1, 8, 'student', 'KPR Student', '21CS042', '9876543210')")

@@ -182,3 +182,30 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_audit_entity (entity_type, entity_id),
     INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. Persistent Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    order_id INT UNSIGNED NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    delivery_status VARCHAR(30) NOT NULL DEFAULT 'delivered',
+    delivered_at DATETIME NULL,
+    failure_reason TEXT NULL,
+    read_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notification_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_notification_order
+        FOREIGN KEY (order_id) REFERENCES orders(id)
+        ON DELETE CASCADE,
+    INDEX idx_notification_user_unread (user_id, is_read),
+    INDEX idx_notification_user_created (user_id, created_at),
+    INDEX idx_notification_order (order_id),
+    INDEX idx_notification_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

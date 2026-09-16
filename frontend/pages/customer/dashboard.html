@@ -42,6 +42,10 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
+                    <button class="notification-bell-trigger relative bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2" title="Notifications">
+                        <i class="fa-solid fa-bell text-sm"></i>
+                        <span class="notification-badge hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#071638] shadow-md">0</span>
+                    </button>
                     <a href="menu.html" class="bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-3 rounded-xl shadow-lg hover:shadow-teal-400/30 hover:scale-[1.02] transition-all flex items-center gap-2">
                         <i class="fa-solid fa-utensils"></i> Order Food
                     </a>
@@ -78,18 +82,12 @@
                         <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> AI Smart Engine
                     </span>
                     <h2 id="ai-section-heading" class="text-xl font-black text-slate-900 mt-0.5">
-                        Recommended For You
+                        Handcrafted Recommendations For You
                     </h2>
                 </div>
-                <span class="text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full w-fit">
-                    Updated based on meal hour & order velocity
-                </span>
             </div>
             <div id="ai-recommendations-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <!-- Dynamically loaded via customer-dashboard.js -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 animate-pulse text-center text-xs text-slate-400">
-                    Loading AI recommendations...
-                </div>
+                <!-- Dynamically populated via customer-dashboard.js -->
             </div>
         </section>
 
@@ -109,10 +107,46 @@
 
     </main>
 
+    <!-- Slide-over Notification Center Drawer -->
+    <div id="notification-backdrop" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+    <div id="notification-drawer" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200">
+        <!-- Header -->
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center text-sm font-black">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-slate-900">Notifications</h3>
+                    <p class="text-[10px] text-slate-400">Live order & payment alerts</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="notif-mark-all-btn" class="text-[11px] font-bold text-teal-700 hover:text-teal-800 hover:underline px-2 py-1" title="Mark all read">
+                    Mark all read
+                </button>
+                <button id="close-notif-drawer-btn" class="w-8 h-8 rounded-xl hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification List -->
+        <div id="notification-items-container" class="flex-grow overflow-y-auto p-4 space-y-3">
+            <!-- Dynamically populated via notifications.js -->
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-t border-slate-100 text-center bg-slate-50 text-[10px] text-slate-400">
+            Updates refresh automatically every 10 seconds.
+        </div>
+    </div>
+
     <!-- Footer Component -->
     <div id="footer-container"></div>
 
-    <!-- Page Specific Script -->
+    <!-- Scripts -->
+    <script src="../../js/customer/notifications.js" defer></script>
     <script src="../../js/customer/customer-dashboard.js"></script>
 </body>
 </html>
