@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Central Operations | KPRIET Food Court</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../../js/core/tailwind-config.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/base/reset.css">
+    <script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+
+    <!-- Header Navigation -->
+    <div id="navbar-container"></div>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow py-8 pb-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
+
+        <!-- Top Header & Role Badge -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-0.5 rounded-full text-xs font-black bg-purple-100 text-purple-800 uppercase tracking-wider">
+                        <i class="fa-solid fa-shield-halved mr-1"></i> Root Administration
+                    </span>
+                    <span class="text-xs text-slate-400 font-medium">Food Court Central Hub</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">System Control Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleShopModal(true)" class="bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Add New Stall
+                </button>
+                <button onclick="logoutAdmin()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition-all">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- 4 KPI Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Turnover</span>
+                    <h3 id="stat-turnover" class="text-xl font-black text-slate-900 mt-0.5">₹0.00</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Orders</span>
+                    <h3 id="stat-orders" class="text-xl font-black text-slate-900 mt-0.5">0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Stalls</span>
+                    <h3 id="stat-shops" class="text-xl font-black text-slate-900 mt-0.5">0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Registered Users</span>
+                    <h3 id="stat-users" class="text-xl font-black text-slate-900 mt-0.5">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stalls Management Section -->
+        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-shop text-purple-600"></i> Food Court Stalls Registry
+                </h2>
+                <span id="shops-count" class="text-xs font-bold text-slate-500">Loading...</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-3">Stall Name</th>
+                            <th class="p-3">Category</th>
+                            <th class="p-3">Items Count</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shops-table-body" class="divide-y divide-slate-100">
+                        <!-- Loaded dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Live Orders Feed Section -->
+        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> Recent Pre-Order Activity
+                </h2>
+                <span class="text-xs text-slate-400">Live transaction stream</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-3">Order Ref</th>
+                            <th class="p-3">Customer</th>
+                            <th class="p-3">Stall</th>
+                            <th class="p-3">Amount</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table-body" class="divide-y divide-slate-100">
+                        <!-- Loaded dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Registered Users Section -->
+        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear text-emerald-600"></i> User Accounts Directory
+                </h2>
+                <span id="users-count" class="text-xs font-bold text-slate-500">Loading...</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-3">Email</th>
+                            <th class="p-3">Name / Role Detail</th>
+                            <th class="p-3">Role</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body" class="divide-y divide-slate-100">
+                        <!-- Loaded dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ADD STALL MODAL -->
+    <div id="add-shop-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Add New Food Court Stall</h3>
+                <button onclick="toggleShopModal(false)" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="add-shop-form" onsubmit="handleAddShop(event)" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Stall Name</label>
+                    <input type="text" id="stall-name" required placeholder="e.g. Spice Garden" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Cuisine / Category</label>
+                    <input type="text" id="stall-category" required placeholder="e.g. North Indian" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Description</label>
+                    <textarea id="stall-description" placeholder="Freshly prepared homestyle delicacies..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-600"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="toggleShopModal(false)" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-700 text-white hover:bg-purple-800">Create Stall</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer Component -->
+    <div id="footer-container"></div>
+
+    <script src="../../js/admin/dashboard.js"></script>
+</body>
+</html>
