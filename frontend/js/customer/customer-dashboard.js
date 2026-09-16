@@ -2,35 +2,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const API_BASE_URL = window.FOOD_COURT_API_BASE || 'http://127.0.0.1:5000/api';
     const customerCartKey = 'kpriet-food-court-cart';
 
-    // 1. Initialize User Information
+    // 1. Initialize User Information from real backend session
     async function initUser() {
         let user = null;
         try {
-            const raw = sessionStorage.getItem('foodCourtUser');
-            if (raw) user = JSON.parse(raw);
-        } catch (e) {}
-
-        if (!user) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.authenticated && data.user) {
-                        user = data.user;
-                        sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
-                    }
+            const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    user = data.user;
+                    sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
                 }
-            } catch (e) {}
+            }
+        } catch (e) {
+            try {
+                const raw = sessionStorage.getItem('foodCourtUser');
+                if (raw) user = JSON.parse(raw);
+            } catch (ignore) {}
         }
 
-        if (user) {
-            const nameEl = document.getElementById('customer-name');
-            if (nameEl && user.full_name) nameEl.textContent = user.full_name;
+        if (!user || user.role !== 'customer') {
+            window.location.href = '../auth/login.html';
+            return;
+        }
 
-            const badgeEl = document.getElementById('customer-type-badge');
-            if (badgeEl && user.customer_type) {
-                badgeEl.textContent = user.customer_type;
-            }
+        const nameEl = document.getElementById('customer-name');
+        if (nameEl && user.full_name) nameEl.textContent = user.full_name;
+
+        const badgeEl = document.getElementById('customer-type-badge');
+        if (badgeEl && user.customer_type) {
+            badgeEl.textContent = user.customer_type.toUpperCase();
         }
     }
 
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const badgeSlot = document.getElementById('meal-slot-badge');
 
         try {
-            const res = await fetch(`${API_BASE_URL}/recommendations`, { credentials: 'include' });
+            const res = await fetch(`${API_BASE_URL}/ai/recommendations`, { credentials: 'include' });
             const data = await res.json();
 
             if (data.success && data.recommendations) {
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     ${item.shop_name}
                                 </span>
                                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                    <i class="fa-solid fa-sparkles text-[9px] mr-1 text-amber-500"></i>${item.ai_badge}
+                                    <i class="fa-solid fa-sparkles text-[9px] mr-1 text-amber-500"></i>${item.reason || item.ai_badge}
                                 </span>
                             </div>
                             <h3 class="font-bold text-slate-800 text-base group-hover:text-teal-700 transition-colors">${item.name}</h3>

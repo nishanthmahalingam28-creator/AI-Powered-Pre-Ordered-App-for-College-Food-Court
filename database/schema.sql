@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('customer', 'vendor', 'admin') NOT NULL DEFAULT 'customer',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_role (role),
@@ -25,12 +26,14 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
     full_name VARCHAR(150) NOT NULL,
     identifier VARCHAR(100) NULL,
     mobile VARCHAR(20) NULL,
+    wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 500.00,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_customer_user
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE,
-    INDEX idx_customer_type (customer_type)
+    INDEX idx_customer_type (customer_type),
+    INDEX idx_customer_mobile (mobile)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. Shops / Food Stalls
@@ -43,6 +46,7 @@ CREATE TABLE IF NOT EXISTS shops (
     category VARCHAR(100) NULL DEFAULT 'Multi-Cuisine',
     image_url VARCHAR(500) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    operational_status VARCHAR(50) NOT NULL DEFAULT 'OPEN',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_shop_owner
@@ -78,9 +82,14 @@ CREATE TABLE IF NOT EXISTS orders (
     shop_id INT UNSIGNED NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL,
     order_status ENUM('pending', 'preparing', 'ready', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
-    payment_status ENUM('pending', 'paid', 'failed') NOT NULL DEFAULT 'paid',
+    payment_status ENUM('pending', 'paid', 'failed', 'cancelled', 'refunded') NOT NULL DEFAULT 'pending',
     payment_method VARCHAR(50) NOT NULL DEFAULT 'Campus Wallet',
     pickup_otp VARCHAR(10) NOT NULL,
+    payment_time DATETIME NULL,
+    preparing_time DATETIME NULL,
+    ready_time DATETIME NULL,
+    completed_time DATETIME NULL,
+    cancellation_time DATETIME NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_order_customer
@@ -90,6 +99,7 @@ CREATE TABLE IF NOT EXISTS orders (
         FOREIGN KEY (shop_id) REFERENCES shops(id)
         ON DELETE CASCADE,
     INDEX idx_order_status (order_status),
+    INDEX idx_order_payment_status (payment_status),
     INDEX idx_order_customer (customer_id),
     INDEX idx_order_shop (shop_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -115,14 +125,30 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS payments (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_id INT UNSIGNED NOT NULL,
+    customer_id INT UNSIGNED NULL,
+    provider VARCHAR(50) NOT NULL DEFAULT 'razorpay',
     method VARCHAR(50) NOT NULL DEFAULT 'Campus Wallet',
     amount DECIMAL(10,2) NOT NULL,
-    status ENUM('pending', 'successful', 'failed') NOT NULL DEFAULT 'successful',
+    currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+    status ENUM('pending', 'successful', 'failed', 'cancelled', 'refunded') NOT NULL DEFAULT 'pending',
     transaction_ref VARCHAR(100) NOT NULL UNIQUE,
+    gateway_order_id VARCHAR(100) NULL,
+    gateway_payment_id VARCHAR(100) NULL,
+    gateway_token VARCHAR(255) NULL,
+    failure_reason TEXT NULL,
+    paid_at DATETIME NULL,
+    refunded_at DATETIME NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_payment_order
         FOREIGN KEY (order_id) REFERENCES orders(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_payment_customer
+        FOREIGN KEY (customer_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    INDEX idx_payment_gateway_order (gateway_order_id),
+    INDEX idx_payment_gateway_payment (gateway_payment_id),
+    INDEX idx_payment_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. OTP Codes Table
@@ -133,6 +159,53 @@ CREATE TABLE IF NOT EXISTS otp_codes (
     purpose VARCHAR(50) NOT NULL DEFAULT 'signup',
     expires_at DATETIME NOT NULL,
     is_verified TINYINT(1) NOT NULL DEFAULT 0,
+    is_consumed TINYINT(1) NOT NULL DEFAULT 0,
+    verified_at DATETIME NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_otp_target (target, code)
+    INDEX idx_otp_target (target, code),
+    INDEX idx_otp_verify_check (target, purpose, is_verified, is_consumed)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. Administrative Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    actor_id INT UNSIGNED NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id VARCHAR(100) NULL,
+    details TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_audit_actor
+        FOREIGN KEY (actor_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    INDEX idx_audit_actor (actor_id),
+    INDEX idx_audit_entity (entity_type, entity_id),
+    INDEX idx_audit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. Persistent Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    order_id INT UNSIGNED NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    delivery_status VARCHAR(30) NOT NULL DEFAULT 'delivered',
+    delivered_at DATETIME NULL,
+    failure_reason TEXT NULL,
+    read_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notification_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_notification_order
+        FOREIGN KEY (order_id) REFERENCES orders(id)
+        ON DELETE CASCADE,
+    INDEX idx_notification_user_unread (user_id, is_read),
+    INDEX idx_notification_user_created (user_id, created_at),
+    INDEX idx_notification_order (order_id),
+    INDEX idx_notification_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

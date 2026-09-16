@@ -2,15 +2,44 @@ const API_BASE_URL = window.FOOD_COURT_API_BASE || 'http://127.0.0.1:5000/api';
 
 let currentShopId = 1;
 let currentShopName = 'YPR';
+let currentOperationalStatus = 'OPEN';
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', async () => {
-    await initShopName();
-    await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders()]);
+    await initShopProfile();
+    await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications()]);
 });
 
-// Parse URL or Session for Stall Information
-async function initShopName() {
+// Resolve Authoritative Assigned Stall for Vendor
+async function initShopProfile() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.success && data.shop) {
+            currentShopId = data.shop.id;
+            currentShopName = data.shop.name;
+            currentOperationalStatus = data.shop.operational_status || 'OPEN';
+            updateOpStatusUI(currentOperationalStatus);
+        } else {
+            // Fallback for admin previewing stall
+            await initShopNameFallback();
+        }
+    } catch (e) {
+        await initShopNameFallback();
+    }
+
+    const titleEl = document.getElementById('title-shop-name');
+    if (titleEl) {
+        titleEl.innerText = currentShopName;
+    }
+
+    const outletEl = document.getElementById('outlet-name');
+    if (outletEl) {
+        outletEl.innerText = currentShopName + ' Stall';
+    }
+}
+
+async function initShopNameFallback() {
     const urlParams = new URLSearchParams(window.location.search);
     const selectedShop = urlParams.get('shop');
 
@@ -22,17 +51,6 @@ async function initShopName() {
 
     currentShopName = selectedShop || (sessionUser && sessionUser.shop_name) || 'YPR';
 
-    const titleEl = document.getElementById('title-shop-name');
-    if (titleEl) {
-        titleEl.innerText = currentShopName;
-    }
-
-    const outletEl = document.getElementById('outlet-name');
-    if (outletEl) {
-        outletEl.innerText = currentShopName + ' Stall';
-    }
-
-    // Resolve shop id
     try {
         const res = await fetch(`${API_BASE_URL}/shops`);
         const data = await res.json();
@@ -40,10 +58,58 @@ async function initShopName() {
             const match = data.shops.find(s => s.name.toLowerCase() === currentShopName.toLowerCase());
             if (match) {
                 currentShopId = match.id;
+                currentOperationalStatus = match.operational_status || 'OPEN';
+                updateOpStatusUI(currentOperationalStatus);
             }
         }
     } catch (e) {
         console.warn('Could not fetch shops list:', e);
+    }
+}
+
+function updateOpStatusUI(status) {
+    currentOperationalStatus = status;
+    const badge = document.getElementById('vendor-op-status-badge');
+    const desc = document.getElementById('vendor-op-status-desc');
+    const dot = document.getElementById('status-indicator-dot');
+
+    if (!badge) return;
+
+    badge.innerText = status.replace('_', ' ');
+
+    if (status === 'OPEN') {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 uppercase';
+        if (desc) desc.innerText = 'Accepting customer pre-orders. When paused or closed, in-flight orders can still be fulfilled.';
+        if (dot) dot.className = 'w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse';
+    } else if (status === 'TEMPORARILY_UNAVAILABLE') {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800 uppercase';
+        if (desc) desc.innerText = 'Stall is temporarily paused. New orders are blocked; active kitchen tickets can still be fulfilled.';
+        if (dot) dot.className = 'w-3.5 h-3.5 rounded-full bg-amber-500';
+    } else {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 uppercase';
+        if (desc) desc.innerText = 'Stall is closed. New customer orders are blocked; active tickets can still be completed.';
+        if (dot) dot.className = 'w-3.5 h-3.5 rounded-full bg-rose-500';
+    }
+}
+
+// Vendor Operational Status Switcher
+async function setVendorOperationalStatus(newStatus) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/shop/operational-status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ operational_status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+            updateOpStatusUI(newStatus);
+            await loadAnalytics();
+        } else {
+            alert(data.message || 'Failed to update operational status.');
+        }
+    } catch (e) {
+        alert('Failed to connect to server.');
     }
 }
 
@@ -73,6 +139,37 @@ async function loadAnalytics() {
             if (bar && a.total_dishes > 0) {
                 const pct = Math.round((a.available_dishes / a.total_dishes) * 100);
                 bar.style.width = `${pct}%`;
+            }
+        }
+
+        // Fetch AI Demand Intelligence
+        if (currentShopId) {
+            try {
+                const aiRes = await fetch(`${API_BASE_URL}/ai/analytics/shop/${currentShopId}`, { credentials: 'include' });
+                const aiData = await aiRes.json();
+                if (aiData.success) {
+                    const topItemsContainer = document.getElementById('ai-top-items-list');
+                    const peakSlotBadge = document.getElementById('ai-peak-slot');
+
+                    if (topItemsContainer) {
+                        if (aiData.top_selling_items && aiData.top_selling_items.length > 0) {
+                            topItemsContainer.innerHTML = aiData.top_selling_items.map(item => `
+                                <div class="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
+                                    <span class="font-medium text-slate-700 truncate max-w-[140px]">${item.item_name}</span>
+                                    <span class="text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-full text-[10px]">${item.units_sold} sold</span>
+                                </div>
+                            `).join('');
+                        } else {
+                            topItemsContainer.innerHTML = '<p class="text-[11px] text-slate-400">No completed orders recorded yet.</p>';
+                        }
+                    }
+
+                    if (peakSlotBadge && aiData.peak_hours && aiData.peak_hours.length > 0) {
+                        peakSlotBadge.innerText = `Peak: ${aiData.peak_hours[0].hour}:00 (${aiData.peak_hours[0].orders_count} orders)`;
+                    }
+                }
+            } catch (aiErr) {
+                console.debug('AI analytics optional sync:', aiErr);
             }
         }
     } catch (e) {
@@ -126,6 +223,16 @@ async function renderMenuItems() {
                     </button>
                 </div>
 
+                <!-- Edit Price Button -->
+                <button onclick="editItemPrice(${item.id}, ${item.price}, '${item.name.replace(/'/g, "\\'")}')" title="Edit Price" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-500 rounded-lg text-xs transition-colors">
+                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                </button>
+
+                <!-- Delete Item Button -->
+                <button onclick="deleteItem(${item.id}, '${item.name.replace(/'/g, "\\'")}')" title="Delete Item" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg text-xs transition-colors">
+                    <i class="fa-solid fa-trash text-[10px]"></i>
+                </button>
+
                 <!-- Availability Toggle Switch -->
                 <label class="relative inline-flex items-center cursor-pointer ml-1">
                     <input type="checkbox" class="sr-only peer" ${item.is_available && item.quantity > 0 ? 'checked' : ''} onchange="toggleItemAvailability(${item.id}, ${item.is_available ? 'true' : 'false'})">
@@ -139,6 +246,54 @@ async function renderMenuItems() {
     }
 }
 
+// Edit Price via API
+async function editItemPrice(itemId, currentPrice, itemName) {
+    const newPriceStr = prompt(`Enter new price for "${itemName}" (₹):`, currentPrice);
+    if (newPriceStr === null) return;
+    const newPrice = parseFloat(newPriceStr.trim());
+    if (isNaN(newPrice) || newPrice <= 0) {
+        alert('Please enter a valid price greater than ₹0.');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ price: newPrice })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await renderMenuItems();
+            await loadAnalytics();
+        } else {
+            alert(data.message || 'Failed to update price.');
+        }
+    } catch (e) {
+        alert('Failed to connect to the server.');
+    }
+}
+
+// Delete Item via API
+async function deleteItem(itemId, itemName) {
+    if (!confirm(`Are you sure you want to remove "${itemName}" from your menu?`)) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+            await renderMenuItems();
+            await loadAnalytics();
+        } else {
+            alert(data.message || 'Failed to delete item.');
+        }
+    } catch (e) {
+        alert('Failed to connect to the server.');
+    }
+}
+
 // Adjust Quantity via API
 async function updateQuantity(itemId, currentQty, change) {
     const newQty = Math.max(0, currentQty + change);
@@ -146,6 +301,7 @@ async function updateQuantity(itemId, currentQty, change) {
         await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ quantity: newQty, available: newQty > 0 })
         });
         await renderMenuItems();
@@ -161,6 +317,7 @@ async function toggleItemAvailability(itemId, currentlyAvailable) {
         await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ available: !currentlyAvailable })
         });
         await renderMenuItems();
@@ -176,7 +333,7 @@ async function renderOrders() {
     if (!container) return;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/orders/vendor/${currentShopId}`);
+        const res = await fetch(`${API_BASE_URL}/orders/vendor/${currentShopId}`, { credentials: 'include' });
         const data = await res.json();
         container.innerHTML = '';
 
@@ -186,37 +343,64 @@ async function renderOrders() {
         }
 
         data.orders.forEach(order => {
-            const isDone = order.order_status === 'completed' || order.order_status === 'cancelled';
+            const isCompleted = order.order_status === 'completed';
+            const isCancelled = order.order_status === 'cancelled';
             const orderEl = document.createElement('div');
             orderEl.className = 'bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-center justify-between gap-3';
+
+            let stClass = 'bg-amber-100 text-amber-800';
+            if (order.order_status === 'preparing') stClass = 'bg-blue-100 text-blue-800';
+            else if (order.order_status === 'ready') stClass = 'bg-purple-100 text-purple-800';
+            else if (isCompleted) stClass = 'bg-emerald-100 text-emerald-800';
+            else if (isCancelled) stClass = 'bg-rose-100 text-rose-800';
+
+            let actionHtml = '';
+            if (order.order_status === 'pending') {
+                actionHtml = `
+                    <button onclick="updateOrderStatus(${order.id}, 'preparing')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap">
+                        Prepare Food
+                    </button>
+                `;
+            } else if (order.order_status === 'preparing') {
+                actionHtml = `
+                    <button onclick="updateOrderStatus(${order.id}, 'ready')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap">
+                        Mark Ready
+                    </button>
+                `;
+            } else if (order.order_status === 'ready') {
+                actionHtml = `
+                    <span class="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200 whitespace-nowrap">
+                        Awaiting Pickup OTP
+                    </span>
+                `;
+            } else if (isCompleted) {
+                actionHtml = `
+                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200 whitespace-nowrap">
+                        Fulfilled ✓
+                    </span>
+                `;
+            } else if (isCancelled) {
+                actionHtml = `
+                    <span class="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200 whitespace-nowrap">
+                        Cancelled
+                    </span>
+                `;
+            }
+
             orderEl.innerHTML = `
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-blue-900">#${order.order_reference}</span>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${order.order_status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} uppercase">
+                        <span class="text-xs font-bold text-blue-900 font-mono">#${order.order_reference}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${stClass} uppercase">
                             ${order.order_status}
                         </span>
+                        <span class="text-[10px] font-semibold text-slate-400">₹${parseFloat(order.total_amount).toFixed(2)}</span>
                     </div>
                     <p class="text-xs text-slate-700 font-medium mt-0.5">${order.items_summary || 'Meal items'}</p>
-                    <p class="text-[10px] text-slate-400 mt-0.5">${order.customer_name || 'Customer'} · OTP: <strong>${order.pickup_otp}</strong></p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">${order.customer_name || 'Customer'} · Method: ${order.payment_method} · Status: <strong>${order.payment_status}</strong></p>
                 </div>
                 <div class="flex items-center gap-2">
-                    ${order.order_status === 'pending' ? `
-                        <button onclick="updateOrderStatus(${order.id}, 'preparing')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors">
-                            Prepare
-                        </button>
-                    ` : ''}
-                    ${order.order_status === 'preparing' ? `
-                        <button onclick="updateOrderStatus(${order.id}, 'ready')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors">
-                            Ready
-                        </button>
-                    ` : ''}
-                    <button 
-                        onclick="completeOrder(${order.id})" 
-                        class="${isDone ? 'bg-emerald-600 opacity-60 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
-                        ${isDone ? 'disabled' : ''}>
-                        ${isDone ? 'Fulfilled ✓' : 'Complete'}
-                    </button>
+                    ${actionHtml}
                 </div>
             `;
             container.appendChild(orderEl);
@@ -226,26 +410,25 @@ async function renderOrders() {
     }
 }
 
-// Complete Order Action
-async function completeOrder(orderId) {
-    await updateOrderStatus(orderId, 'completed');
-}
-
 // Update Order Status Helper
 async function updateOrderStatus(orderId, newStatus) {
     try {
         const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ status: newStatus })
         });
         const data = await res.json();
         if (data.success) {
             await renderOrders();
             await loadAnalytics();
+        } else {
+            alert(data.message || 'Failed to update order status.');
         }
     } catch (e) {
         console.error('Order status update error:', e);
+        alert('Connection error while updating order status.');
     }
 }
 
@@ -266,6 +449,7 @@ async function handleVerifyOtp() {
         const res = await fetch(`${API_BASE_URL}/orders/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ otp, shop_id: currentShopId })
         });
         const data = await res.json();
@@ -316,8 +500,8 @@ async function handleAddItem(event) {
         const res = await fetch(`${API_BASE_URL}/vendor/menu/item`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({
-                shop_id: currentShopId,
                 name,
                 price,
                 quantity,
@@ -335,5 +519,134 @@ async function handleAddItem(event) {
         }
     } catch (e) {
         alert('Failed to connect to the server.');
+    }
+}
+
+// ============================================================================
+// VENDOR NOTIFICATIONS & KITCHEN ALERTS (PHASE 7)
+// ============================================================================
+
+let vendorNotifPollingTimer = null;
+
+async function initVendorNotifications() {
+    await fetchVendorUnreadCount();
+    if (vendorNotifPollingTimer) clearInterval(vendorNotifPollingTimer);
+    vendorNotifPollingTimer = setInterval(fetchVendorUnreadCount, 10000);
+}
+
+window.addEventListener('beforeunload', () => {
+    if (vendorNotifPollingTimer) {
+        clearInterval(vendorNotifPollingTimer);
+        vendorNotifPollingTimer = null;
+    }
+});
+
+async function fetchVendorUnreadCount() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/notifications/unread-count`, { credentials: 'include' });
+        if (!res.ok) {
+            if (res.status === 401 && vendorNotifPollingTimer) {
+                clearInterval(vendorNotifPollingTimer);
+            }
+            return;
+        }
+        const data = await res.json();
+        if (data.success) {
+            const badge = document.getElementById('vendor-notif-badge');
+            if (badge) {
+                const count = data.unread_count || 0;
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.textContent = '0';
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+    } catch (e) {
+        console.debug('Vendor notification count error:', e);
+    }
+}
+
+async function toggleVendorNotifDrawer(show) {
+    const drawer = document.getElementById('vendor-notif-drawer');
+    const backdrop = document.getElementById('vendor-notif-backdrop');
+    if (!drawer || !backdrop) return;
+
+    if (show) {
+        drawer.classList.remove('translate-x-full');
+        backdrop.classList.remove('hidden');
+        await loadVendorNotifications();
+    } else {
+        drawer.classList.add('translate-x-full');
+        backdrop.classList.add('hidden');
+    }
+}
+
+async function loadVendorNotifications() {
+    const container = document.getElementById('vendor-notif-items');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="py-8 text-center text-slate-400">
+            <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-blue-600"></i>
+            <p class="text-xs font-semibold">Loading kitchen alerts...</p>
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/notifications?limit=30`, { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.notifications || data.notifications.length === 0) {
+            container.innerHTML = `
+                <div class="py-10 text-center text-slate-400">
+                    <i class="fa-regular fa-bell-slash text-2xl mb-2 text-slate-300"></i>
+                    <p class="text-xs font-bold text-slate-600">No active alerts</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">New orders and kitchen events will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = '';
+        data.notifications.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `p-3.5 rounded-2xl border text-xs flex items-start gap-3 transition-colors ${
+                item.is_read ? 'bg-white border-slate-100' : 'bg-blue-50/50 border-blue-200'
+            }`;
+            itemDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 text-sm">
+                    <i class="fa-solid ${item.type === 'ORDER_CANCELLED' ? 'fa-ban text-rose-500' : 'fa-receipt'}"></i>
+                </div>
+                <div class="flex-grow min-w-0">
+                    <div class="flex items-center justify-between gap-1 mb-0.5">
+                        <span class="font-black text-slate-900 truncate">${item.title}</span>
+                        <span class="text-[10px] text-slate-400 shrink-0">${item.created_at ? item.created_at.split(' ')[1] || '' : ''}</span>
+                    </div>
+                    <p class="text-slate-600 text-[11px] leading-relaxed">${item.message}</p>
+                </div>
+            `;
+            container.appendChild(itemDiv);
+        });
+    } catch (e) {
+        container.innerHTML = `<div class="p-4 text-center text-xs text-rose-500 font-bold">Failed to load alerts.</div>`;
+    }
+}
+
+async function markAllVendorNotifsRead() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+            method: 'PUT',
+            credentials: 'include'
+        });
+        if (res.ok) {
+            const badge = document.getElementById('vendor-notif-badge');
+            if (badge) badge.classList.add('hidden');
+            await loadVendorNotifications();
+        }
+    } catch (e) {
+        console.error('Failed to mark all vendor notifications read:', e);
     }
 }

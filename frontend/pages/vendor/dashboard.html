@@ -26,6 +26,40 @@
             <p class="text-slate-500 text-sm mt-2">Manage live operations, menu availability, verify customer pickup OTPs, and view sales analytics.</p>
         </div>
 
+        <!-- OPERATIONAL STATUS BAR -->
+        <div class="w-full px-4 md:px-12">
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div id="status-indicator-dot" class="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-500">Stall Operational Status:</span>
+                            <span id="vendor-op-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 uppercase">
+                                OPEN
+                            </span>
+                        </div>
+                        <p id="vendor-op-status-desc" class="text-[11px] text-slate-400 mt-0.5">Accepting customer pre-orders. When paused or closed, in-flight orders can still be fulfilled.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleVendorNotifDrawer(true)" class="relative px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center gap-1.5" title="Kitchen Alerts">
+                        <i class="fa-solid fa-bell"></i>
+                        <span>Alerts</span>
+                        <span id="vendor-notif-badge" class="hidden bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">0</span>
+                    </button>
+                    <button onclick="setVendorOperationalStatus('OPEN')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors">
+                        Set Open
+                    </button>
+                    <button onclick="setVendorOperationalStatus('TEMPORARILY_UNAVAILABLE')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 transition-colors">
+                        Temp Pause
+                    </button>
+                    <button onclick="setVendorOperationalStatus('CLOSED')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors">
+                        Set Closed
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 4 MAIN UTILITY CARDS GRID -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-4 md:px-12">
 
@@ -145,6 +179,19 @@
                         <h4 id="total-orders-count" class="text-lg font-black text-slate-800">0</h4>
                     </div>
                 </div>
+
+                <!-- AI Demand Insights -->
+                <div class="mt-2 pt-3 border-t border-slate-100 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-brain text-purple-600 text-[11px]"></i> AI Demand Insights
+                        </span>
+                        <span id="ai-peak-slot" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100">Active</span>
+                    </div>
+                    <div id="ai-top-items-list" class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1 text-xs">
+                        <p class="text-[11px] text-slate-400">Loading top demand items...</p>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -198,6 +245,36 @@
                     <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700">Add Item</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Vendor Notifications Slide-over Drawer -->
+    <div id="vendor-notif-backdrop" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 hidden transition-opacity" onclick="toggleVendorNotifDrawer(false)"></div>
+    <div id="vendor-notif-drawer" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-sm font-black">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-slate-900">Kitchen Alerts</h3>
+                    <p class="text-[10px] text-slate-400">Incoming tickets & cancellations</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="markAllVendorNotifsRead()" class="text-[11px] font-bold text-blue-700 hover:underline px-2 py-1">
+                    Mark all read
+                </button>
+                <button onclick="toggleVendorNotifDrawer(false)" class="w-8 h-8 rounded-xl hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <div id="vendor-notif-items" class="flex-grow overflow-y-auto p-4 space-y-3">
+            <!-- Dynamically populated via dashboard.js -->
+        </div>
+        <div class="p-3 border-t border-slate-100 text-center bg-slate-50 text-[10px] text-slate-400">
+            Polling kitchen updates every 10 seconds.
         </div>
     </div>
 

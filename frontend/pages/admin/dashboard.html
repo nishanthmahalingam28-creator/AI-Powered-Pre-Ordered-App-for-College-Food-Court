@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Central Operations | KPRIET Food Court</title>
+    <title>Admin Operations Management | KPRIET Food Court</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../../js/core/tailwind-config.js"></script>
@@ -25,15 +25,18 @@
             <div>
                 <div class="flex items-center gap-2">
                     <span class="px-3 py-0.5 rounded-full text-xs font-black bg-purple-100 text-purple-800 uppercase tracking-wider">
-                        <i class="fa-solid fa-shield-halved mr-1"></i> Root Administration
+                        <i class="fa-solid fa-shield-halved mr-1"></i> Central Operations Management
                     </span>
-                    <span class="text-xs text-slate-400 font-medium">Food Court Central Hub</span>
+                    <span class="text-xs text-slate-400 font-medium">Phase 6 Governance Hub</span>
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">System Control Dashboard</h1>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">Admin Operations Control</h1>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <button onclick="toggleShopModal(true)" class="bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Add New Stall
+                    <i class="fa-solid fa-plus"></i> Add Stall
+                </button>
+                <button onclick="toggleVendorModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Add Vendor
                 </button>
                 <button onclick="logoutAdmin()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition-all">
                     Logout
@@ -41,7 +44,7 @@
             </div>
         </div>
 
-        <!-- 4 KPI Metrics Grid -->
+        <!-- KPI Metrics Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
                 <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold">
@@ -50,6 +53,7 @@
                 <div>
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Turnover</span>
                     <h3 id="stat-turnover" class="text-xl font-black text-slate-900 mt-0.5">₹0.00</h3>
+                    <span id="stat-collected-note" class="text-[10px] text-emerald-700 font-semibold">₹0.00 settled</span>
                 </div>
             </div>
 
@@ -60,6 +64,7 @@
                 <div>
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Orders</span>
                     <h3 id="stat-orders" class="text-xl font-black text-slate-900 mt-0.5">0</h3>
+                    <span id="stat-orders-breakdown" class="text-[10px] text-blue-600 font-semibold">0 active · 0 done</span>
                 </div>
             </div>
 
@@ -68,8 +73,9 @@
                     <i class="fa-solid fa-store"></i>
                 </div>
                 <div>
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Stalls</span>
-                    <h3 id="stat-shops" class="text-xl font-black text-slate-900 mt-0.5">0</h3>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Stalls Status</span>
+                    <h3 id="stat-shops" class="text-xl font-black text-slate-900 mt-0.5">0 Active</h3>
+                    <span id="stat-shops-op" class="text-[10px] text-slate-500 font-semibold">0 Open · 0 Closed · 0 Temp Unavail</span>
                 </div>
             </div>
 
@@ -78,18 +84,44 @@
                     <i class="fa-solid fa-users"></i>
                 </div>
                 <div>
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Registered Users</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Campus Accounts</span>
                     <h3 id="stat-users" class="text-xl font-black text-slate-900 mt-0.5">0</h3>
+                    <span id="stat-users-breakdown" class="text-[10px] text-purple-700 font-semibold">0 Cust · 0 Vendors</span>
                 </div>
             </div>
         </div>
 
-        <!-- Stalls Management Section -->
-        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-shop text-purple-600"></i> Food Court Stalls Registry
-                </h2>
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200 mb-6 overflow-x-auto gap-2 text-xs font-bold">
+            <button onclick="switchTab('shops')" id="tab-btn-shops" class="px-4 py-3 border-b-2 border-purple-600 text-purple-700 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-shop"></i> Stalls & Operations
+            </button>
+            <button onclick="switchTab('vendors')" id="tab-btn-vendors" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-id-badge"></i> Vendors & Assignments
+            </button>
+            <button onclick="switchTab('customers')" id="tab-btn-customers" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-graduation-cap"></i> Customer Management
+            </button>
+            <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-clock-rotate-left"></i> Global Orders
+            </button>
+            <button onclick="switchTab('payments')" id="tab-btn-payments" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-credit-card"></i> Payment Monitoring
+            </button>
+            <button onclick="switchTab('audit')" id="tab-btn-audit" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-clipboard-list"></i> Security Audit Trail
+            </button>
+        </div>
+
+        <!-- SECTION 1: STALL OPERATIONS -->
+        <section id="section-shops" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-shop text-purple-600"></i> Food Court Stalls Directory & Operations
+                    </h2>
+                    <p class="text-xs text-slate-400">Control stall operational status (OPEN / CLOSED / TEMPORARILY_UNAVAILABLE) and active enablement.</p>
+                </div>
                 <span id="shops-count" class="text-xs font-bold text-slate-500">Loading...</span>
             </div>
             <div class="overflow-x-auto">
@@ -98,66 +130,198 @@
                         <tr>
                             <th class="p-3">Stall Name</th>
                             <th class="p-3">Category</th>
-                            <th class="p-3">Items Count</th>
-                            <th class="p-3">Status</th>
+                            <th class="p-3">Assigned Vendor</th>
+                            <th class="p-3">Dishes</th>
+                            <th class="p-3">Operational Status</th>
+                            <th class="p-3">Admin Status</th>
                             <th class="p-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="shops-table-body" class="divide-y divide-slate-100">
-                        <!-- Loaded dynamically via dashboard.js -->
+                        <!-- Populated dynamically via dashboard.js -->
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- Live Orders Feed Section -->
-        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> Recent Pre-Order Activity
-                </h2>
-                <span class="text-xs text-slate-400">Live transaction stream</span>
+        <!-- SECTION 2: VENDOR MANAGEMENT -->
+        <section id="section-vendors" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-id-badge text-blue-600"></i> Vendor Accounts & Stall Assignments
+                    </h2>
+                    <p class="text-xs text-slate-400">Ensure 1-to-1 vendor stall isolation and manage vendor account status.</p>
+                </div>
+                <button onclick="toggleVendorModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-colors">
+                    + New Vendor
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-3">Vendor Email</th>
+                            <th class="p-3">Assigned Stall</th>
+                            <th class="p-3">Stall Operational Status</th>
+                            <th class="p-3">Account Status</th>
+                            <th class="p-3">Created</th>
+                            <th class="p-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendors-table-body" class="divide-y divide-slate-100">
+                        <!-- Populated dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 3: CUSTOMER DIRECTORY -->
+        <section id="section-customers" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap text-emerald-600"></i> Customer Accounts & Profiles
+                    </h2>
+                    <p class="text-xs text-slate-400">Manage student, faculty, and guest campus accounts, wallet balances, and active standing.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="customer-search-input" onkeyup="filterCustomers()" placeholder="Search name, roll no, email..." class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-purple-600">
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-3">Name & Roll / ID</th>
+                            <th class="p-3">Email</th>
+                            <th class="p-3">Customer Type</th>
+                            <th class="p-3">Mobile</th>
+                            <th class="p-3">Wallet Balance</th>
+                            <th class="p-3">Orders / Spent</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customers-table-body" class="divide-y divide-slate-100">
+                        <!-- Populated dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 4: GLOBAL ORDER MONITORING -->
+        <section id="section-orders" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> Global Food Court Pre-Order Feed
+                    </h2>
+                    <p class="text-xs text-slate-400">Live order queue monitoring across all stalls with status filters.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="order-status-filter" onchange="loadGlobalOrders()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <input type="text" id="order-search-input" onkeyup="if(event.key==='Enter') loadGlobalOrders()" placeholder="Order ref, customer..." class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-purple-600">
+                    <button onclick="loadGlobalOrders()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-xl">Refresh</button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600">
                     <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
                         <tr>
                             <th class="p-3">Order Ref</th>
-                            <th class="p-3">Customer</th>
                             <th class="p-3">Stall</th>
+                            <th class="p-3">Customer</th>
+                            <th class="p-3">Items Summary</th>
                             <th class="p-3">Amount</th>
+                            <th class="p-3">Payment</th>
                             <th class="p-3">Status</th>
-                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">OTP</th>
+                            <th class="p-3">Placed At</th>
                         </tr>
                     </thead>
-                    <tbody id="orders-table-body" class="divide-y divide-slate-100">
-                        <!-- Loaded dynamically via dashboard.js -->
+                    <tbody id="global-orders-table-body" class="divide-y divide-slate-100">
+                        <!-- Populated dynamically via dashboard.js -->
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- Registered Users Section -->
-        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-user-gear text-emerald-600"></i> User Accounts Directory
-                </h2>
-                <span id="users-count" class="text-xs font-bold text-slate-500">Loading...</span>
+        <!-- SECTION 5: PAYMENT MONITORING -->
+        <section id="section-payments" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-credit-card text-emerald-600"></i> Payment Gateway & Transaction Monitoring
+                    </h2>
+                    <p class="text-xs text-slate-400">Track Razorpay checkout orders, campus wallet settlements, webhooks, and refunds.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="payment-status-filter" onchange="loadPayments()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none">
+                        <option value="">All Statuses</option>
+                        <option value="successful">Successful</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                        <option value="refunded">Refunded</option>
+                    </select>
+                    <button onclick="loadPayments()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-xl">Refresh</button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600">
                     <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
                         <tr>
-                            <th class="p-3">Email</th>
-                            <th class="p-3">Name / Role Detail</th>
-                            <th class="p-3">Role</th>
+                            <th class="p-3">Transaction Ref</th>
+                            <th class="p-3">Order Ref</th>
+                            <th class="p-3">Stall</th>
+                            <th class="p-3">Customer</th>
+                            <th class="p-3">Method / Provider</th>
+                            <th class="p-3">Amount</th>
+                            <th class="p-3">Gateway Order ID</th>
                             <th class="p-3">Status</th>
-                            <th class="p-3 text-right">Action</th>
+                            <th class="p-3">Date</th>
                         </tr>
                     </thead>
-                    <tbody id="users-table-body" class="divide-y divide-slate-100">
-                        <!-- Loaded dynamically via dashboard.js -->
+                    <tbody id="payments-table-body" class="divide-y divide-slate-100">
+                        <!-- Populated dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 6: AUDIT LOGS -->
+        <section id="section-audit" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-list text-purple-600"></i> Administrative & Operational Audit Logs
+                    </h2>
+                    <p class="text-xs text-slate-400">Cryptographically immutable activity trail of governance, assignments, and status modifications.</p>
+                </div>
+                <button onclick="loadAuditLogs()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-xl">Refresh Trail</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Actor</th>
+                            <th class="p-3">Role</th>
+                            <th class="p-3">Action Code</th>
+                            <th class="p-3">Entity</th>
+                            <th class="p-3">Entity ID</th>
+                            <th class="p-3">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body" class="divide-y divide-slate-100 font-mono text-[11px]">
+                        <!-- Populated dynamically via dashboard.js -->
                     </tbody>
                 </table>
             </div>
@@ -184,12 +348,81 @@
                     <input type="text" id="stall-category" required placeholder="e.g. North Indian" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-600">
                 </div>
                 <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Initial Operational Status</label>
+                    <select id="stall-operational-status" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-600">
+                        <option value="OPEN">OPEN - Accepting Orders</option>
+                        <option value="TEMPORARILY_UNAVAILABLE">TEMPORARILY_UNAVAILABLE</option>
+                        <option value="CLOSED">CLOSED</option>
+                    </select>
+                </div>
+                <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Description</label>
                     <textarea id="stall-description" placeholder="Freshly prepared homestyle delicacies..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-600"></textarea>
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
                     <button type="button" onclick="toggleShopModal(false)" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
                     <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-700 text-white hover:bg-purple-800">Create Stall</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CREATE VENDOR MODAL -->
+    <div id="create-vendor-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Create Vendor Account</h3>
+                <button onclick="toggleVendorModal(false)" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="create-vendor-form" onsubmit="handleCreateVendor(event)" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Vendor Email</label>
+                    <input type="email" id="vendor-email" required placeholder="vendor.stall@kpriet.ac.in" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Initial Password</label>
+                    <input type="password" id="vendor-password" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Assign to Active Stall (Optional)</label>
+                    <select id="vendor-shop-select" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
+                        <option value="">-- Unassigned --</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="toggleVendorModal(false)" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700">Create Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ASSIGN VENDOR MODAL -->
+    <div id="assign-vendor-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Assign Vendor to Stall</h3>
+                <button onclick="toggleAssignModal(false)" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="assign-vendor-form" onsubmit="handleAssignVendor(event)" class="flex flex-col gap-4">
+                <input type="hidden" id="assign-vendor-id">
+                <div>
+                    <p class="text-xs text-slate-500">Configuring assignment for vendor:</p>
+                    <p id="assign-vendor-email" class="font-bold text-slate-800 text-sm mt-0.5"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Target Stall</label>
+                    <select id="assign-shop-select" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-600">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="toggleAssignModal(false)" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-700 text-white hover:bg-purple-800">Save Assignment</button>
                 </div>
             </form>
         </div>

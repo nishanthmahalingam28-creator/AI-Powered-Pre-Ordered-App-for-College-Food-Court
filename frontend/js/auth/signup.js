@@ -106,7 +106,7 @@ verifyOtpBtn.addEventListener("click", async function () {
         const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mobile: mobileVal, code: enteredOtp })
+            body: JSON.stringify({ mobile: mobileVal, code: enteredOtp, purpose: 'signup' })
         });
         const data = await res.json();
 
@@ -129,6 +129,20 @@ verifyOtpBtn.addEventListener("click", async function () {
             verifyOtpBtn.disabled = false;
             verifyOtpBtn.innerHTML = 'Verify OTP';
         }
+    }
+});
+
+mobileNumberInput.addEventListener("input", function () {
+    if (isOtpVerified) {
+        isOtpVerified = false;
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        verifyOtpBtn.disabled = false;
+        verifyOtpBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        otpInput.disabled = false;
+        otpInput.value = "";
+        otpSuccess.innerHTML = "";
+        mobileError.innerHTML = "Mobile number was modified. Please re-verify with OTP.";
     }
 });
 

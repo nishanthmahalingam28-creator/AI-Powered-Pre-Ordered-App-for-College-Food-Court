@@ -1,0 +1,67 @@
+name: College Food Court CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, version1 ]
+  pull_request:
+    branches: [ main, master, version1 ]
+
+jobs:
+  test:
+    name: Run Automated Test Suites
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: food_court_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest flake8
+
+      - name: Syntax & Lint Verification
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,venv,docs
+          # Exit-zero treat all errors as warnings. Max line length 140
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=140 --statistics --exclude=.venv,venv,docs
+
+      - name: Initialize Database Schema
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test_root_password
+          DB_NAME: food_court_db
+          USE_SQLITE: 0
+        run: |
+          python backend/init_db.py
+
+      - name: Execute Full Regression Test Suite
+        env:
+          FLASK_ENV: testing
+          USE_SQLITE: 1
+          SECRET_KEY: ci-pipeline-secure-test-key-32b-verified
+          RAZORPAY_KEY_ID: rzp_test_ci_pipeline_key
+          RAZORPAY_KEY_SECRET: rzp_test_ci_pipeline_secret
+          RAZORPAY_WEBHOOK_SECRET: rzp_wh_ci_test_secret_32b_ok
+        run: |
+          python -m pytest tests/ -v

@@ -1,0 +1,79 @@
+version: "3.8"
+
+networks:
+  internal_net:
+    internal: true
+  public_net:
+    driver: bridge
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: foodcourt_mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_DATABASE: food_court_db
+    expose:
+      - "3306"
+    networks:
+      - internal_net
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: foodcourt_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      PORT: 5000
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: food_court_db
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      COOKIE_SECURE: 1
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:?RAZORPAY_KEY_ID is required}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:?RAZORPAY_KEY_SECRET is required}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:?RAZORPAY_WEBHOOK_SECRET is required}
+    expose:
+      - "5000"
+    networks:
+      - internal_net
+      - public_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: foodcourt_nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/var/www/foodcourt:ro
+    networks:
+      - public_net
+
+volumes:
+  mysql_data:
+    driver: local

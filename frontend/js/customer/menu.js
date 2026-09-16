@@ -107,9 +107,11 @@ async function loadStallFilters() {
             const allBtn = document.createElement('button');
             allBtn.className = `px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${!selectedShop ? 'bg-teal-700 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`;
             allBtn.textContent = 'All Stalls';
-            allBtn.onclick = () => {
+            allBtn.onclick = async () => {
                 selectedShop = '';
+                selectedCategory = 'all';
                 updateStallActivePills();
+                await loadCategoryFilters();
                 fetchAndRenderMenu();
             };
             container.appendChild(allBtn);
@@ -120,9 +122,11 @@ async function loadStallFilters() {
                 btn.className = `stall-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${isActive ? 'bg-teal-700 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`;
                 btn.textContent = stall.name;
                 btn.dataset.stall = stall.name;
-                btn.onclick = () => {
+                btn.onclick = async () => {
                     selectedShop = stall.name;
+                    selectedCategory = 'all';
                     updateStallActivePills();
+                    await loadCategoryFilters();
                     fetchAndRenderMenu();
                 };
                 container.appendChild(btn);
@@ -145,7 +149,25 @@ async function loadCategoryFilters() {
     const container = document.getElementById('category-filters');
     if (!container) return;
 
-    const categories = ['all', 'Main Course', 'Fast Food', 'Chinese', 'Beverages', 'Snacks', 'Breakfast', 'Desserts'];
+    let categories = ['all'];
+    try {
+        const url = selectedShop 
+            ? `${API_BASE_URL}/categories?shop=${encodeURIComponent(selectedShop)}`
+            : `${API_BASE_URL}/categories`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.categories)) {
+            categories = ['all', ...data.categories];
+        }
+    } catch (e) {
+        console.warn('Failed to load categories from server:', e);
+    }
+
+    // Reset selectedCategory if not in the new category list
+    if (selectedCategory !== 'all' && !categories.includes(selectedCategory)) {
+        selectedCategory = 'all';
+    }
+
     container.innerHTML = '';
 
     categories.forEach(cat => {
@@ -214,7 +236,7 @@ async function fetchAndRenderMenu() {
                                 <h3 class="font-bold text-base text-slate-800 mt-1.5">${item.name}</h3>
                             </div>
                             <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">
-                                ${isAvailable ? 'In Stock' : 'Out of Stock'}
+                                ${isAvailable ? 'In Stock' : 'OUT OF STOCK'}
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mt-1">${item.description || item.category}</p>
@@ -225,7 +247,7 @@ async function fetchAndRenderMenu() {
                             class="font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm ${isAvailable ? 'bg-teal-700 hover:bg-teal-800 text-white cursor-pointer active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}"
                             ${!isAvailable ? 'disabled' : ''}
                             onclick='addToCart(${JSON.stringify({ id: item.id, name: item.name, shop: item.shop_name, price: item.price })}, this)'>
-                            ${isAvailable ? '<i class="fa-solid fa-plus text-[10px] mr-1"></i> Add' : 'Unavailable'}
+                            ${isAvailable ? '<i class="fa-solid fa-plus text-[10px] mr-1"></i> Add' : 'OUT OF STOCK'}
                         </button>
                     </div>
                 `;
