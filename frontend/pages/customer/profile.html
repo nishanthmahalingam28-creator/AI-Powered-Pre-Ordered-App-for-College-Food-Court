@@ -13,10 +13,62 @@
 <body class="customer-page">
   <div id="navbar-container"></div>
   <main class="customer-shell py-8 pb-12">
-    <div class="mb-8"><p class="text-sm font-bold uppercase tracking-widest text-teal-700">Customer Account</p><h1 class="mt-2 text-3xl font-black">My profile</h1><p class="mt-2 text-slate-500">Edit your details for the future account API integration.</p></div>
+    <div class="mb-8">
+      <p class="text-sm font-bold uppercase tracking-widest text-teal-700">Customer Account</p>
+      <h1 class="mt-2 text-3xl font-black">My Profile</h1>
+      <p class="mt-2 text-slate-500">Manage your personal information and account security.</p>
+    </div>
     <div class="grid gap-6 lg:grid-cols-2">
-      <section class="customer-card p-6"><h2 class="text-xl font-extrabold">Personal details</h2><form id="profile-form" class="mt-5 space-y-4"><label class="block text-sm font-bold">Name<input class="customer-input mt-2" name="name" value="Demo Customer"></label><label class="block text-sm font-bold">Email<input class="customer-input mt-2" type="email" name="email" value="student@kpriet.ac.in"></label><label class="block text-sm font-bold">Mobile number<input class="customer-input mt-2" type="tel" name="mobile" value="+91 98765 43210"></label><label class="block text-sm font-bold">Customer type<select class="customer-input mt-2" name="customerType"><option selected>Student</option><option>Faculty</option><option>Guest</option></select></label><button class="customer-button customer-button-primary" type="submit">Save profile</button><p id="profile-message" class="hidden rounded-lg bg-teal-50 p-3 text-sm text-teal-800"></p></form></section>
-      <section class="customer-card p-6"><h2 class="text-xl font-extrabold">Change password</h2><p class="mt-2 text-sm text-slate-500">Password values are never stored by this frontend demo.</p><form id="password-form" class="mt-5 space-y-4"><label class="block text-sm font-bold">Current password<input class="customer-input mt-2" type="password" autocomplete="current-password" required></label><label class="block text-sm font-bold">New password<input class="customer-input mt-2" type="password" autocomplete="new-password" required></label><label class="block text-sm font-bold">Confirm new password<input class="customer-input mt-2" type="password" autocomplete="new-password" required></label><button class="customer-button customer-button-secondary" type="submit">Request password change</button><p id="password-message" class="hidden rounded-lg bg-amber-50 p-3 text-sm text-amber-800"></p></form></section>
+      <section class="customer-card p-6">
+        <h2 class="text-xl font-extrabold text-slate-900">Personal Details</h2>
+        <form id="profile-form" class="mt-5 space-y-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700" for="profile-name">Full Name</label>
+            <input class="customer-input mt-1.5 w-full" id="profile-name" name="name" required placeholder="Loading name...">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700" for="profile-email">Email Address <span class="text-xs font-normal text-slate-400">(Read-only)</span></label>
+            <input class="customer-input mt-1.5 w-full bg-slate-100 text-slate-600 cursor-not-allowed" id="profile-email" type="email" name="email" readonly placeholder="Loading email...">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700" for="profile-mobile">Mobile Number</label>
+            <input class="customer-input mt-1.5 w-full" id="profile-mobile" type="tel" name="mobile" placeholder="10-digit mobile number">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-slate-700" for="profile-type">Account Type <span class="text-xs font-normal text-slate-400">(Read-only)</span></label>
+              <input class="customer-input mt-1.5 w-full bg-slate-100 text-slate-600 cursor-not-allowed uppercase text-xs font-bold" id="profile-type" readonly placeholder="Customer">
+            </div>
+            <div id="profile-identifier-container">
+              <label class="block text-sm font-bold text-slate-700" id="profile-identifier-label" for="profile-identifier">Roll / Staff ID</label>
+              <input class="customer-input mt-1.5 w-full bg-slate-100 text-slate-600 cursor-not-allowed font-mono text-xs uppercase" id="profile-identifier" readonly placeholder="N/A">
+            </div>
+          </div>
+          <button id="save-profile-btn" class="customer-button customer-button-primary mt-2" type="submit">Save Changes</button>
+          <p id="profile-message" class="hidden rounded-lg p-3 text-xs font-semibold"></p>
+        </form>
+      </section>
+
+      <section class="customer-card p-6">
+        <h2 class="text-xl font-extrabold text-slate-900">Change Password</h2>
+        <p class="mt-2 text-sm text-slate-500">Ensure your password has at least 8 characters.</p>
+        <form id="password-form" class="mt-5 space-y-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700" for="current-password">Current Password</label>
+            <input class="customer-input mt-1.5 w-full" id="current-password" type="password" autocomplete="current-password" required placeholder="Enter current password">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700" for="new-password">New Password</label>
+            <input class="customer-input mt-1.5 w-full" id="new-password" type="password" autocomplete="new-password" required minlength="8" placeholder="Minimum 8 characters">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700" for="confirm-password">Confirm New Password</label>
+            <input class="customer-input mt-1.5 w-full" id="confirm-password" type="password" autocomplete="new-password" required minlength="8" placeholder="Confirm new password">
+          </div>
+          <button id="change-password-btn" class="customer-button customer-button-secondary mt-2" type="submit">Update Password</button>
+          <p id="password-message" class="hidden rounded-lg p-3 text-xs font-semibold"></p>
+        </form>
+      </section>
     </div>
   </main>
   <div id="footer-container"></div>

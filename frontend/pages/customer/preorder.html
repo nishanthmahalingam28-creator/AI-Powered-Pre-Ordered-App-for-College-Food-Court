@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="../../css/base/reset.css">
   <link rel="stylesheet" href="../../css/pages/customer.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="../../js/core/public-components.js" defer></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
@@ -49,15 +50,23 @@
             <input type="radio" name="paymentMethod" value="Campus Wallet" checked class="text-teal-600 focus:ring-teal-500">
             <div>
               <strong class="text-xs font-black text-slate-800 block">Student / Campus Wallet</strong>
-              <span class="text-[11px] text-slate-500">Fast 1-tap institutional payment deduction</span>
+              <span class="text-[11px] text-slate-500">Instant balance deduction from college account</span>
             </div>
           </label>
 
           <label class="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 p-3.5 cursor-pointer hover:bg-slate-50">
             <input type="radio" name="paymentMethod" value="UPI / Online" class="text-teal-600 focus:ring-teal-500">
             <div>
-              <strong class="text-xs font-black text-slate-800 block">UPI / QR Payment</strong>
-              <span class="text-[11px] text-slate-500">Instant scan via GPay, PhonePe, or Paytm</span>
+              <strong class="text-xs font-black text-slate-800 block">UPI / Online Gateway (Razorpay)</strong>
+              <span class="text-[11px] text-slate-500">Instant UPI (GPay, PhonePe, Paytm), RuPay, Cards & Netbanking</span>
+            </div>
+          </label>
+
+          <label class="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 p-3.5 cursor-pointer hover:bg-slate-50">
+            <input type="radio" name="paymentMethod" value="Pay at Counter" class="text-teal-600 focus:ring-teal-500">
+            <div>
+              <strong class="text-xs font-black text-slate-800 block">Pay at Counter</strong>
+              <span class="text-[11px] text-slate-500">Pay cash or scan UPI at the stall upon pickup</span>
             </div>
           </label>
         </section>
@@ -113,6 +122,21 @@
         </div>
       </div>
 
+      <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-600">Payment Status:</span>
+          <span id="order-payment-status" class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-emerald-100 text-emerald-800">
+            PAID
+          </span>
+          <span id="order-payment-method" class="text-xs text-slate-500 font-medium"></span>
+        </div>
+        <div id="pending-pay-action" class="hidden">
+          <button type="button" id="complete-pending-pay-btn" class="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition-all shadow-sm">
+            Complete Online Payment Now →
+          </button>
+        </div>
+      </div>
+
       <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
         <button onclick="window.print()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors">
           <i class="fa-solid fa-print mr-1.5"></i> Print Receipt
@@ -122,6 +146,34 @@
         </a>
       </div>
     </section>
+
+    <!-- Real Gateway Payment Processing & Verification Status Modal -->
+    <div id="payment-processing-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-100 text-center">
+        <div id="payment-spinner-icon" class="w-16 h-16 bg-teal-50 text-teal-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+          <i class="fa-solid fa-circle-notch fa-spin"></i>
+        </div>
+        <h3 id="payment-processing-title" class="text-xl font-black text-slate-900">Verifying Payment...</h3>
+        <p id="payment-processing-desc" class="text-xs text-slate-500 mt-2">Authorizing cryptographic signature with server gateway. Please do not close or refresh.</p>
+
+        <div class="my-5 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
+          <div class="flex justify-between text-xs text-slate-600">
+            <span>Order Reference:</span>
+            <span id="proc-order-ref" class="font-mono font-bold text-teal-700">—</span>
+          </div>
+          <div class="flex justify-between text-xs text-slate-600">
+            <span>Gateway Transaction:</span>
+            <span id="proc-payment-id" class="font-mono text-slate-800 text-[11px]">—</span>
+          </div>
+        </div>
+
+        <div id="payment-processing-action" class="hidden mt-4">
+          <button type="button" id="payment-close-modal-btn" class="w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
 
   </main>
 

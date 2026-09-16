@@ -126,6 +126,16 @@ async function renderMenuItems() {
                     </button>
                 </div>
 
+                <!-- Edit Price Button -->
+                <button onclick="editItemPrice(${item.id}, ${item.price}, '${item.name.replace(/'/g, "\\'")}')" title="Edit Price" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-500 rounded-lg text-xs transition-colors">
+                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                </button>
+
+                <!-- Delete Item Button -->
+                <button onclick="deleteItem(${item.id}, '${item.name.replace(/'/g, "\\'")}')" title="Delete Item" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg text-xs transition-colors">
+                    <i class="fa-solid fa-trash text-[10px]"></i>
+                </button>
+
                 <!-- Availability Toggle Switch -->
                 <label class="relative inline-flex items-center cursor-pointer ml-1">
                     <input type="checkbox" class="sr-only peer" ${item.is_available && item.quantity > 0 ? 'checked' : ''} onchange="toggleItemAvailability(${item.id}, ${item.is_available ? 'true' : 'false'})">
@@ -139,6 +149,54 @@ async function renderMenuItems() {
     }
 }
 
+// Edit Price via API
+async function editItemPrice(itemId, currentPrice, itemName) {
+    const newPriceStr = prompt(`Enter new price for "${itemName}" (₹):`, currentPrice);
+    if (newPriceStr === null) return;
+    const newPrice = parseFloat(newPriceStr.trim());
+    if (isNaN(newPrice) || newPrice <= 0) {
+        alert('Please enter a valid price greater than ₹0.');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ price: newPrice })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await renderMenuItems();
+            await loadAnalytics();
+        } else {
+            alert(data.message || 'Failed to update price.');
+        }
+    } catch (e) {
+        alert('Failed to connect to the server.');
+    }
+}
+
+// Delete Item via API
+async function deleteItem(itemId, itemName) {
+    if (!confirm(`Are you sure you want to remove "${itemName}" from your menu?`)) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+            await renderMenuItems();
+            await loadAnalytics();
+        } else {
+            alert(data.message || 'Failed to delete item.');
+        }
+    } catch (e) {
+        alert('Failed to connect to the server.');
+    }
+}
+
 // Adjust Quantity via API
 async function updateQuantity(itemId, currentQty, change) {
     const newQty = Math.max(0, currentQty + change);
@@ -146,6 +204,7 @@ async function updateQuantity(itemId, currentQty, change) {
         await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ quantity: newQty, available: newQty > 0 })
         });
         await renderMenuItems();
@@ -161,6 +220,7 @@ async function toggleItemAvailability(itemId, currentlyAvailable) {
         await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ available: !currentlyAvailable })
         });
         await renderMenuItems();
@@ -176,7 +236,7 @@ async function renderOrders() {
     if (!container) return;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/orders/vendor/${currentShopId}`);
+        const res = await fetch(`${API_BASE_URL}/orders/vendor/${currentShopId}`, { credentials: 'include' });
         const data = await res.json();
         container.innerHTML = '';
 
@@ -237,6 +297,7 @@ async function updateOrderStatus(orderId, newStatus) {
         const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ status: newStatus })
         });
         const data = await res.json();
@@ -266,6 +327,7 @@ async function handleVerifyOtp() {
         const res = await fetch(`${API_BASE_URL}/orders/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ otp, shop_id: currentShopId })
         });
         const data = await res.json();
@@ -316,8 +378,8 @@ async function handleAddItem(event) {
         const res = await fetch(`${API_BASE_URL}/vendor/menu/item`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({
-                shop_id: currentShopId,
                 name,
                 price,
                 quantity,

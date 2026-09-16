@@ -1,16 +1,19 @@
-from flask import Blueprint, jsonify, request, session
+import logging
 import secrets
 from datetime import datetime
+from flask import Blueprint, jsonify, request, session
 
 from db import DB
 from routes.auth import login_required, role_required
 from services.payment import PaymentService
 
+logger = logging.getLogger("food_court.orders")
 orders_bp = Blueprint("orders", __name__)
 
 
 @orders_bp.post("")
 @orders_bp.post("/")
+@orders_bp.post("/place")
 @role_required(["customer", "admin"])
 def place_order():
     data = request.get_json(silent=True) or {}
@@ -40,9 +43,23 @@ def place_order():
         if not item_id:
             return jsonify({"success": False, "message": "Invalid item payload. Item ID is required."}), 400
 
-        item = DB.get_one("SELECT * FROM menu_items WHERE id = %s", (item_id,))
+        item = DB.get_one(
+            """
+            SELECT m.*, s.name as shop_name, s.is_active as shop_is_active
+            FROM menu_items m
+            INNER JOIN shops s ON s.id = m.shop_id
+            WHERE m.id = %s
+            """,
+            (item_id,)
+        )
         if not item:
             return jsonify({"success": False, "message": f"Menu item #{item_id} not found."}), 404
+
+        if not item.get("shop_is_active"):
+            return jsonify({
+                "success": False,
+                "message": f"Stall '{item['shop_name']}' is currently closed or inactive. Orders cannot be placed."
+            }), 400
 
         # Enforce single-stall orders: one cart = one shop
         if detected_shop_id is None:
@@ -82,22 +99,23 @@ def place_order():
     shop_id = detected_shop_id
     order_ref = f"KPR-{secrets.randbelow(900000) + 100000}"
     pickup_otp = str(secrets.randbelow(900000) + 100000)
-    payment_method = str(data.get("payment_method") or "Campus Wallet")
+    raw_method = str(data.get("payment_method") or "Campus Wallet")
+    _, payment_method_label = PaymentService.normalize_method(raw_method)
     created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         with DB.transaction() as tx:
-            # Create Order Record
+            # 1. Create Order Record with pending payment_status by default
             order_id = tx.execute(
                 """
                 INSERT INTO orders (order_reference, customer_id, shop_id, total_amount, order_status,
                                     payment_status, payment_method, pickup_otp, created_at)
-                VALUES (%s, %s, %s, %s, 'pending', 'paid', %s, %s, %s)
+                VALUES (%s, %s, %s, %s, 'pending', 'pending', %s, %s, %s)
                 """,
-                (order_ref, customer_id, shop_id, total_amount, payment_method, pickup_otp, created_at),
+                (order_ref, customer_id, shop_id, total_amount, payment_method_label, pickup_otp, created_at),
             )
 
-            # Insert Items and Decrement Stock Atomically (Race Condition / Concurrency Guard)
+            # 2. Insert Items and Decrement Stock Atomically (Race Condition / Concurrency Guard)
             for item in validated_items:
                 affected = tx.execute_update(
                     """
@@ -119,10 +137,13 @@ def place_order():
                     (order_id, item["menu_item_id"], item["name"], item["unit_price"], item["quantity"], item["subtotal"]),
                 )
 
-            # Process Payment via Service Abstraction within transaction
+            # 3. Process Payment via Service Abstraction within transaction
+            # Campus Wallet: verified & deducted server-side atomically
+            # UPI/Online: initiated as pending with gateway_token
+            # Cash: initiated as pending
             payment_result = PaymentService.process_payment(
                 order_id=order_id,
-                method=payment_method,
+                method=raw_method,
                 amount=total_amount,
                 customer_id=customer_id,
                 tx=tx
@@ -130,6 +151,7 @@ def place_order():
     except ValueError as ve:
         return jsonify({"success": False, "message": str(ve)}), 400
     except Exception as e:
+        logger.error("Order placement error for customer_id=%s: %s", customer_id, type(e).__name__)
         return jsonify({"success": False, "message": "Failed to process order. Please try again."}), 500
 
     shop = DB.get_one("SELECT name FROM shops WHERE id = %s", (shop_id,))
@@ -140,6 +162,7 @@ def place_order():
         "message": "Order placed successfully!",
         "order": {
             "id": order_id,
+            "order_id": order_id,
             "order_reference": order_ref,
             "shop_id": shop_id,
             "shop_name": shop_name,
@@ -147,11 +170,285 @@ def place_order():
             "pickup_otp": pickup_otp,
             "order_status": "pending",
             "payment_status": payment_result["status"],
-            "payment_ref": payment_result["transaction_ref"],
+            "payment_ref": payment_result.get("transaction_ref"),
+            "gateway_token": payment_result.get("gateway_token"),
+            "gateway_order_id": payment_result.get("gateway_order_id"),
+            "razorpay_order_id": payment_result.get("razorpay_order_id"),
+            "key_id": payment_result.get("key_id"),
+            "amount_paise": payment_result.get("amount_paise", int(round(total_amount * 100))),
+            "currency": payment_result.get("currency", "INR"),
+            "payment_method": payment_result.get("method", payment_method_label),
+            "payment": {
+                "payment_id": payment_result.get("payment_id"),
+                "payment_status": payment_result.get("status"),
+                "gateway_token": payment_result.get("gateway_token"),
+                "gateway_order_id": payment_result.get("gateway_order_id"),
+                "razorpay_order_id": payment_result.get("razorpay_order_id"),
+                "key_id": payment_result.get("key_id"),
+                "amount_paise": payment_result.get("amount_paise", int(round(total_amount * 100))),
+                "currency": payment_result.get("currency", "INR")
+            },
             "items_count": sum(i["quantity"] for i in validated_items),
             "created_at": created_at
         }
     }), 201
+
+
+@orders_bp.post("/<int:order_id>/verify-payment")
+@role_required(["customer", "admin"])
+def verify_order_payment(order_id):
+    """
+    CRITICAL: Official server-side payment verification endpoint for Razorpay Checkout.
+    Validates razorpay_order_id, razorpay_payment_id, and cryptographic razorpay_signature.
+    """
+    data = request.get_json(silent=True) or {}
+    gateway_order_id = str(data.get("razorpay_order_id") or data.get("gateway_order_id") or "").strip()
+    gateway_payment_id = str(data.get("razorpay_payment_id") or data.get("gateway_payment_id") or "").strip()
+    gateway_signature = str(data.get("razorpay_signature") or data.get("gateway_signature") or "").strip()
+
+    if not gateway_order_id or not gateway_payment_id or not gateway_signature:
+        return jsonify({
+            "success": False,
+            "message": "Payment verification requires razorpay_order_id, razorpay_payment_id, and razorpay_signature."
+        }), 400
+
+    customer_id = session.get("user_id") if session.get("role") == "customer" else None
+
+    try:
+        with DB.transaction() as tx:
+            result = PaymentService.verify_gateway_payment(
+                order_id=order_id,
+                gateway_order_id=gateway_order_id,
+                gateway_payment_id=gateway_payment_id,
+                gateway_signature=gateway_signature,
+                customer_id=customer_id,
+                tx=tx
+            )
+        return jsonify({
+            "success": True,
+            "message": result["message"],
+            "status": "paid",
+            "payment_status": "paid",
+            "order_id": order_id,
+            "transaction_ref": gateway_payment_id
+        }), 200
+    except ValueError as ve:
+        return jsonify({"success": False, "message": str(ve)}), 400
+    except PermissionError as pe:
+        return jsonify({"success": False, "message": str(pe)}), 403
+    except Exception as e:
+        logger.error("Payment verification error for order %s: %s", order_id, e)
+        return jsonify({"success": False, "message": "Failed to verify payment."}), 500
+
+
+@orders_bp.post("/<int:order_id>/confirm-payment")
+@role_required(["customer", "admin"])
+def confirm_order_payment(order_id):
+    """
+    Backwards-compatible payment confirmation endpoint.
+    Accepts either Razorpay signature credentials or legacy HMAC server tokens.
+    """
+    data = request.get_json(silent=True) or {}
+    tx_ref = str(data.get("transaction_ref") or data.get("transaction_id") or "").strip()
+    gateway_token = str(data.get("gateway_token") or data.get("token") or "").strip()
+    gateway_order_id = str(data.get("razorpay_order_id") or data.get("gateway_order_id") or "").strip()
+    gateway_payment_id = str(data.get("razorpay_payment_id") or data.get("gateway_payment_id") or tx_ref).strip()
+    gateway_signature = str(data.get("razorpay_signature") or data.get("gateway_signature") or "").strip()
+
+    if not gateway_signature and (not tx_ref or not gateway_token):
+        return jsonify({
+            "success": False,
+            "message": "Payment confirmation requires transaction_ref and valid server gateway_token."
+        }), 400
+
+    customer_id = session.get("user_id") if session.get("role") == "customer" else None
+
+    try:
+        with DB.transaction() as tx:
+            result = PaymentService.verify_gateway_payment(
+                order_id=order_id,
+                transaction_ref=tx_ref,
+                gateway_token=gateway_token,
+                gateway_order_id=gateway_order_id,
+                gateway_payment_id=gateway_payment_id,
+                gateway_signature=gateway_signature,
+                customer_id=customer_id,
+                tx=tx
+            )
+        return jsonify({
+            "success": True,
+            "message": result["message"],
+            "status": "paid",
+            "payment_status": "paid",
+            "order_id": order_id,
+            "transaction_ref": result.get("transaction_ref", tx_ref)
+        }), 200
+    except ValueError as ve:
+        return jsonify({"success": False, "message": str(ve)}), 400
+    except PermissionError as pe:
+        return jsonify({"success": False, "message": str(pe)}), 403
+    except Exception as e:
+        logger.error("Payment confirmation error for order %s: %s", order_id, e)
+        return jsonify({"success": False, "message": "Failed to confirm payment."}), 500
+
+
+@orders_bp.post("/<int:order_id>/cancel")
+@role_required(["customer", "vendor", "admin"])
+def cancel_order(order_id):
+    """
+    Cancels an order, restores reserved stock to menu_items, and refunds/cancels payment.
+    Enforces business rule: orders cannot be cancelled once the kitchen starts preparing.
+    """
+    order = DB.get_one("SELECT * FROM orders WHERE id = %s", (order_id,))
+    if not order:
+        return jsonify({"success": False, "message": "Order not found."}), 404
+
+    current_role = session.get("role")
+    current_user_id = session.get("user_id")
+    current_shop_id = session.get("shop_id")
+
+    # Authorization / IDOR check
+    if current_role == "customer" and order["customer_id"] != current_user_id:
+        return jsonify({"success": False, "message": "Forbidden: You cannot cancel another customer's order."}), 403
+
+    if current_role == "vendor" and order["shop_id"] != current_shop_id:
+        return jsonify({"success": False, "message": "Forbidden: You cannot cancel another stall's order."}), 403
+
+    if order["order_status"] in ("preparing", "ready", "completed"):
+        return jsonify({
+            "success": False,
+            "message": f"Cannot cancel order. The kitchen has already started {order['order_status']} your food."
+        }), 400
+
+    if order["order_status"] == "cancelled":
+        return jsonify({"success": False, "message": "Order is already cancelled."}), 400
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        with DB.transaction() as tx:
+            # 1. Update order status to cancelled
+            tx.execute(
+                "UPDATE orders SET order_status = 'cancelled', cancellation_time = %s WHERE id = %s",
+                (now_str, order_id)
+            )
+
+            # 2. Restore reserved stock for each item
+            order_items = tx.query("SELECT menu_item_id, quantity FROM order_items WHERE order_id = %s", (order_id,))
+            for item in order_items:
+                if item.get("menu_item_id"):
+                    tx.execute_update(
+                        """
+                        UPDATE menu_items
+                        SET quantity = quantity + %s,
+                            is_available = 1
+                        WHERE id = %s
+                        """,
+                        (item["quantity"], item["menu_item_id"])
+                    )
+
+            # 3. Refund or cancel payment record
+            PaymentService.cancel_or_refund_payment(order_id, reason="Customer cancelled", customer_id=order["customer_id"], tx=tx)
+
+        return jsonify({
+            "success": True,
+            "message": "Order cancelled successfully. Reserved stock has been restored.",
+            "order_id": order_id,
+            "status": "cancelled"
+        }), 200
+    except Exception as e:
+        logger.error("Order cancellation error for order %s: %s", order_id, e)
+        return jsonify({"success": False, "message": "Failed to cancel order."}), 500
+
+
+@orders_bp.get("/<int:order_id>/bill")
+@orders_bp.get("/<int:order_id>/receipt")
+@login_required
+def get_order_bill(order_id):
+    """
+    Returns the complete, immutable bill/receipt for an order.
+    Protected by IDOR access control.
+    """
+    order = DB.get_one(
+        """
+        SELECT o.*, s.name as shop_name, s.category as shop_category,
+               cp.full_name as customer_name, cp.customer_type, cp.identifier, cp.mobile,
+               u.email as customer_email
+        FROM orders o
+        INNER JOIN shops s ON s.id = o.shop_id
+        LEFT JOIN customer_profiles cp ON cp.user_id = o.customer_id
+        LEFT JOIN users u ON u.id = o.customer_id
+        WHERE o.id = %s
+        """,
+        (order_id,)
+    )
+    if not order:
+        return jsonify({"success": False, "message": "Order not found."}), 404
+
+    current_role = session.get("role")
+    current_user_id = session.get("user_id")
+    current_shop_id = session.get("shop_id")
+
+    if current_role == "customer" and order["customer_id"] != current_user_id:
+        return jsonify({"success": False, "message": "Forbidden: You cannot access other customers' bills."}), 403
+
+    if current_role == "vendor" and order["shop_id"] != current_shop_id:
+        return jsonify({"success": False, "message": "Forbidden: You cannot access other stalls' bills."}), 403
+
+    items = DB.query(
+        "SELECT id, menu_item_id, item_name, unit_price, quantity, subtotal FROM order_items WHERE order_id = %s",
+        (order_id,)
+    )
+
+    payment = DB.get_one(
+        "SELECT id, method, amount, status, transaction_ref, created_at FROM payments WHERE order_id = %s ORDER BY id DESC LIMIT 1",
+        (order_id,)
+    )
+
+    total_amount = float(order["total_amount"])
+    subtotal = sum(float(i["subtotal"]) for i in items)
+
+    bill = {
+        "order_id": order["id"],
+        "order_reference": order["order_reference"],
+        "order_status": order["order_status"],
+        "payment_status": order["payment_status"],
+        "payment_method": order["payment_method"],
+        "pickup_otp": order["pickup_otp"],
+        "shop_id": order["shop_id"],
+        "shop_name": order["shop_name"],
+        "total_amount": total_amount,
+        "subtotal": subtotal,
+        "customer": {
+            "name": order.get("customer_name") or "Customer",
+            "type": order.get("customer_type") or "student",
+            "identifier": order.get("identifier") or "",
+            "mobile": order.get("mobile") or "",
+            "email": order.get("customer_email") or ""
+        },
+        "shop": {
+            "id": order["shop_id"],
+            "name": order["shop_name"],
+            "category": order.get("shop_category") or "Food Court"
+        },
+        "items": items,
+        "financials": {
+            "subtotal": subtotal,
+            "convenience_fee": 0.00,
+            "total_amount": total_amount
+        },
+        "payment": payment,
+        "timestamps": {
+            "order_time": str(order["created_at"]),
+            "payment_time": str(order["payment_time"]) if order.get("payment_time") else None,
+            "preparing_time": str(order["preparing_time"]) if order.get("preparing_time") else None,
+            "ready_time": str(order["ready_time"]) if order.get("ready_time") else None,
+            "completed_time": str(order["completed_time"]) if order.get("completed_time") else None,
+            "cancellation_time": str(order["cancellation_time"]) if order.get("cancellation_time") else None
+        }
+    }
+
+    return jsonify({"success": True, "bill": bill}), 200
 
 
 @orders_bp.get("/my-orders")
@@ -162,7 +459,9 @@ def get_my_orders():
     orders = DB.query(
         """
         SELECT o.id, o.order_reference, o.total_amount, o.order_status, o.payment_status,
-               o.payment_method, o.pickup_otp, o.created_at, s.name as shop_name, s.category as shop_category
+               o.payment_method, o.pickup_otp, o.created_at, o.payment_time, o.preparing_time,
+               o.ready_time, o.completed_time, o.cancellation_time,
+               s.name as shop_name, s.category as shop_category
         FROM orders o
         INNER JOIN shops s ON s.id = o.shop_id
         WHERE o.customer_id = %s
@@ -209,7 +508,7 @@ def get_order_detail(order_id):
     if current_role == "customer" and order["customer_id"] != current_user_id:
         return jsonify({"success": False, "message": "Forbidden: You cannot access other customers' orders."}), 403
 
-    if current_role == "vendor" and order["shop_id"] != current_shop_id:
+    if current_role == "vendor" and (not current_shop_id or order["shop_id"] != current_shop_id):
         return jsonify({"success": False, "message": "Forbidden: You cannot access other shops' orders."}), 403
 
     items = DB.query("SELECT * FROM order_items WHERE order_id = %s", (order_id,))
@@ -225,20 +524,30 @@ def get_vendor_orders(shop_id):
     current_shop_id = session.get("shop_id")
 
     # Strict vendor isolation: vendors can only view their own shop
-    if current_role == "vendor" and current_shop_id != shop_id:
+    if current_role == "vendor" and (not current_shop_id or current_shop_id != shop_id):
         return jsonify({
             "success": False,
             "message": "Forbidden: You are only authorized to view orders from your assigned shop."
         }), 403
 
-    orders = DB.query(
-        """
+    include_all = request.args.get("include_all", "0") in ("1", "true")
+
+    sql = """
         SELECT o.id, o.order_reference, o.customer_id, o.total_amount, o.order_status,
-               o.payment_status, o.pickup_otp, o.created_at,
+               o.payment_status, o.payment_method, o.pickup_otp, o.created_at,
+               o.payment_time, o.preparing_time, o.ready_time, o.completed_time, o.cancellation_time,
                cp.full_name as customer_name, cp.customer_type, cp.identifier
         FROM orders o
         LEFT JOIN customer_profiles cp ON cp.user_id = o.customer_id
         WHERE o.shop_id = %s
+    """
+    params = [shop_id]
+
+    # In real operations, exclude unpaid abandoned orders unless paid or Pay at Counter
+    if not include_all and current_role == "vendor":
+        sql += " AND (o.payment_status = 'paid' OR LOWER(o.payment_method) LIKE '%counter%' OR LOWER(o.payment_method) LIKE '%cash%')"
+
+    sql += """
         ORDER BY CASE o.order_status
             WHEN 'pending' THEN 1
             WHEN 'preparing' THEN 2
@@ -246,9 +555,9 @@ def get_vendor_orders(shop_id):
             ELSE 4 END,
             o.id DESC
         LIMIT 50
-        """,
-        (shop_id,),
-    )
+    """
+
+    orders = DB.query(sql, tuple(params))
 
     for order in orders:
         items = DB.query(
@@ -269,7 +578,7 @@ _failed_otp_attempts = {}
 @role_required(["vendor", "admin"])
 def verify_pickup_otp():
     data = request.get_json(silent=True) or {}
-    otp = str(data.get("otp", "")).strip()
+    otp = str(data.get("otp") or data.get("pickup_otp") or "").strip()
 
     current_role = session.get("role")
     current_shop_id = session.get("shop_id")
@@ -277,6 +586,8 @@ def verify_pickup_otp():
 
     # Enforce vendor's actual assigned shop (prevent spoofing via request body)
     if current_role == "vendor":
+        if not current_shop_id:
+            return jsonify({"success": False, "message": "Forbidden: No assigned stall found for vendor session."}), 403
         shop_id = current_shop_id
     else:
         shop_id = data.get("shop_id") or current_shop_id
@@ -329,11 +640,34 @@ def verify_pickup_otp():
             "message": "Order has already been picked up and completed."
         }), 400
 
+    if order["order_status"] == "cancelled":
+        return jsonify({
+            "success": False,
+            "message": "Cannot verify OTP for a cancelled order."
+        }), 400
+
     # Reset failed attempts counter upon successful verification
     _failed_otp_attempts.pop(lock_key, None)
 
-    # Mark as completed and invalidate OTP
-    DB.execute("UPDATE orders SET order_status = 'completed' WHERE id = %s", (order["id"],))
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Mark as completed and record completed timestamp
+    # If Pay at Counter was pending, confirm payment now
+    DB.execute(
+        """
+        UPDATE orders
+        SET order_status = 'completed',
+            completed_time = %s,
+            payment_status = 'paid',
+            payment_time = COALESCE(payment_time, %s)
+        WHERE id = %s
+        """,
+        (now_str, now_str, order["id"]),
+    )
+    DB.execute(
+        "UPDATE payments SET status = 'successful' WHERE order_id = %s AND status = 'pending'",
+        (order["id"],),
+    )
 
     return jsonify({
         "success": True,
@@ -342,7 +676,9 @@ def verify_pickup_otp():
             "id": order["id"],
             "order_reference": order["order_reference"],
             "status": "completed",
-            "shop_name": order["shop_name"]
+            "payment_status": "paid",
+            "shop_name": order["shop_name"],
+            "completed_time": now_str
         }
     }), 200
 
@@ -357,14 +693,62 @@ def update_order_status(order_id):
     if new_status not in allowed_statuses:
         return jsonify({"success": False, "message": f"Invalid status. Must be one of {allowed_statuses}"}), 400
 
-    order = DB.get_one("SELECT id, shop_id FROM orders WHERE id = %s", (order_id,))
+    order = DB.get_one("SELECT * FROM orders WHERE id = %s", (order_id,))
     if not order:
         return jsonify({"success": False, "message": "Order not found."}), 404
 
     # Vendor ownership check: vendors cannot touch another stall's orders
-    if session.get("role") == "vendor" and order["shop_id"] != session.get("shop_id"):
-        return jsonify({"success": False, "message": "Forbidden: You cannot alter orders belonging to another shop."}), 403
+    if session.get("role") == "vendor":
+        vendor_shop_id = session.get("shop_id")
+        if not vendor_shop_id or order["shop_id"] != vendor_shop_id:
+            return jsonify({"success": False, "message": "Forbidden: You cannot alter orders belonging to another shop."}), 403
 
-    DB.execute("UPDATE orders SET order_status = %s WHERE id = %s", (new_status, order_id))
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    return jsonify({"success": True, "message": f"Order status updated to {new_status}.", "status": new_status}), 200
+    # Handle cancellation by vendor: restore stock
+    if new_status == "cancelled" and order["order_status"] != "cancelled":
+        with DB.transaction() as tx:
+            tx.execute(
+                "UPDATE orders SET order_status = 'cancelled', cancellation_time = %s WHERE id = %s",
+                (now_str, order_id)
+            )
+            items = tx.query("SELECT menu_item_id, quantity FROM order_items WHERE order_id = %s", (order_id,))
+            for i in items:
+                if i.get("menu_item_id"):
+                    tx.execute_update(
+                        """
+                        UPDATE menu_items
+                        SET quantity = quantity + %s,
+                            is_available = 1
+                        WHERE id = %s
+                        """,
+                        (i["quantity"], i["menu_item_id"])
+                    )
+            PaymentService.cancel_or_refund_payment(order_id, reason="Vendor cancelled", customer_id=order["customer_id"], tx=tx)
+        return jsonify({"success": True, "message": "Order cancelled and stock restored.", "status": "cancelled"}), 200
+
+    # Timestamp update per lifecycle state
+    sql = "UPDATE orders SET order_status = %s"
+    params = [new_status]
+
+    if new_status == "preparing":
+        sql += ", preparing_time = COALESCE(preparing_time, %s)"
+        params.append(now_str)
+    elif new_status == "ready":
+        sql += ", ready_time = COALESCE(ready_time, %s)"
+        params.append(now_str)
+    elif new_status == "completed":
+        sql += ", completed_time = COALESCE(completed_time, %s)"
+        params.append(now_str)
+
+    sql += " WHERE id = %s"
+    params.append(order_id)
+
+    DB.execute(sql, tuple(params))
+
+    return jsonify({
+        "success": True,
+        "message": f"Order status updated to {new_status}.",
+        "status": new_status,
+        "updated_at": now_str
+    }), 200

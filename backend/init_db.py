@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'customer',
     is_active INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
     full_name TEXT NOT NULL,
     identifier TEXT,
     mobile TEXT,
+    wallet_balance REAL NOT NULL DEFAULT 500.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -40,6 +42,7 @@ CREATE TABLE IF NOT EXISTS shops (
     category TEXT DEFAULT 'Multi-Cuisine',
     image_url TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
+    operational_status TEXT NOT NULL DEFAULT 'OPEN',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -67,9 +70,14 @@ CREATE TABLE IF NOT EXISTS orders (
     shop_id INTEGER NOT NULL,
     total_amount REAL NOT NULL,
     order_status TEXT NOT NULL DEFAULT 'pending',
-    payment_status TEXT NOT NULL DEFAULT 'paid',
+    payment_status TEXT NOT NULL DEFAULT 'pending',
     payment_method TEXT NOT NULL DEFAULT 'Campus Wallet',
     pickup_otp TEXT NOT NULL,
+    payment_time TIMESTAMP NULL,
+    preparing_time TIMESTAMP NULL,
+    ready_time TIMESTAMP NULL,
+    completed_time TIMESTAMP NULL,
+    cancellation_time TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -91,12 +99,23 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
+    customer_id INTEGER,
+    provider TEXT NOT NULL DEFAULT 'razorpay',
     method TEXT NOT NULL DEFAULT 'Campus Wallet',
     amount REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'successful',
+    currency TEXT NOT NULL DEFAULT 'INR',
+    status TEXT NOT NULL DEFAULT 'pending',
     transaction_ref TEXT NOT NULL UNIQUE,
+    gateway_order_id TEXT,
+    gateway_payment_id TEXT,
+    gateway_token TEXT,
+    failure_reason TEXT,
+    paid_at TIMESTAMP,
+    refunded_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS otp_codes (
@@ -106,17 +125,30 @@ CREATE TABLE IF NOT EXISTS otp_codes (
     purpose TEXT NOT NULL DEFAULT 'signup',
     expires_at TIMESTAMP NOT NULL,
     is_verified INTEGER NOT NULL DEFAULT 0,
+    is_consumed INTEGER NOT NULL DEFAULT 0,
+    verified_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_id INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 );
 """
 
 DEFAULT_STALLS = [
-    (1, "YPR", "ypr", 2, "Fresh authentic South Indian hot meals, dosas, and parottas", "South Indian", 1),
-    (2, "Campus Kitchen", "campus-kitchen", 3, "Homestyle healthy combo meals, curries, and rotis", "North & South", 1),
-    (3, "German Cafe", "german-cafe", 4, "Crispy burgers, cheesy sandwiches, fries, and cold brews", "Fast Food", 1),
-    (4, "Royal Kitchen", "royal-kitchen", 5, "Special Biryanis, fried rice, noodles, and chicken delights", "Biryani & Chinese", 1),
-    (5, "Mario", "mario", 6, "Fresh fruit juices, shakes, smoothies, and quick pastries", "Beverages & Juices", 1),
-    (6, "Saaral", "saaral", 7, "Traditional snacks, tea, filter coffee, samosas, and evening bites", "Snacks & Cafe", 1),
+    (1, "YPR", "ypr", 2, "Fresh authentic South Indian hot meals, dosas, and parottas", "Food", 1),
+    (2, "Campus Kitchen", "campus-kitchen", 3, "Homestyle healthy combo meals, curries, and rotis", "Food", 1),
+    (3, "German Cafe", "german-cafe", 4, "Crispy burgers, cheesy sandwiches, fries, and cold brews", "Food", 1),
+    (4, "Royal Kitchen", "royal-kitchen", 5, "Special Biryanis, fried rice, noodles, and chicken delights", "Food", 1),
+    (5, "Mario", "mario", 6, "Fresh fruit juices, shakes, smoothies, and quick pastries", "Juice & Maggi", 1),
+    (6, "Saaral", "saaral", 7, "Traditional snacks, tea, filter coffee, samosas, and evening bites", "Snacks & Cakes", 1),
 ]
 
 DEFAULT_USERS = [
@@ -131,24 +163,38 @@ DEFAULT_USERS = [
 ]
 
 DEFAULT_MENU = [
-    (1, 1, "Crispy Ghee Podi Dosa", "Golden crispy dosa roasted in pure ghee and spiced podi with coconut chutney", 65.00, "Main Course", 30, 1),
-    (2, 1, "Special South Indian Meals", "Steamed rice, sambar, rasam, kootu, poriyal, curd, and appalam", 90.00, "Main Course", 25, 1),
-    (3, 1, "Egg Parotta (2 Pcs)", "Layered flaky parotta served with rich salna and onion raita", 70.00, "Main Course", 20, 1),
-    (4, 2, "Paneer Butter Masala Combo", "Rich paneer gravy served with 3 butter rotis and jeera rice", 110.00, "Main Course", 25, 1),
-    (5, 2, "Dal Makhani Rice Bowl", "Slow-cooked black lentils in creamy butter sauce over fragrant basmati", 85.00, "Main Course", 20, 1),
-    (6, 2, "Aloo Paratha with Curd", "Stuffed spiced potato paratha served with fresh curd and pickle", 55.00, "Breakfast", 35, 1),
-    (7, 3, "Crispy Veg Supreme Burger", "Herbed potato-corn patty with melted cheese, lettuce, and secret sauce", 75.00, "Fast Food", 20, 1),
-    (8, 3, "Peri Peri Loaded Fries", "Golden french fries seasoned with spicy peri-peri dust and cheese mayo", 60.00, "Snacks", 40, 1),
-    (9, 3, "Grilled Chicken Sandwich", "Toasted triple-layer sandwich with shredded chicken, mayo, and herbs", 90.00, "Fast Food", 15, 1),
-    (10, 4, "Royal Chicken Dum Biryani", "Aromatic seeraga samba rice cooked with tender chicken pieces and spices", 140.00, "Main Course", 35, 1),
-    (11, 4, "Schezwan Veg Fried Rice", "Wok-tossed basmati rice with crunchy vegetables in spicy schezwan sauce", 90.00, "Chinese", 25, 1),
-    (12, 4, "Chicken Noodles", "Hakka noodles tossed with egg, shredded chicken, and spring onions", 110.00, "Chinese", 20, 1),
-    (13, 5, "Fresh Mango Alphonso Shake", "Thick chilled shake made with ripe Alphonso mangoes and vanilla ice cream", 60.00, "Beverages", 25, 1),
-    (14, 5, "Cold Coffee with Cream", "Blended robust espresso with cold milk and whipped cream crown", 50.00, "Beverages", 30, 1),
-    (15, 5, "Chocolate Lava Pastry", "Warm gooey molten chocolate cake dusted with powdered sugar", 55.00, "Desserts", 15, 1),
-    (16, 6, "Filter Coffee (Special Degree)", "Freshly brewed Kumbakonam style decoction milk coffee", 25.00, "Beverages", 50, 1),
-    (17, 6, "Hot Samosa (2 Pcs) & Chutney", "Crisp triangular pastry stuffed with spiced potato and peas", 30.00, "Snacks", 45, 1),
-    (18, 6, "Masala Tea", "Strong hand-brewed ginger cardamom milk tea", 20.00, "Beverages", 60, 1),
+    # YPR (Offerings: Food)
+    (1, 1, "Crispy Ghee Podi Dosa", "Golden crispy dosa roasted in pure ghee and spiced podi with coconut chutney", 65.00, "Food", 30, 1),
+    (2, 1, "Special South Indian Meals", "Steamed rice, sambar, rasam, kootu, poriyal, curd, and appalam", 90.00, "Food", 25, 1),
+    (3, 1, "Egg Parotta (2 Pcs)", "Layered flaky parotta served with rich salna and onion raita", 70.00, "Food", 20, 1),
+
+    # Campus Kitchen (Dev Seed Stall)
+    (4, 2, "Paneer Butter Masala Combo", "Rich paneer gravy served with 3 butter rotis and jeera rice", 110.00, "Food", 25, 1),
+    (5, 2, "Dal Makhani Rice Bowl", "Slow-cooked black lentils in creamy butter sauce over fragrant basmati", 85.00, "Food", 20, 1),
+    (6, 2, "Aloo Paratha with Curd", "Stuffed spiced potato paratha served with fresh curd and pickle", 55.00, "Food", 35, 1),
+
+    # German Cafe (Offerings: Food)
+    (7, 3, "Crispy Veg Supreme Burger", "Herbed potato-corn patty with melted cheese, lettuce, and secret sauce", 75.00, "Food", 20, 1),
+    (8, 3, "Peri Peri Loaded Fries", "Golden french fries seasoned with spicy peri-peri dust and cheese mayo", 60.00, "Food", 40, 1),
+    (9, 3, "Grilled Chicken Sandwich", "Toasted triple-layer sandwich with shredded chicken, mayo, and herbs", 90.00, "Food", 15, 1),
+
+    # Royal Kitchen (Offerings: Food, Tea, Snacks)
+    (10, 4, "Royal Chicken Dum Biryani", "Aromatic seeraga samba rice cooked with tender chicken pieces and spices", 140.00, "Food", 35, 1),
+    (11, 4, "Schezwan Veg Fried Rice", "Wok-tossed basmati rice with crunchy vegetables in spicy schezwan sauce", 90.00, "Food", 25, 1),
+    (12, 4, "Royal Masala Chai", "Aromatic spiced milk tea brewed with crushed cardamom and ginger", 20.00, "Tea", 50, 1),
+    (13, 4, "Crispy Chicken Cutlet", "Crisp spiced chicken patty served with mint chutney", 50.00, "Snacks", 25, 1),
+
+    # Mario (Offerings: Juice, Maggi)
+    (14, 5, "Fresh Mango Alphonso Shake", "Thick chilled shake made with ripe Alphonso mangoes and vanilla ice cream", 60.00, "Juice", 25, 1),
+    (15, 5, "Fresh Sweet Lime Juice", "Freshly pressed sweet lime citrus cooler with mint sprig", 45.00, "Juice", 30, 1),
+    (16, 5, "Classic Veg Masala Maggi", "Wok-tossed noodles with diced vegetables and authentic tastemaker masala", 40.00, "Maggi", 35, 1),
+    (17, 5, "Cheese Butter Maggi", "Double spiced Maggi topped with melted butter and generous grated cheese", 55.00, "Maggi", 25, 1),
+
+    # Saaral (Offerings: Snacks, Cakes)
+    (18, 6, "Hot Samosa (2 Pcs) & Chutney", "Crisp triangular pastry stuffed with spiced potato and peas", 30.00, "Snacks", 45, 1),
+    (19, 6, "Crispy Onion Pakoda", "Deep fried crunchy onion fritters with green chili and curry leaves", 35.00, "Snacks", 40, 1),
+    (20, 6, "Chocolate Truffle Cake Slice", "Rich moist dark chocolate sponge layered with Dutch chocolate ganache", 65.00, "Cakes", 20, 1),
+    (21, 6, "Red Velvet Cupcake", "Velvety crimson sponge topped with vanilla cream cheese frosting", 45.00, "Cakes", 25, 1),
 ]
 
 
@@ -157,6 +203,58 @@ def init_sqlite():
     conn = sqlite3.connect(SQLITE_PATH)
     cur = conn.cursor()
     cur.executescript(SQLITE_SCHEMA)
+
+    # Ensure schema migrations on pre-existing tables
+    try:
+        cur.execute("PRAGMA table_info(otp_codes)")
+        cols = [r[1] for r in cur.fetchall()]
+        if "is_consumed" not in cols:
+            cur.execute("ALTER TABLE otp_codes ADD COLUMN is_consumed INTEGER NOT NULL DEFAULT 0")
+        if "verified_at" not in cols:
+            cur.execute("ALTER TABLE otp_codes ADD COLUMN verified_at TIMESTAMP NULL")
+
+        cur.execute("PRAGMA table_info(customer_profiles)")
+        cp_cols = [r[1] for r in cur.fetchall()]
+        if "wallet_balance" not in cp_cols:
+            cur.execute("ALTER TABLE customer_profiles ADD COLUMN wallet_balance REAL NOT NULL DEFAULT 500.00")
+
+        cur.execute("PRAGMA table_info(orders)")
+        ord_cols = [r[1] for r in cur.fetchall()]
+        if "payment_time" not in ord_cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN payment_time TIMESTAMP NULL")
+        if "preparing_time" not in ord_cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN preparing_time TIMESTAMP NULL")
+        if "ready_time" not in ord_cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN ready_time TIMESTAMP NULL")
+        if "completed_time" not in ord_cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN completed_time TIMESTAMP NULL")
+        if "cancellation_time" not in ord_cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN cancellation_time TIMESTAMP NULL")
+
+        cur.execute("PRAGMA table_info(payments)")
+        pay_cols = [r[1] for r in cur.fetchall()]
+        if "gateway_token" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN gateway_token TEXT NULL")
+        if "customer_id" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN customer_id INTEGER NULL")
+        if "provider" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN provider TEXT NOT NULL DEFAULT 'razorpay'")
+        if "currency" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN currency TEXT NOT NULL DEFAULT 'INR'")
+        if "gateway_order_id" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN gateway_order_id TEXT NULL")
+        if "gateway_payment_id" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN gateway_payment_id TEXT NULL")
+        if "failure_reason" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN failure_reason TEXT NULL")
+        if "paid_at" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN paid_at TIMESTAMP NULL")
+        if "refunded_at" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN refunded_at TIMESTAMP NULL")
+        if "updated_at" not in pay_cols:
+            cur.execute("ALTER TABLE payments ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except Exception:
+        pass
 
     cur.executemany("INSERT OR REPLACE INTO users (id, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)", DEFAULT_USERS)
     cur.execute("INSERT OR REPLACE INTO customer_profiles (id, user_id, customer_type, full_name, identifier, mobile) VALUES (1, 8, 'student', 'KPR Student', '21CS042', '9876543210')")
@@ -196,18 +294,26 @@ def init_mysql():
                         cur.execute(stmt)
             print("MySQL schema executed successfully.")
 
+        # Seed data handling: Only seed in development mode or when explicitly opted in
+        flask_env = os.getenv("FLASK_ENV", "development").lower()
+        is_prod = flask_env in ("production", "prod")
+        allow_seed = (not is_prod) or (os.getenv("SEED_DEMO_DATA", "0").lower() in ("1", "true", "yes"))
+
         if os.path.exists(seed_path):
-            with open(seed_path, "r", encoding="utf-8") as f:
-                seed_sql = f.read()
-            with conn.cursor() as cur:
-                for statement in seed_sql.split(";"):
-                    stmt = statement.strip()
-                    if stmt:
-                        cur.execute(stmt)
-            print("MySQL seed executed successfully.")
+            if allow_seed:
+                with open(seed_path, "r", encoding="utf-8") as f:
+                    seed_sql = f.read()
+                with conn.cursor() as cur:
+                    for statement in seed_sql.split(";"):
+                        stmt = statement.strip()
+                        if stmt:
+                            cur.execute(stmt)
+                print("MySQL seed executed successfully.")
+            else:
+                print("SECURITY NOTICE: Development seed credentials skipped in production mode. (Use SEED_DEMO_DATA=1 to override).")
 
         conn.close()
-        print("MySQL database initialized and seeded successfully.")
+        print("MySQL database initialization complete.")
         return True
     except Exception as e:
         print(f"MySQL initialization skipped/failed: {e}")
@@ -215,6 +321,18 @@ def init_mysql():
 
 
 if __name__ == "__main__":
+    import sys
+    flask_env = os.getenv("FLASK_ENV", "development").lower()
+    is_prod = flask_env in ("production", "prod")
+
     mysql_ok = init_mysql()
-    init_sqlite()
-    print("\nDatabase initialization complete.")
+    if is_prod:
+        if not mysql_ok:
+            print("CRITICAL: MySQL database initialization failed in production mode. Aborting startup.", file=sys.stderr)
+            sys.exit(1)
+        print("\nProduction MySQL database initialization complete.")
+    else:
+        if not mysql_ok or os.getenv("USE_SQLITE", "").lower() in ("1", "true", "yes"):
+            init_sqlite()
+        print("\nDevelopment database initialization complete.")
+

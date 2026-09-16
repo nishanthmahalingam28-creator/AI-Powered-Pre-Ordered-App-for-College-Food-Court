@@ -1,8 +1,10 @@
+import logging
 from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
 from db import DB
 from routes.auth import role_required
 
+logger = logging.getLogger("food_court.admin")
 admin_bp = Blueprint("admin", __name__)
 
 
@@ -94,12 +96,68 @@ def add_shop():
     if not name:
         return jsonify({"success": False, "message": "Stall name is required."}), 400
 
+    existing = DB.get_one(
+        "SELECT id FROM shops WHERE LOWER(name) = %s OR LOWER(slug) = %s LIMIT 1",
+        (name.lower(), slug.lower()),
+    )
+    if existing:
+        return jsonify({
+            "success": False,
+            "message": f"A stall with name '{name}' or slug '{slug}' already exists."
+        }), 409
+
     shop_id = DB.execute(
         "INSERT INTO shops (name, slug, description, category, is_active) VALUES (%s, %s, %s, %s, 1)",
         (name, slug, description, category),
     )
 
     return jsonify({"success": True, "message": f"Stall '{name}' created successfully.", "shop_id": shop_id}), 201
+
+
+@admin_bp.put("/shops/<int:shop_id>")
+@role_required(["admin"])
+def update_shop(shop_id):
+    shop = DB.get_one("SELECT * FROM shops WHERE id = %s", (shop_id,))
+    if not shop:
+        return jsonify({"success": False, "message": "Shop not found."}), 404
+
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", shop["name"])).strip()
+    slug = str(data.get("slug", shop["slug"])).strip()
+    description = str(data.get("description", shop.get("description") or "")).strip()
+    category = str(data.get("category", shop.get("category") or "Multi-Cuisine")).strip()
+
+    if not name:
+        return jsonify({"success": False, "message": "Stall name cannot be empty."}), 400
+
+    # Check duplicate on another stall
+    existing = DB.get_one(
+        "SELECT id FROM shops WHERE (LOWER(name) = %s OR LOWER(slug) = %s) AND id != %s LIMIT 1",
+        (name.lower(), slug.lower(), shop_id),
+    )
+    if existing:
+        return jsonify({"success": False, "message": "Another stall already uses this name or slug."}), 409
+
+    DB.execute(
+        """
+        UPDATE shops
+        SET name = %s, slug = %s, description = %s, category = %s
+        WHERE id = %s
+        """,
+        (name, slug, description, category, shop_id),
+    )
+
+    return jsonify({
+        "success": True,
+        "message": f"Stall '{name}' updated successfully.",
+        "shop": {
+            "id": shop_id,
+            "name": name,
+            "slug": slug,
+            "description": description,
+            "category": category,
+        }
+    }), 200
 
 
 @admin_bp.put("/shops/<int:shop_id>/status")
@@ -179,6 +237,9 @@ def create_vendor():
     )
 
     if shop_id:
+        target_shop = DB.get_one("SELECT id, is_active FROM shops WHERE id = %s", (shop_id,))
+        if not target_shop or not target_shop.get("is_active"):
+            return jsonify({"success": False, "message": "Cannot assign vendor to an inactive or non-existent stall."}), 400
         DB.execute("UPDATE shops SET owner_user_id = %s WHERE id = %s", (user_id, shop_id))
 
     return jsonify({
@@ -202,10 +263,15 @@ def assign_vendor_shop(user_id):
     if not shop_id:
         return jsonify({"success": False, "message": "Target shop_id is required."}), 400
 
-    shop = DB.get_one("SELECT id, name FROM shops WHERE id = %s", (shop_id,))
+    shop = DB.get_one("SELECT id, name, is_active FROM shops WHERE id = %s", (shop_id,))
     if not shop:
         return jsonify({"success": False, "message": "Target shop not found."}), 404
 
+    if not shop.get("is_active"):
+        return jsonify({"success": False, "message": "Cannot assign vendor to an inactive stall."}), 400
+
+    # Clear any previous stall ownership for this vendor to ensure 1-to-1 mapping
+    DB.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
     DB.execute("UPDATE shops SET owner_user_id = %s WHERE id = %s", (user_id, shop_id))
 
     return jsonify({
