@@ -14,9 +14,8 @@
 
         if (isLocalDev) {
             window.FOOD_COURT_API_BASE = "https://college-food-court-api.onrender.com/api";
-        } else {
-            // In production/staging behind reverse proxy, use relative /api endpoint
-            window.FOOD_COURT_API_BASE = "/api";
+        }else {
+            window.FOOD_COURT_API_BASE = "https://college-food-court-api.onrender.com/api";
         }
     }
 
