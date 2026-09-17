@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../css/base/reset.css">
     <link rel="stylesheet" href="../../css/pages/customer.css">
+    <!-- Chart.js for Financial Visual Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../../js/config.js"></script>
     <script src="../../js/core/public-components.js" defer></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
@@ -41,8 +44,8 @@
                         Skip food court lines with AI pre-ordering. Track your live tickets and pickup fresh meals instantly.
                     </p>
                 </div>
-                <div class="flex items-center gap-3 shrink-0">
-                    <button class="notification-bell-trigger relative bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2" title="Notifications">
+                <div class="flex items-center gap-3 shrink-0 flex-wrap">
+                    <button class="notification-bell-trigger relative bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2 cursor-pointer" title="Notifications">
                         <i class="fa-solid fa-bell text-sm"></i>
                         <span class="notification-badge hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#071638] shadow-md">0</span>
                     </button>
@@ -52,7 +55,337 @@
                     <a href="orders.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
                         <i class="fa-solid fa-receipt"></i> My Orders
                     </a>
+                    <a href="expenses.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-wallet"></i> Expenses
+                    </a>
+                    <a href="income.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-coins"></i> Income
+                    </a>
+                    <a href="budgets.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i> Budgets & Goals
+                    </a>
+                    <a href="analytics.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line"></i> Analytics
+                    </a>
+                    <a href="assistant.html" class="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 text-teal-200 font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-teal-400/40 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-teal-300"></i> AI Assistant
+                    </a>
+                    <a href="profile.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-user"></i> Profile
+                    </a>
+                    <button onclick="handleCustomerLogout()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-rose-400/30 transition-all flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                    </button>
                 </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- LIVE FINANCIAL OVERVIEW & SPENDING INTELLIGENCE (DATABASE) -->
+        <!-- ========================================================= -->
+        <section id="financial-overview-section" class="mb-10">
+            <!-- Header Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-black uppercase tracking-widest text-teal-700 block">Financial Intelligence</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                            Live Database Records
+                        </span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        Spending, Income & Goals Overview
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                        Calculated directly from your authenticated financial transactions in real-time.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                        id="refresh-financials-btn"
+                        class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                        title="Refresh Financial Data"
+                    >
+                        <i id="refresh-financials-icon" class="fa-solid fa-rotate-right text-xs text-teal-600"></i>
+                        <span>Refresh Data</span>
+                    </button>
+                    <a href="analytics.html" class="bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-teal-200 shadow-sm transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-xs text-teal-600"></i> Analytics
+                    </a>
+                    <a href="expenses.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus text-xs text-teal-600"></i> Log Expense
+                    </a>
+                    <a href="income.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus text-xs text-emerald-600"></i> Log Income
+                    </a>
+                </div>
+            </div>
+
+            <!-- Error State with Retry Button -->
+            <div id="financial-error-banner" class="hidden mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-base">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-rose-900">Failed to load financial statistics</h4>
+                        <p id="financial-error-text" class="text-[11px] text-rose-700">Could not retrieve your financial data from the server.</p>
+                    </div>
+                </div>
+                <button
+                    id="retry-financials-btn"
+                    class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                >
+                    <i class="fa-solid fa-arrow-rotate-right text-xs"></i> Retry Connection
+                </button>
+            </div>
+
+            <!-- Loading Skeleton Placeholder -->
+            <div id="financial-loading-skeleton" class="space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-200"></div>
+                        <div class="space-y-2 flex-1">
+                            <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                            <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-200"></div>
+                        <div class="space-y-2 flex-1">
+                            <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                            <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-200"></div>
+                        <div class="space-y-2 flex-1">
+                            <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                            <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-200"></div>
+                        <div class="space-y-2 flex-1">
+                            <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                            <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Financial Content Container (Hidden while loading) -->
+            <div id="financial-content-container" class="hidden space-y-6">
+
+                <!-- 1. Four Core Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Total Income -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Income</span>
+                                <span id="dash-income-count" class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">0</span>
+                            </div>
+                            <span id="stat-dash-income" class="text-2xl font-black text-slate-900 mt-0.5 block">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Expenses -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
+                        <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl font-bold group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Expenses</span>
+                                <span id="dash-expense-count" class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800">0</span>
+                            </div>
+                            <span id="stat-dash-expenses" class="text-2xl font-black text-slate-900 mt-0.5 block">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Net Balance -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
+                        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Net Balance</span>
+                            <span id="stat-dash-balance" class="text-2xl font-black text-slate-900 mt-0.5 block">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Budgets & Allocations -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
+                        <div class="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-xl font-bold group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Monthly Budget</span>
+                            <span id="stat-dash-budget" class="text-2xl font-black text-slate-900 mt-0.5 block">₹0.00</span>
+                            <span id="dash-budget-consumed-text" class="text-[10px] text-slate-400 font-semibold block">0% allocated spent</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Interactive Visual Analytics & Charts Grid (2 columns on lg) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Chart 1: Cash Flow Flowchart (7 cols on lg) -->
+                    <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-simple text-teal-600"></i> Cash Flow & Savings Ratio
+                                </h3>
+                                <p class="text-xs text-slate-400">Comparison of total income received vs expenses logged.</p>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Container with fixed aspect ratio -->
+                        <div class="relative h-64 w-full flex items-center justify-center">
+                            <canvas id="cashFlowChart"></canvas>
+                            <div id="cash-flow-empty" class="hidden text-center text-slate-400">
+                                <i class="fa-regular fa-chart-bar text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-xs font-semibold">No income or expense entries logged yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Category Spending Distribution (5 cols on lg) -->
+                    <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-pie text-emerald-600"></i> Expense by Category
+                                </h3>
+                                <p class="text-xs text-slate-400">Breakdown of campus food court spending.</p>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Container with fixed aspect ratio -->
+                        <div class="relative h-64 w-full flex items-center justify-center">
+                            <canvas id="categoryChart"></canvas>
+                            <div id="category-chart-empty" class="hidden text-center text-slate-400">
+                                <i class="fa-solid fa-chart-pie text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-xs font-semibold">No category spending recorded yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Budgets & Goals Quick Glance Grid (2 columns on lg) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left: Category Budgets Progress -->
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                                <div>
+                                    <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                        <i class="fa-solid fa-wallet text-teal-600"></i> Category Spending Budgets
+                                    </h3>
+                                    <p class="text-xs text-slate-400">Monitor your spending caps per dining category.</p>
+                                </div>
+                                <a href="budgets.html" class="text-xs font-bold text-teal-700 hover:underline flex items-center gap-1">
+                                    Manage <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                            </div>
+
+                            <div id="dash-budgets-list" class="space-y-4">
+                                <!-- Populated dynamically via customer-dashboard.js -->
+                            </div>
+
+                            <div id="dash-budgets-empty" class="hidden py-8 text-center text-slate-400">
+                                <i class="fa-solid fa-chart-pie text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-xs font-semibold">No category budgets established yet.</p>
+                                <a href="budgets.html" class="inline-block mt-2 text-xs font-bold text-teal-700 hover:underline">
+                                    + Set your first budget
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Financial Savings Goals Progress -->
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                                <div>
+                                    <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                        <i class="fa-solid fa-bullseye text-emerald-600"></i> Financial Savings Goals
+                                    </h3>
+                                    <p class="text-xs text-slate-400">Track and fund your campus dining milestones.</p>
+                                </div>
+                                <a href="budgets.html#goals-section" class="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
+                                    Manage <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                            </div>
+
+                            <div id="dash-goals-list" class="space-y-4">
+                                <!-- Populated dynamically via customer-dashboard.js -->
+                            </div>
+
+                            <div id="dash-goals-empty" class="hidden py-8 text-center text-slate-400">
+                                <i class="fa-solid fa-piggy-bank text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-xs font-semibold">No financial goals established yet.</p>
+                                <a href="budgets.html#goals-section" class="inline-block mt-2 text-xs font-bold text-emerald-700 hover:underline">
+                                    + Create a savings goal
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Recent Financial Transactions Feed -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-teal-600"></i> Recent Financial Activity
+                            </h3>
+                            <p class="text-xs text-slate-400">Latest recorded dining expenses and received allowances.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <a href="expenses.html" class="text-xs font-bold text-slate-600 hover:text-teal-700 hover:underline">
+                                All Expenses →
+                            </a>
+                            <a href="income.html" class="text-xs font-bold text-slate-600 hover:text-emerald-700 hover:underline">
+                                All Income →
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Table Wrapper -->
+                    <div id="dash-transactions-wrapper" class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-100 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                    <th class="py-3 px-3">Type</th>
+                                    <th class="py-3 px-3">Category / Source</th>
+                                    <th class="py-3 px-3">Description</th>
+                                    <th class="py-3 px-3">Date</th>
+                                    <th class="py-3 px-3 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-transactions-tbody" class="divide-y divide-slate-100 text-xs font-medium">
+                                <!-- Populated dynamically via customer-dashboard.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Empty state for new user -->
+                    <div id="dash-transactions-empty" class="hidden py-12 text-center text-slate-400">
+                        <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-300 mx-auto flex items-center justify-center text-2xl mb-3">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-700">No financial transactions recorded yet</h4>
+                        <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                            Your logged meal expenses and income allowances will appear here automatically.
+                        </p>
+                    </div>
+                </div>
+
             </div>
         </section>
 

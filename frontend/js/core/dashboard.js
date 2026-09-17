@@ -6,13 +6,28 @@ let currentOperationalStatus = 'OPEN';
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', async () => {
-    await initShopProfile();
-    await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications()]);
+    const authed = await initShopProfile();
+    if (authed) {
+        await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications()]);
+    }
 });
 
 // Resolve Authoritative Assigned Stall for Vendor
 async function initShopProfile() {
     try {
+        const authRes = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+        if (!authRes.ok) {
+            sessionStorage.removeItem('foodCourtUser');
+            window.location.href = '../auth/login.html';
+            return false;
+        }
+        const authData = await authRes.json();
+        if (!authData.authenticated || (authData.user.role !== 'vendor' && authData.user.role !== 'admin')) {
+            sessionStorage.removeItem('foodCourtUser');
+            window.location.href = '../auth/login.html';
+            return false;
+        }
+
         const res = await fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' });
         const data = await res.json();
         if (data.success && data.shop) {
@@ -37,7 +52,22 @@ async function initShopProfile() {
     if (outletEl) {
         outletEl.innerText = currentShopName + ' Stall';
     }
+    return true;
 }
+
+window.handleVendorLogout = async function() {
+    try {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+    } catch (e) {
+        console.error('Logout error', e);
+    }
+    sessionStorage.removeItem('foodCourtUser');
+    localStorage.removeItem('foodCourtUser');
+    window.location.href = '../auth/login.html';
+};
 
 async function initShopNameFallback() {
     const urlParams = new URLSearchParams(window.location.search);

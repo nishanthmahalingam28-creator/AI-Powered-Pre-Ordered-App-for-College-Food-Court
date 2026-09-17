@@ -101,10 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (res.ok && data.success) {
                     if (otpContainer) otpContainer.classList.remove('hidden');
-                    if (otpSuccess) otpSuccess.innerHTML = `OTP sent to +91 ${mobileVal}. ${data.demo_otp ? '(Demo OTP: <strong>' + data.demo_otp + '</strong>)' : ''}`;
-                    if (data.demo_otp && otpInput) {
-                        otpInput.value = data.demo_otp;
-                    }
+                    if (otpSuccess) otpSuccess.innerHTML = `OTP sent to +91 ${mobileVal}. ${data.demo_otp ? '(Dev OTP: <strong>' + data.demo_otp + '</strong>)' : ''}`;
                 } else {
                     if (mobileError) mobileError.innerHTML = data.message || 'Failed to dispatch OTP.';
                 }
@@ -206,6 +203,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if (fullName.length < 2 || !/^[a-zA-Z\s'.-]{2,50}$/.test(fullName)) {
+                alertBox.className = 'p-3.5 mb-4 rounded-xl text-xs font-semibold bg-red-50 text-red-700 flex items-center gap-2';
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Please enter a valid full name (at least 2 letters, letters only).';
+                return;
+            }
+
+            if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+                alertBox.className = 'p-3.5 mb-4 rounded-xl text-xs font-semibold bg-red-50 text-red-700 flex items-center gap-2';
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Password must contain at least 8 characters and include both letters and numbers.';
+                return;
+            }
+
             if (!isOtpVerified) {
                 alertBox.className = 'p-3.5 mb-4 rounded-xl text-xs font-semibold bg-red-50 text-red-700 flex items-center gap-2';
                 alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Please verify your mobile number with OTP first.';
@@ -232,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         fullName: fullName,
                         email: email,
                         password: password,
+                        confirmPassword: confirmPwdInput.value,
                         customerType: 'faculty',
                         identifier: facultyId,
                         mobile: mobile
@@ -246,12 +256,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                if (result.user) {
+                    sessionStorage.setItem('foodCourtUser', JSON.stringify(result.user));
+                }
+
                 alertBox.className = 'p-3.5 mb-4 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 flex items-center gap-2';
-                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Faculty account registered successfully! Redirecting to login...';
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Faculty account registered successfully! Entering KPR Food Court...';
 
                 setTimeout(() => {
-                    window.location.href = 'faculty-login.html';
-                }, 1000);
+                    window.location.href = result.redirect || '../customer/dashboard.html';
+                }, 800);
 
             } catch (err) {
                 alertBox.className = 'p-3.5 mb-4 rounded-xl text-xs font-semibold bg-red-50 text-red-700 flex items-center gap-2';

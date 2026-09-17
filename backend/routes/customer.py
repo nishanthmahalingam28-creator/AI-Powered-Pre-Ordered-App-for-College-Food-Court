@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from flask import Blueprint, jsonify, request, session
-from werkzeug.security import generate_password_hash, check_password_hash
+from security import hash_password, verify_password
 
 from db import DB
 from routes.auth import login_required, role_required, normalize_mobile
@@ -198,10 +198,10 @@ def change_password():
         return jsonify({"success": False, "message": "New password must contain at least 8 characters."}), 400
 
     user = DB.get_one("SELECT id, password_hash FROM users WHERE id = %s AND is_active = 1", (user_id,))
-    if not user or not check_password_hash(user["password_hash"], current_password):
+    if not user or not verify_password(current_password, user["password_hash"]):
         return jsonify({"success": False, "message": "Current password is incorrect."}), 400
 
-    new_hash = generate_password_hash(new_password)
+    new_hash = hash_password(new_password)
     DB.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user_id))
 
     logger.info("Customer password updated successfully for user_id=%s", user_id)
@@ -209,3 +209,386 @@ def change_password():
         "success": True,
         "message": "Password updated successfully."
     }), 200
+
+
+def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
+    """
+    Core aggregator for customer financial intelligence and visual analytics.
+    Calculates income, expenses, categories, monthly trends, budget comparisons,
+    and savings progress strictly for the authenticated user from the database.
+    """
+    # 1. Total Income & Statistical aggregates
+    inc_stats = DB.get_one(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total,
+               COUNT(id) AS count,
+               COALESCE(AVG(amount), 0) AS avg_amount,
+               COALESCE(MAX(amount), 0) AS max_amount
+        FROM income
+        WHERE user_id = %s
+        """,
+        (user_id,)
+    ) or {}
+    total_income = float(inc_stats.get("total") or 0.0)
+    income_count = int(inc_stats.get("count") or 0)
+    avg_income = float(inc_stats.get("avg_amount") or 0.0)
+    max_income = float(inc_stats.get("max_amount") or 0.0)
+
+    # 2. Total Expenses & Statistical aggregates
+    exp_stats = DB.get_one(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total,
+               COUNT(id) AS count,
+               COALESCE(AVG(amount), 0) AS avg_amount,
+               COALESCE(MAX(amount), 0) AS max_amount
+        FROM expenses
+        WHERE user_id = %s
+        """,
+        (user_id,)
+    ) or {}
+    total_expenses = float(exp_stats.get("total") or 0.0)
+    expense_count = int(exp_stats.get("count") or 0)
+    avg_expense = float(exp_stats.get("avg_amount") or 0.0)
+    max_expense = float(exp_stats.get("max_amount") or 0.0)
+
+    # Net balance & Savings Rate
+    net_balance = round(total_income - total_expenses, 2)
+    savings_rate = round((net_balance / total_income * 100), 1) if total_income > 0 else 0.0
+
+    # 3. Wallet Balance
+    prof_row = DB.get_one(
+        "SELECT wallet_balance FROM customer_profiles WHERE user_id = %s LIMIT 1",
+        (user_id,)
+    )
+    wallet_balance = float(prof_row.get("wallet_balance") or 0.0) if prof_row else 0.0
+
+    # 4. Category Expense Breakdown
+    cat_rows = DB.get_all(
+        """
+        SELECT category, COALESCE(SUM(amount), 0) AS total, COUNT(id) AS count
+        FROM expenses
+        WHERE user_id = %s
+        GROUP BY category
+        ORDER BY total DESC
+        """,
+        (user_id,)
+    )
+    category_breakdown_expenses = []
+    for cr in cat_rows:
+        cat_tot = round(float(cr["total"] or 0.0), 2)
+        pct = round((cat_tot / total_expenses * 100), 1) if total_expenses > 0 else 0.0
+        category_breakdown_expenses.append({
+            "category": cr["category"] or "Other",
+            "amount": cat_tot,
+            "count": int(cr.get("count") or 0),
+            "percentage": pct
+        })
+
+    # 5. Income Sources Breakdown
+    inc_cat_rows = DB.get_all(
+        """
+        SELECT source, COALESCE(SUM(amount), 0) AS total, COUNT(id) AS count
+        FROM income
+        WHERE user_id = %s
+        GROUP BY source
+        ORDER BY total DESC
+        """,
+        (user_id,)
+    )
+    category_breakdown_income = []
+    for ir in inc_cat_rows:
+        src_tot = round(float(ir["total"] or 0.0), 2)
+        pct = round((src_tot / total_income * 100), 1) if total_income > 0 else 0.0
+        category_breakdown_income.append({
+            "source": ir["source"] or "Other",
+            "category": ir["source"] or "Other",
+            "amount": src_tot,
+            "count": int(ir.get("count") or 0),
+            "percentage": pct
+        })
+
+    # 6. Monthly Trends (SQLite & MySQL compatible via SUBSTR)
+    exp_monthly_rows = DB.get_all(
+        """
+        SELECT SUBSTR(expense_date, 1, 7) AS ym, COALESCE(SUM(amount), 0) AS total, COUNT(id) AS count
+        FROM expenses
+        WHERE user_id = %s AND expense_date IS NOT NULL AND expense_date != ''
+        GROUP BY SUBSTR(expense_date, 1, 7)
+        ORDER BY ym ASC
+        """,
+        (user_id,)
+    )
+    monthly_exp_map = {
+        r["ym"]: {"total": round(float(r["total"] or 0.0), 2), "count": int(r.get("count") or 0)}
+        for r in exp_monthly_rows if r.get("ym")
+    }
+
+    inc_monthly_rows = DB.get_all(
+        """
+        SELECT SUBSTR(income_date, 1, 7) AS ym, COALESCE(SUM(amount), 0) AS total, COUNT(id) AS count
+        FROM income
+        WHERE user_id = %s AND income_date IS NOT NULL AND income_date != ''
+        GROUP BY SUBSTR(income_date, 1, 7)
+        ORDER BY ym ASC
+        """,
+        (user_id,)
+    )
+    monthly_inc_map = {
+        r["ym"]: {"total": round(float(r["total"] or 0.0), 2), "count": int(r.get("count") or 0)}
+        for r in inc_monthly_rows if r.get("ym")
+    }
+
+    all_months = sorted(set(list(monthly_exp_map.keys()) + list(monthly_inc_map.keys())))
+    monthly_trends = []
+    month_names = {
+        "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun",
+        "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+    }
+
+    for ym in all_months:
+        m_inc = monthly_inc_map.get(ym, {}).get("total", 0.0)
+        m_exp = monthly_exp_map.get(ym, {}).get("total", 0.0)
+        m_net = round(m_inc - m_exp, 2)
+        m_rate = round((m_net / m_inc * 100), 1) if m_inc > 0 else 0.0
+
+        parts = ym.split("-")
+        label = ym
+        if len(parts) == 2 and parts[1] in month_names:
+            label = f"{month_names[parts[1]]} {parts[0]}"
+
+        monthly_trends.append({
+            "month": ym,
+            "label": label,
+            "income": m_inc,
+            "expenses": m_exp,
+            "net_savings": m_net,
+            "savings_rate": m_rate,
+            "income_count": monthly_inc_map.get(ym, {}).get("count", 0),
+            "expense_count": monthly_exp_map.get(ym, {}).get("count", 0)
+        })
+
+    # 7. Budgets and per-category spending
+    budget_rows = DB.get_all(
+        """
+        SELECT id, category, amount_limit, period, start_date, end_date
+        FROM budgets
+        WHERE user_id = %s
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    )
+
+    total_budget_limit = 0.0
+    total_budget_spent = 0.0
+    budgets_data = []
+
+    for b in budget_rows:
+        limit_val = float(b.get("amount_limit") or 0.0)
+        total_budget_limit += limit_val
+        cat_name = b.get("category") or ""
+
+        spent_row = DB.get_one(
+            "SELECT COALESCE(SUM(amount), 0) AS cat_spent FROM expenses WHERE user_id = %s AND LOWER(category) = LOWER(%s)",
+            (user_id, cat_name)
+        )
+        cat_spent = float(spent_row.get("cat_spent") or 0.0) if spent_row else 0.0
+        total_budget_spent += cat_spent
+
+        pct_spent = round((cat_spent / limit_val * 100), 1) if limit_val > 0 else 0.0
+        if pct_spent > 100:
+            status = "exceeded"
+        elif pct_spent >= 80:
+            status = "near_limit"
+        else:
+            status = "on_track"
+
+        budgets_data.append({
+            "id": b["id"],
+            "category": cat_name,
+            "amount_limit": round(limit_val, 2),
+            "spent": round(cat_spent, 2),
+            "remaining": round(max(0.0, limit_val - cat_spent), 2),
+            "percent_spent": pct_spent,
+            "period": b.get("period", "monthly"),
+            "start_date": str(b["start_date"]) if b.get("start_date") else None,
+            "end_date": str(b["end_date"]) if b.get("end_date") else None,
+            "status": status
+        })
+
+    budget_percent_spent = round((total_budget_spent / total_budget_limit * 100), 1) if total_budget_limit > 0 else 0.0
+
+    # 8. Financial Goals & Savings Progress
+    goal_rows = DB.get_all(
+        """
+        SELECT id, title, target_amount, current_amount, target_date, category, status
+        FROM financial_goals
+        WHERE user_id = %s
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    )
+
+    total_goals_target = 0.0
+    total_goals_saved = 0.0
+    goals_data = []
+
+    for g in goal_rows:
+        target_val = float(g.get("target_amount") or 0.0)
+        saved_val = float(g.get("current_amount") or 0.0)
+        total_goals_target += target_val
+        total_goals_saved += saved_val
+        pct = round((saved_val / target_val * 100), 1) if target_val > 0 else 0.0
+
+        goals_data.append({
+            "id": g["id"],
+            "title": g.get("title") or "Savings Goal",
+            "target_amount": round(target_val, 2),
+            "current_amount": round(saved_val, 2),
+            "remaining": round(max(0.0, target_val - saved_val), 2),
+            "progress_percent": pct,
+            "target_date": str(g["target_date"]) if g.get("target_date") else None,
+            "category": g.get("category", "Dining"),
+            "status": g.get("status", "in_progress")
+        })
+
+    goals_overall_progress = round((total_goals_saved / total_goals_target * 100), 1) if total_goals_target > 0 else 0.0
+
+    # 9. Recent Transactions (Top 20)
+    recent_expenses = DB.get_all(
+        """
+        SELECT id, amount, category, description, expense_date AS tx_date, created_at
+        FROM expenses
+        WHERE user_id = %s
+        ORDER BY expense_date DESC, id DESC
+        LIMIT 20
+        """,
+        (user_id,)
+    )
+
+    recent_income = DB.get_all(
+        """
+        SELECT id, amount, source AS category, description, income_date AS tx_date, created_at
+        FROM income
+        WHERE user_id = %s
+        ORDER BY income_date DESC, id DESC
+        LIMIT 20
+        """,
+        (user_id,)
+    )
+
+    unified_transactions = []
+    for e in recent_expenses:
+        unified_transactions.append({
+            "id": e["id"],
+            "type": "expense",
+            "amount": round(float(e["amount"]), 2),
+            "category": e.get("category") or "Dining",
+            "description": e.get("description") or "Food Court Expense",
+            "date": str(e.get("tx_date") or ""),
+            "created_at": str(e.get("created_at") or "")
+        })
+
+    for i in recent_income:
+        unified_transactions.append({
+            "id": i["id"],
+            "type": "income",
+            "amount": round(float(i["amount"]), 2),
+            "category": i.get("category") or "Stipend",
+            "description": i.get("description") or "Received Income",
+            "date": str(i.get("tx_date") or ""),
+            "created_at": str(i.get("created_at") or "")
+        })
+
+    unified_transactions.sort(
+        key=lambda x: (x["date"] or "", x["created_at"] or ""),
+        reverse=True
+    )
+    capped_transactions = unified_transactions[:tx_limit]
+
+    return {
+        "success": True,
+        "summary": {
+            "total_income": round(total_income, 2),
+            "total_expenses": round(total_expenses, 2),
+            "net_balance": net_balance,
+            "savings_rate": savings_rate,
+            "wallet_balance": round(wallet_balance, 2),
+            "average_income": round(avg_income, 2),
+            "highest_income": round(max_income, 2),
+            "average_expense": round(avg_expense, 2),
+            "highest_expense": round(max_expense, 2),
+            "total_budget": round(total_budget_limit, 2),
+            "total_budget_spent": round(total_budget_spent, 2),
+            "budget_percent_spent": budget_percent_spent,
+            "total_goals_target": round(total_goals_target, 2),
+            "total_goals_saved": round(total_goals_saved, 2),
+            "goals_overall_progress": goals_overall_progress,
+            "counts": {
+                "income_entries": income_count,
+                "expense_entries": expense_count,
+                "active_budgets": len(budgets_data),
+                "active_goals": len(goals_data)
+            }
+        },
+        "category_breakdown": category_breakdown_expenses,
+        "category_breakdown_income": category_breakdown_income,
+        "monthly_trends": monthly_trends,
+        "budget_comparisons": budgets_data,
+        "budgets": budgets_data,
+        "goals": goals_data,
+        "recent_transactions": capped_transactions,
+        "charts": {
+            "cash_flow": {
+                "income": round(total_income, 2),
+                "expenses": round(total_expenses, 2),
+                "net_balance": net_balance,
+                "savings_rate": savings_rate
+            },
+            "category_distribution": category_breakdown_expenses,
+            "income_distribution": category_breakdown_income,
+            "monthly_trends": monthly_trends,
+            "budget_comparison": budgets_data
+        }
+    }
+
+
+@customer_bp.get("/financial-summary")
+@login_required
+@role_required(["customer"])
+def get_financial_summary():
+    """
+    Computes aggregated real-time financial statistics for the customer dashboard.
+    Enforces session ownership, zero cross-user leakage, and graceful 0-record defaults.
+    """
+    user_id = session.get("user_id")
+    try:
+        payload = _compute_customer_analytics_payload(user_id, tx_limit=10)
+        return jsonify(payload), 200
+    except Exception as err:
+        logger.exception("Failed to generate financial summary for user %s: %s", user_id, err)
+        return jsonify({
+            "success": False,
+            "message": "Failed to calculate financial statistics."
+        }), 500
+
+
+@customer_bp.get("/analytics")
+@login_required
+@role_required(["customer"])
+def get_customer_analytics():
+    """
+    Provides comprehensive financial intelligence and visual analytics data
+    for the authenticated customer's analytics dashboard.
+    Enforces strict tenant isolation, zero mock data, and handles empty datasets.
+    """
+    user_id = session.get("user_id")
+    limit = request.args.get("limit", 20, type=int)
+    try:
+        payload = _compute_customer_analytics_payload(user_id, tx_limit=limit)
+        return jsonify(payload), 200
+    except Exception as err:
+        logger.exception("Failed to generate customer analytics for user %s: %s", user_id, err)
+        return jsonify({
+            "success": False,
+            "message": "Failed to calculate analytics."
+        }), 500

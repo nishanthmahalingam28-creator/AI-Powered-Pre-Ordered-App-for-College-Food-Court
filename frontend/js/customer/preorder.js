@@ -1,51 +1,80 @@
-const API_BASE_URL = window.FOOD_COURT_API_BASE;
-const customerCartKey = 'kpriet-food-court-cart';
-
-function readPreorderCart() {
-    try {
-        const storedCart = window.localStorage.getItem(customerCartKey);
-        return storedCart ? JSON.parse(storedCart) : [];
-    } catch (error) {
-        return [];
-    }
-}
-
-function savePreorderCart(cart) {
-    window.localStorage.setItem(customerCartKey, JSON.stringify(cart));
-}
+let serverCart = [];
+let serverCartSummary = null;
 
 function formatCurrency(value) {
-    return `₹${parseFloat(value).toFixed(2)}`;
+    return `₹${parseFloat(value || 0).toFixed(2)}`;
 }
 
-function renderPreorder() {
-    const cart = readPreorderCart();
+async function fetchCartAndRender() {
     const cartContainer = document.getElementById('cart-items');
     const emptyState = document.getElementById('empty-cart');
     const subtotalElement = document.getElementById('cart-subtotal');
     const totalElement = document.getElementById('cart-total');
     const confirmButton = document.getElementById('confirm-order');
-    const subtotal = cart.reduce((total, item) => total + (item.price * (item.quantity || 1)), 0);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/cart`, { credentials: 'include' });
+        if (response.status === 401) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            serverCart = data.cart || [];
+            serverCartSummary = data.summary || {};
+            renderCartUI();
+        }
+    } catch (e) {
+        console.error('Error fetching cart:', e);
+        if (cartContainer) {
+            cartContainer.innerHTML = '<p class="text-xs text-red-500 py-3">Unable to connect to server to load cart.</p>';
+        }
+    }
+}
+
+function renderCartUI() {
+    const cartContainer = document.getElementById('cart-items');
+    const emptyState = document.getElementById('empty-cart');
+    const subtotalElement = document.getElementById('cart-subtotal');
+    const totalElement = document.getElementById('cart-total');
+    const confirmButton = document.getElementById('confirm-order');
+    const subtotal = serverCartSummary ? serverCartSummary.total_amount : serverCart.reduce((total, item) => total + (item.price * (item.quantity || 1)), 0);
 
     cartContainer.innerHTML = '';
-    emptyState.classList.toggle('hidden', cart.length > 0);
-    confirmButton.disabled = cart.length === 0;
-    confirmButton.classList.toggle('opacity-50', cart.length === 0);
-    confirmButton.classList.toggle('cursor-not-allowed', cart.length === 0);
+    emptyState.classList.toggle('hidden', serverCart.length > 0);
+    
+    const isValid = serverCartSummary ? serverCartSummary.is_valid : true;
+    confirmButton.disabled = serverCart.length === 0 || !isValid;
+    confirmButton.classList.toggle('opacity-50', serverCart.length === 0 || !isValid);
+    confirmButton.classList.toggle('cursor-not-allowed', serverCart.length === 0 || !isValid);
 
-    cart.forEach((item) => {
+    // Display validation alerts if any items are invalid/out of stock
+    if (serverCartSummary && serverCartSummary.validation_errors && serverCartSummary.validation_errors.length > 0) {
+        const errorAlert = document.createElement('div');
+        errorAlert.className = 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex flex-col gap-1';
+        errorAlert.innerHTML = `
+            <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Action Required:</div>
+            ${serverCartSummary.validation_errors.map(err => `<div>• ${err}</div>`).join('')}
+        `;
+        cartContainer.appendChild(errorAlert);
+    }
+
+    serverCart.forEach((item) => {
         const row = document.createElement('div');
         row.className = 'flex flex-wrap items-center justify-between gap-3 pt-3 first:pt-0';
         row.innerHTML = `
             <div>
                 <h4 class="font-bold text-slate-800 text-sm">${item.name}</h4>
-                <p class="text-xs text-slate-500">${item.shop || 'Food Court'} · ${formatCurrency(item.price)} each</p>
+                <p class="text-xs text-slate-500">${item.shop_name || 'Food Court'} · ${formatCurrency(item.price)} each</p>
+                ${!item.is_available ? '<span class="text-[10px] text-red-600 font-bold">Currently Unavailable</span>' : ''}
+                ${item.stock_quantity < item.quantity ? `<span class="text-[10px] text-amber-600 font-bold">Only ${item.stock_quantity} left</span>` : ''}
             </div>
             <div class="flex items-center gap-2">
-                <button type="button" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center justify-center" data-decrease="${item.id}">−</button>
+                <button type="button" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center justify-center cursor-pointer" data-decrease="${item.item_id || item.id}">−</button>
                 <span class="min-w-6 text-center font-bold text-xs">${item.quantity || 1}</span>
-                <button type="button" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center justify-center" data-increase="${item.id}">+</button>
-                <button type="button" class="text-xs text-red-600 hover:text-red-800 ml-2 font-semibold" data-remove="${item.id}">Remove</button>
+                <button type="button" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center justify-center cursor-pointer" data-increase="${item.item_id || item.id}">+</button>
+                <button type="button" class="text-xs text-red-600 hover:text-red-800 ml-2 font-semibold cursor-pointer" data-remove="${item.item_id || item.id}">Remove</button>
             </div>`;
         cartContainer.appendChild(row);
     });
@@ -64,19 +93,60 @@ function renderPreorder() {
     });
 }
 
-function changeQuantity(itemId, difference) {
-    const cart = readPreorderCart();
-    const item = cart.find((cartItem) => String(cartItem.id) === String(itemId));
-    if (item) {
-        item.quantity = (item.quantity || 1) + difference;
+async function changeQuantity(itemId, difference) {
+    const item = serverCart.find((c) => String(c.item_id || c.id) === String(itemId));
+    if (!item) return;
+
+    const newQty = (item.quantity || 1) + difference;
+
+    try {
+        let res;
+        if (newQty <= 0) {
+            res = await fetch(`${API_BASE_URL}/cart/${itemId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+        } else {
+            res = await fetch(`${API_BASE_URL}/cart/${itemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ quantity: newQty })
+            });
+        }
+
+        const data = await res.json();
+        if (data.success) {
+            serverCart = data.cart || [];
+            serverCartSummary = data.summary || {};
+            renderCartUI();
+        } else {
+            alert(data.message || 'Unable to update quantity.');
+        }
+    } catch (e) {
+        console.error('Update quantity error:', e);
+        alert('Server communication error.');
     }
-    savePreorderCart(cart.filter((cartItem) => cartItem.quantity > 0));
-    renderPreorder();
 }
 
-function removeItem(itemId) {
-    savePreorderCart(readPreorderCart().filter((item) => String(item.id) !== String(itemId)));
-    renderPreorder();
+async function removeItem(itemId) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/cart/${itemId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+            serverCart = data.cart || [];
+            serverCartSummary = data.summary || {};
+            renderCartUI();
+        } else {
+            alert(data.message || 'Failed to remove item.');
+        }
+    } catch (e) {
+        console.error('Remove item error:', e);
+        alert('Server communication error.');
+    }
 }
 
 let activePendingOrder = null;
@@ -248,8 +318,7 @@ document.getElementById('complete-pending-pay-btn')?.addEventListener('click', (
 });
 
 document.getElementById('confirm-order').addEventListener('click', async () => {
-    const cart = readPreorderCart();
-    if (!cart.length) return;
+    if (!serverCart || !serverCart.length) return;
 
     const confirmBtn = document.getElementById('confirm-order');
     const originalText = confirmBtn.innerHTML;
@@ -264,7 +333,7 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-                items: cart.map(item => ({ id: item.id, quantity: item.quantity || 1 })),
+                items: serverCart.map(item => ({ id: item.item_id || item.id, quantity: item.quantity || 1 })),
                 payment_method: selectedPayment
             })
         });
@@ -286,9 +355,8 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             confirmationSec.classList.remove('hidden');
             confirmationSec.scrollIntoView({ behavior: 'smooth' });
 
-            // Clear Cart in localStorage after successful order placement
-            savePreorderCart([]);
-            renderPreorder();
+            // Refresh cart from server (which was automatically cleared upon order placement)
+            await fetchCartAndRender();
 
             // If UPI / Online was selected, launch the Razorpay Checkout modal
             if (selectedPayment === 'UPI / Online' && order.payment_status === 'pending') {
@@ -305,4 +373,4 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
     }
 });
 
-renderPreorder();
+fetchCartAndRender();

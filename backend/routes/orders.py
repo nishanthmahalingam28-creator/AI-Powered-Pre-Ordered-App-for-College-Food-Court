@@ -161,6 +161,12 @@ def place_order():
     shop = DB.get_one("SELECT name FROM shops WHERE id = %s", (shop_id,))
     shop_name = shop["name"] if shop else "Food Court"
 
+    # Automatically clear user's database shopping cart upon successful order placement
+    try:
+        DB.execute("DELETE FROM cart_items WHERE user_id = %s", (customer_id,))
+    except Exception as ce:
+        logger.warning("Failed to clear database cart for user #%s: %s", customer_id, ce)
+
     # Dispatch persistent notifications safely (non-blocking)
     try:
         NotificationService.notify_customer(

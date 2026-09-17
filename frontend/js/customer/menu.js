@@ -1,5 +1,4 @@
 const API_BASE_URL = window.FOOD_COURT_API_BASE;
-const customerCartKey = 'kpriet-food-court-cart';
 
 let selectedShop = '';
 let selectedCategory = 'all';
@@ -34,62 +33,89 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function readCart() {
+let cachedCart = [];
+
+async function updateCartCount() {
     try {
-        const stored = localStorage.getItem(customerCartKey);
-        return stored ? JSON.parse(stored) : [];
+        const res = await fetch(`${API_BASE_URL}/cart`, { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.summary) {
+                cachedCart = data.cart || [];
+                const badge = document.getElementById('cart-count');
+                if (badge) badge.textContent = String(data.summary.total_items || 0);
+            }
+        }
     } catch (e) {
-        return [];
+        // Silently catch network errors for public preview
     }
 }
 
-function saveCart(cart) {
-    localStorage.setItem(customerCartKey, JSON.stringify(cart));
-    updateCartCount();
+function readCart() {
+    return cachedCart;
 }
 
-function updateCartCount() {
-    const cart = readCart();
-    const count = cart.reduce((total, item) => total + (item.quantity || 1), 0);
-    const badge = document.getElementById('cart-count');
-    if (badge) badge.textContent = String(count);
-}
+async function addToCart(item, btn) {
+    if (btn) btn.disabled = true;
 
-function addToCart(item, btn) {
-    let cart = readCart();
+    try {
+        let res = await fetch(`${API_BASE_URL}/cart`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ item_id: item.id, quantity: 1 })
+        });
 
-    // Enforce one cart = one shop policy
-    if (cart.length > 0) {
-        const existingShop = cart[0].shop || cart[0].shop_name;
-        const incomingShop = item.shop || item.shop_name;
+        if (res.status === 401) {
+            const shouldLogin = confirm('Please log in to add items to your cart and place pre-orders. Would you like to log in now?');
+            if (shouldLogin) {
+                window.location.href = '../auth/login.html';
+            }
+            return;
+        }
 
-        if (existingShop && incomingShop && existingShop.toLowerCase() !== incomingShop.toLowerCase()) {
-            const shouldClear = confirm(
-                `Your cart currently contains items from "${existingShop}".\n\nCampus policy requires orders to be placed from one stall at a time. Would you like to clear your existing cart to add items from "${incomingShop}"?`
+        let data = await res.json().catch(() => ({}));
+
+        // Handle single-stall conflict: offer to clear conflicting stall and switch
+        if (res.status === 409 && data.conflict) {
+            const shouldSwitch = confirm(
+                `${data.message}\n\nWould you like to clear your existing cart to start an order from ${data.new_shop_name || 'this stall'}?`
             );
-            if (!shouldClear) {
+            if (!shouldSwitch) {
                 return;
             }
-            cart = [];
+
+            res = await fetch(`${API_BASE_URL}/cart`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ item_id: item.id, quantity: 1, clear_conflicting_stall: true })
+            });
+            data = await res.json().catch(() => ({}));
         }
-    }
 
-    const existing = cart.find(c => c.id === item.id);
-    if (existing) {
-        existing.quantity += 1;
-    } else {
-        cart.push({ ...item, quantity: 1 });
-    }
-    saveCart(cart);
+        if (res.ok && data.success) {
+            cachedCart = data.cart || [];
+            const badge = document.getElementById('cart-count');
+            if (badge && data.summary) badge.textContent = String(data.summary.total_items || 0);
 
-    if (btn) {
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Added';
-        btn.classList.add('bg-emerald-600');
-        setTimeout(() => {
-            btn.innerHTML = orig;
-            btn.classList.remove('bg-emerald-600');
-        }, 900);
+            if (btn) {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Added';
+                btn.classList.add('bg-emerald-600');
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.classList.remove('bg-emerald-600');
+                }, 900);
+            }
+        } else {
+            alert(data.message || 'Unable to add item to cart. Please try again.');
+        }
+    } catch (err) {
+        console.error('Add to cart API error:', err);
+        alert('Could not connect to the server to update cart.');
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }
 

@@ -7,7 +7,7 @@ recommend_bp = Blueprint("recommendations", __name__)
 @recommend_bp.get("")
 @recommend_bp.get("/")
 def get_recommendations():
-    user_id = session.get("user_id") or request.args.get("user_id")
+    user_id = session.get("user_id")
     shop_id = request.args.get("shop_id") or request.args.get("shop")
     limit = int(request.args.get("limit", 6))
 

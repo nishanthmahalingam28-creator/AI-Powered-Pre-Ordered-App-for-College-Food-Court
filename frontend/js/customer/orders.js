@@ -107,6 +107,11 @@ async function loadCustomerOrders() {
 
     try {
         const res = await fetch(`${API_BASE_URL}/orders/my-orders`, { credentials: 'include' });
+        if (res.status === 401) {
+            sessionStorage.removeItem('foodCourtUser');
+            window.location.href = '../auth/login.html';
+            return;
+        }
         const data = await res.json();
 
         if (data.success && data.orders) {

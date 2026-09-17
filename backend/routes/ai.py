@@ -9,14 +9,39 @@ import logging
 from flask import Blueprint, jsonify, request, session
 from ai.recommender import FoodCourtRecommender
 from ai.analytics import FoodCourtAnalytics
-from routes.auth import role_required
+from services.ai_assistant import AIAssistantService
+from routes.auth import role_required, login_required
 from db import DB
 
 logger = logging.getLogger("food_court.ai.routes")
 ai_bp = Blueprint("ai", __name__)
 
 
+@ai_bp.post("/assistant/chat")
+@login_required
+@role_required(["customer"])
+def chat_with_ai_assistant():
+    """
+    Secure Customer AI Financial Assistant Endpoint.
+    Enforces:
+    - User ID strictly derived from session (never user-supplied).
+    - Data sanitization and PII/credential scrubbing.
+    - Graceful fallback when AI API keys are missing or services fail.
+    - Zero hallucination on empty transaction history.
+    """
+    user_id = session.get("user_id")
+    data = request.get_json(silent=True) or {}
+    message = data.get("message") or data.get("prompt") or ""
+
+    result = AIAssistantService.generate_response(user_id=user_id, user_message=message)
+    if not result.get("success") and result.get("error_code") == "INVALID_INPUT":
+        return jsonify(result), 400
+
+    return jsonify(result), 200
+
+
 @ai_bp.get("/recommendations")
+@login_required
 def get_ai_recommendations():
     """
     AI-Powered Food Recommendations API.
@@ -24,14 +49,9 @@ def get_ai_recommendations():
     Query Parameters:
     - shop_id: Optional shop ID to strictly scope recommendations.
     - limit: Max items to return (default 5, max 20).
-    - user_id: Optional user ID override (defaults to authenticated session).
+    Owner user ID is strictly derived from the authenticated session.
     """
-    customer_id = session.get("user_id") or request.args.get("user_id")
-    if customer_id:
-        try:
-            customer_id = int(customer_id)
-        except (ValueError, TypeError):
-            customer_id = None
+    customer_id = session.get("user_id")
 
     raw_shop_id = request.args.get("shop_id") or request.args.get("shop")
     shop_id = None

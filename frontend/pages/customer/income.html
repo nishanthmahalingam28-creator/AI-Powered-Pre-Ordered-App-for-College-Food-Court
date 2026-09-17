@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Income | KPR Food Court</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../js/core/tailwind-config.js"></script>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/base/reset.css">
+  <link rel="stylesheet" href="../../css/pages/customer.css">
+  <script src="../../js/config.js"></script>
+  <script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+
+  <!-- Header Navigation -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Content Container -->
+  <main class="customer-shell flex-grow py-8 pb-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
+
+    <!-- Header / Banner -->
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xs font-black uppercase tracking-widest text-emerald-700 block">Financial Tracker</span>
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            Database Backed
+          </span>
+        </div>
+        <h1 class="text-3xl font-black text-slate-900 tracking-tight">Income & Allowances</h1>
+        <p class="mt-1 text-slate-500 text-sm max-w-2xl">
+          Log stipends, pocket money, fellowships, and earnings. All records are securely persisted to your database account.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="dashboard.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Dashboard
+        </a>
+        <a href="expenses.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm flex items-center gap-2">
+          <i class="fa-solid fa-wallet"></i> Expenses
+        </a>
+        <a href="analytics.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-emerald-600"></i> Analytics
+        </a>
+        <a href="assistant.html" class="bg-gradient-to-r from-teal-50 to-cyan-50 hover:from-teal-100 hover:to-cyan-100 text-teal-800 font-bold text-xs px-4 py-2.5 rounded-xl border border-teal-200 transition-all shadow-sm flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-teal-600"></i> AI Assistant
+        </a>
+      </div>
+    </div>
+
+    <!-- Summary Metrics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-arrow-down"></i>
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Received</span>
+          <span id="stat-total-amount" class="text-2xl font-black text-slate-900">₹0.00</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-coins"></i>
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Entries</span>
+          <span id="stat-total-count" class="text-2xl font-black text-slate-900">0</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-calendar-days"></i>
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Active Period</span>
+          <span id="stat-current-month" class="text-2xl font-black text-slate-900">Current</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid: Form & Income Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Left Column: Add Income Form (4 cols on lg) -->
+      <section class="lg:col-span-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm sticky top-24">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-circle-plus text-emerald-600"></i> Add Income Record
+            </h2>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Direct API</span>
+          </div>
+
+          <!-- Alert Container -->
+          <div id="form-alert" class="hidden mb-4 p-3.5 rounded-xl text-xs font-semibold flex items-start gap-2.5">
+            <i id="form-alert-icon" class="fa-solid fa-circle-info mt-0.5 shrink-0 text-sm"></i>
+            <span id="form-alert-text"></span>
+          </div>
+
+          <form id="income-form" class="space-y-4" novalidate>
+            <!-- Amount -->
+            <div>
+              <label for="income-amount" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Amount (₹) <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-bold">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  id="income-amount"
+                  name="amount"
+                  step="0.01"
+                  min="0.01"
+                  max="1000000"
+                  required
+                  placeholder="0.00"
+                  class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 transition-all"
+                >
+              </div>
+              <p id="amount-error" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+            </div>
+
+            <!-- Date -->
+            <div>
+              <label for="income-date" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Date <span class="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                id="income-date"
+                name="date"
+                required
+                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 transition-all"
+              >
+              <p id="date-error" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+            </div>
+
+            <!-- Source -->
+            <div>
+              <label for="income-source" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Income Source <span class="text-rose-500">*</span>
+              </label>
+              <select
+                id="income-source"
+                name="source"
+                required
+                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 transition-all cursor-pointer"
+              >
+                <option value="Campus Stipend">Campus Stipend</option>
+                <option value="Allowance / Pocket Money">Allowance / Pocket Money</option>
+                <option value="Part-Time Job">Part-Time Job</option>
+                <option value="Scholarship">Scholarship</option>
+                <option value="Research Grant">Research Grant</option>
+                <option value="Gift">Gift</option>
+                <option value="Other">Other</option>
+              </select>
+              <p id="source-error" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label for="income-description" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Description <span class="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="income-description"
+                name="description"
+                maxlength="255"
+                required
+                placeholder="e.g., Monthly Research Assistance"
+                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 transition-all"
+              >
+              <p id="description-error" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+            </div>
+
+            <!-- Submit Button (Duplicate submission guarded) -->
+            <button
+              type="submit"
+              id="submit-income-btn"
+              class="w-full mt-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white font-extrabold text-xs uppercase tracking-wider py-3.5 px-4 rounded-xl shadow-md hover:shadow-emerald-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <i class="fa-solid fa-floppy-disk text-sm"></i>
+              <span id="submit-btn-text">Save Income</span>
+              <span id="submit-btn-spinner" class="hidden animate-spin">
+                <i class="fa-solid fa-circle-notch text-sm"></i>
+              </span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Right Column: Income List & Table (8 cols on lg) -->
+      <section class="lg:col-span-8 space-y-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm min-h-[450px] flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+              <div>
+                <h2 class="text-lg font-black text-slate-900">Recorded Incomes</h2>
+                <p class="text-xs text-slate-400">All income entries registered under your authenticated account.</p>
+              </div>
+              <button
+                id="refresh-btn"
+                class="text-slate-500 hover:text-emerald-700 bg-slate-100 hover:bg-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Refresh list"
+              >
+                <i class="fa-solid fa-rotate-right text-xs"></i> Refresh
+              </button>
+            </div>
+
+            <!-- Global Alert Container -->
+            <div id="list-alert" class="hidden mb-4 p-3.5 rounded-xl text-xs font-semibold flex items-start gap-2.5">
+              <i id="list-alert-icon" class="fa-solid fa-circle-info mt-0.5 shrink-0 text-sm"></i>
+              <span id="list-alert-text"></span>
+            </div>
+
+            <!-- Loading State -->
+            <div id="income-loading" class="py-16 text-center text-slate-400">
+              <div class="inline-block animate-spin text-3xl text-emerald-600 mb-3">
+                <i class="fa-solid fa-circle-notch"></i>
+              </div>
+              <p class="text-sm font-semibold">Loading income records from database...</p>
+            </div>
+
+            <!-- Error State with Retry -->
+            <div id="income-error" class="hidden py-12 text-center">
+              <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center text-xl mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <h3 class="text-sm font-bold text-slate-900">Failed to load income records</h3>
+              <p id="error-message-text" class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                An error occurred while fetching your records.
+              </p>
+              <button
+                id="retry-btn"
+                class="mt-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer"
+              >
+                <i class="fa-solid fa-arrow-rotate-right mr-1"></i> Retry Loading
+              </button>
+            </div>
+
+            <!-- Empty State -->
+            <div id="income-empty" class="hidden py-16 text-center text-slate-400">
+              <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-300 mx-auto flex items-center justify-center text-3xl mb-3">
+                <i class="fa-solid fa-wallet"></i>
+              </div>
+              <h3 class="text-sm font-bold text-slate-700">No income records yet</h3>
+              <p class="text-xs text-slate-400 mt-1">Add your campus stipend, allowance, or earnings on the left.</p>
+            </div>
+
+            <!-- Income Table Container -->
+            <div id="income-table-wrapper" class="hidden overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-bold text-[10px] border-b border-slate-100">
+                  <tr>
+                    <th class="py-3 px-3">Date</th>
+                    <th class="py-3 px-3">Source</th>
+                    <th class="py-3 px-3">Description</th>
+                    <th class="py-3 px-3 text-right">Amount</th>
+                    <th class="py-3 px-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="income-tbody" class="divide-y divide-slate-100 text-slate-700">
+                  <!-- Populated via income.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Bottom Security Badge -->
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-shield-halved text-emerald-600"></i> Protected by Session Ownership & IDOR Shield
+            </span>
+            <span>Zero localStorage dependency</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Edit Income Modal -->
+  <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-md shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3.5 mb-4">
+        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-emerald-600"></i> Edit Income Record
+        </h3>
+        <button id="close-edit-modal-btn" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <div id="edit-alert" class="hidden mb-3 p-3 rounded-xl text-xs font-semibold flex items-start gap-2">
+        <i class="fa-solid fa-circle-info mt-0.5 shrink-0 text-sm"></i>
+        <span id="edit-alert-text"></span>
+      </div>
+
+      <form id="edit-income-form" class="space-y-3.5" novalidate>
+        <input type="hidden" id="edit-income-id">
+
+        <div>
+          <label for="edit-amount" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+            Amount (₹) <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold">
+              ₹
+            </span>
+            <input
+              type="number"
+              id="edit-amount"
+              step="0.01"
+              min="0.01"
+              max="1000000"
+              required
+              class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label for="edit-date" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+            Date <span class="text-rose-500">*</span>
+          </label>
+          <input
+            type="date"
+            id="edit-date"
+            required
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
+          >
+        </div>
+
+        <div>
+          <label for="edit-source" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+            Income Source <span class="text-rose-500">*</span>
+          </label>
+          <select
+            id="edit-source"
+            required
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 cursor-pointer"
+          >
+            <option value="Campus Stipend">Campus Stipend</option>
+            <option value="Allowance / Pocket Money">Allowance / Pocket Money</option>
+            <option value="Part-Time Job">Part-Time Job</option>
+            <option value="Scholarship">Scholarship</option>
+            <option value="Research Grant">Research Grant</option>
+            <option value="Gift">Gift</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="edit-description" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+            Description <span class="text-rose-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="edit-description"
+            maxlength="255"
+            required
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
+          >
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            id="cancel-edit-btn"
+            class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            id="save-edit-btn"
+            class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <span id="save-edit-text">Save Changes</span>
+            <span id="save-edit-spinner" class="hidden animate-spin">
+              <i class="fa-solid fa-circle-notch"></i>
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-sm shadow-2xl border border-slate-100 text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center text-xl mb-3">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <h3 class="text-base font-black text-slate-900">Delete Income Record?</h3>
+      <p class="text-xs text-slate-500 mt-1">
+        This will permanently remove this record from the database.
+      </p>
+
+      <div class="flex items-center justify-center gap-2.5 mt-5">
+        <button
+          type="button"
+          id="cancel-delete-btn"
+          class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="confirm-delete-btn"
+          class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span id="confirm-delete-text">Delete Record</span>
+          <span id="confirm-delete-spinner" class="hidden animate-spin">
+            <i class="fa-solid fa-circle-notch"></i>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Navigation -->
+  <div id="footer-container"></div>
+
+  <!-- Income Logic -->
+  <script src="../../js/customer/income.js"></script>
+</body>
+</html>

@@ -13,10 +13,17 @@
 <body class="customer-page">
   <div id="navbar-container"></div>
   <main class="customer-shell py-8 pb-12">
-    <div class="mb-8">
-      <p class="text-sm font-bold uppercase tracking-widest text-teal-700">Customer Account</p>
-      <h1 class="mt-2 text-3xl font-black">My Profile</h1>
-      <p class="mt-2 text-slate-500">Manage your personal information and account security.</p>
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-widest text-teal-700">Customer Account</p>
+        <h1 class="mt-2 text-3xl font-black">My Profile</h1>
+        <p class="mt-2 text-slate-500">Manage your personal information and account security.</p>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <a href="expenses.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm flex items-center gap-2 w-fit">
+          <i class="fa-solid fa-wallet"></i> My Expenses
+        </a>
+      </div>
     </div>
     <div class="grid gap-6 lg:grid-cols-2">
       <section class="customer-card p-6">
@@ -69,6 +76,12 @@
           <p id="password-message" class="hidden rounded-lg p-3 text-xs font-semibold"></p>
         </form>
       </section>
+    </div>
+
+    <div class="mt-8 flex justify-end">
+      <button id="logout-btn" type="button" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-5 py-3 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out from Account
+      </button>
     </div>
   </main>
   <div id="footer-container"></div>

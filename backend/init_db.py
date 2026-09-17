@@ -2,7 +2,7 @@ import os
 import sqlite3
 import pymysql
 from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash
+from security import hash_password
 
 load_dotenv()
 
@@ -158,6 +158,93 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS cart_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    menu_item_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
+    UNIQUE (user_id, menu_item_id)
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    expense_date TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS income (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    source TEXT NOT NULL,
+    description TEXT NOT NULL,
+    income_date TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS budgets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    amount_limit REAL NOT NULL,
+    period TEXT NOT NULL DEFAULT 'monthly',
+    start_date TEXT,
+    end_date TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS financial_goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    target_amount REAL NOT NULL,
+    current_amount REAL NOT NULL DEFAULT 0.00,
+    target_date TEXT,
+    category TEXT DEFAULT 'Dining',
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    is_used INTEGER NOT NULL DEFAULT 0,
+    used_at TIMESTAMP NULL,
+    ip_address TEXT NULL,
+    user_agent TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cart_user ON cart_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_expense_user ON expenses(user_id);
+CREATE INDEX IF NOT EXISTS idx_expense_date ON expenses(expense_date);
+CREATE INDEX IF NOT EXISTS idx_income_user ON income(user_id);
+CREATE INDEX IF NOT EXISTS idx_income_date ON income(income_date);
+CREATE INDEX IF NOT EXISTS idx_budget_user ON budgets(user_id);
+CREATE INDEX IF NOT EXISTS idx_budget_category ON budgets(category);
+CREATE INDEX IF NOT EXISTS idx_goal_user ON financial_goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_goal_status ON financial_goals(status);
+CREATE INDEX IF NOT EXISTS idx_pwd_reset_token ON password_resets(token_hash);
+CREATE INDEX IF NOT EXISTS idx_pwd_reset_user ON password_resets(user_id);
 CREATE INDEX IF NOT EXISTS idx_notification_user_unread ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_notification_user_created ON notifications(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notification_order ON notifications(order_id);
@@ -174,14 +261,14 @@ DEFAULT_STALLS = [
 ]
 
 DEFAULT_USERS = [
-    (1, "admin@kpriet.ac.in", generate_password_hash("admin123"), "admin", 1),
-    (2, "ypr@kpriet.ac.in", generate_password_hash("vendor123"), "vendor", 1),
-    (3, "campus@kpriet.ac.in", generate_password_hash("vendor123"), "vendor", 1),
-    (4, "german@kpriet.ac.in", generate_password_hash("vendor123"), "vendor", 1),
-    (5, "royal@kpriet.ac.in", generate_password_hash("vendor123"), "vendor", 1),
-    (6, "mario@kpriet.ac.in", generate_password_hash("vendor123"), "vendor", 1),
-    (7, "saaral@kpriet.ac.in", generate_password_hash("vendor123"), "vendor", 1),
-    (8, "student@kpriet.ac.in", generate_password_hash("password123"), "customer", 1),
+    (1, "admin@kpriet.ac.in", hash_password("admin123"), "admin", 1),
+    (2, "ypr@kpriet.ac.in", hash_password("vendor123"), "vendor", 1),
+    (3, "campus@kpriet.ac.in", hash_password("vendor123"), "vendor", 1),
+    (4, "german@kpriet.ac.in", hash_password("vendor123"), "vendor", 1),
+    (5, "royal@kpriet.ac.in", hash_password("vendor123"), "vendor", 1),
+    (6, "mario@kpriet.ac.in", hash_password("vendor123"), "vendor", 1),
+    (7, "saaral@kpriet.ac.in", hash_password("vendor123"), "vendor", 1),
+    (8, "student@kpriet.ac.in", hash_password("password123"), "customer", 1),
 ]
 
 DEFAULT_MENU = [

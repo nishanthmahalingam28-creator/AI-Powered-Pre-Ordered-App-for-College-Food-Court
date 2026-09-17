@@ -69,6 +69,26 @@ document.addEventListener("DOMContentLoaded", () => {
             return "orders";
         }
 
+        if (currentPath.includes("expenses.html")) {
+            return "expenses";
+        }
+
+        if (currentPath.includes("income.html")) {
+            return "income";
+        }
+
+        if (currentPath.includes("budgets.html") || currentPath.includes("goals.html")) {
+            return "budgets";
+        }
+
+        if (currentPath.includes("analytics.html")) {
+            return "analytics";
+        }
+
+        if (currentPath.includes("assistant.html")) {
+            return "assistant";
+        }
+
         if (currentPath.includes("profile.html")) {
             return "profile";
         }

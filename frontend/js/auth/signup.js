@@ -72,10 +72,7 @@ sendOtpBtn.addEventListener("click", async function () {
 
         if (res.ok && data.success) {
             otpContainer.classList.remove("hidden");
-            otpSuccess.innerHTML = `OTP sent to +91 ${mobileVal}. ${data.demo_otp ? '(Demo OTP: <strong>' + data.demo_otp + '</strong>)' : ''}`;
-            if (data.demo_otp) {
-                otpInput.value = data.demo_otp;
-            }
+            otpSuccess.innerHTML = `OTP sent to +91 ${mobileVal}. ${data.demo_otp ? '(Dev OTP: <strong>' + data.demo_otp + '</strong>)' : ''}`;
         } else {
             mobileError.innerHTML = data.message || "Failed to dispatch OTP.";
         }
@@ -146,13 +143,24 @@ mobileNumberInput.addEventListener("input", function () {
     }
 });
 
+// Real-time input listeners to clear errors on typing
+[fullNameInput, emailInput, passwordInput, confirmPasswordInput, identityInput].forEach(inputEl => {
+    if (inputEl) {
+        inputEl.addEventListener("input", () => {
+            const errId = inputEl.id === "identityInput" ? "identityError" : `${inputEl.id}Error`;
+            const errEl = document.getElementById(errId);
+            if (errEl) errEl.innerHTML = "";
+        });
+    }
+});
+
 document.getElementById("signupForm").addEventListener("submit", async function (event) {
     event.preventDefault();
 
     const fullName = fullNameInput.value.trim();
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-    const confirmPassword = confirmPasswordInput.value.trim();
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
     const customerType = customerTypeSelect.value;
     const identityValue = identityInput.value.trim();
     const mobileVal = mobileNumberInput.value.trim();
@@ -168,62 +176,81 @@ document.getElementById("signupForm").addEventListener("submit", async function 
 
     let valid = true;
 
-    if (fullName === "") {
-        document.getElementById("nameError").innerHTML = "Full name is required";
+    // 1. Full Name Validation
+    const namePattern = /^[a-zA-Z\s'.-]{2,50}$/;
+    if (!fullName) {
+        document.getElementById("nameError").innerHTML = "Full name is required.";
+        valid = false;
+    } else if (fullName.length < 2) {
+        document.getElementById("nameError").innerHTML = "Full name must contain at least 2 characters.";
+        valid = false;
+    } else if (!namePattern.test(fullName)) {
+        document.getElementById("nameError").innerHTML = "Full name can only contain letters, spaces, hyphens, and apostrophes.";
         valid = false;
     }
 
-    if (customerType === "student" && identityValue === "") {
-        identityError.innerHTML = "Roll number is required";
+    // 2. Persona Identifier Validation
+    if (customerType === "student" && !identityValue) {
+        identityError.innerHTML = "Roll number is required for students.";
         valid = false;
-    } else if (customerType === "faculty" && identityValue === "") {
-        identityError.innerHTML = "Faculty ID is required";
+    } else if (customerType === "faculty" && !identityValue) {
+        identityError.innerHTML = "Faculty ID is required for faculty members.";
         valid = false;
     }
 
-    if (mobileVal === "") {
-        mobileError.innerHTML = "Mobile number is required";
+    // 3. Mobile & OTP Verification Validation
+    if (!mobileVal) {
+        mobileError.innerHTML = "Mobile number is required.";
         valid = false;
     } else if (!isOtpVerified) {
-        mobileError.innerHTML = "Please verify your mobile number with OTP";
+        mobileError.innerHTML = "Please verify your mobile number with OTP before registering.";
         valid = false;
     }
 
-    if (email === "") {
-        document.getElementById("emailError").innerHTML = "Email is required";
+    // 4. Email Format Validation
+    if (!email) {
+        document.getElementById("emailError").innerHTML = "Email address is required.";
         valid = false;
     } else if (customerType === "student" || customerType === "faculty") {
-        const kprietPattern = /^[a-zA-Z0-9._%+-]+@kpriet\.ac\.in$/;
+        const kprietPattern = /^[a-zA-Z0-9._%+-]+@kpriet\.ac\.in$/i;
         if (!kprietPattern.test(email)) {
-            document.getElementById("emailError").innerHTML = "Enter a valid KPRIET Email (@kpriet.ac.in)";
+            document.getElementById("emailError").innerHTML = "Enter a valid KPRIET institutional email (@kpriet.ac.in).";
             valid = false;
         }
     } else if (customerType === "guest") {
         const standardEmailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!standardEmailPattern.test(email)) {
-            document.getElementById("emailError").innerHTML = "Enter a valid email address";
+            document.getElementById("emailError").innerHTML = "Enter a valid email address.";
             valid = false;
         }
     }
 
-    if (password === "") {
-        document.getElementById("passwordError").innerHTML = "Password is required";
+    // 5. Password Strength Validation (min 8 chars, at least 1 letter and 1 number)
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    if (!password) {
+        document.getElementById("passwordError").innerHTML = "Password is required.";
         valid = false;
     } else if (password.length < 8) {
-        document.getElementById("passwordError").innerHTML = "Password must contain at least 8 characters";
+        document.getElementById("passwordError").innerHTML = "Password must contain at least 8 characters.";
+        valid = false;
+    } else if (!hasLetter || !hasNumber) {
+        document.getElementById("passwordError").innerHTML = "Password must contain both letters and numbers.";
         valid = false;
     }
 
-    if (confirmPassword === "") {
-        document.getElementById("confirmPasswordError").innerHTML = "Please confirm your password";
+    // 6. Confirm Password Matching Validation
+    if (!confirmPassword) {
+        document.getElementById("confirmPasswordError").innerHTML = "Please confirm your password.";
         valid = false;
     } else if (password !== confirmPassword) {
-        document.getElementById("confirmPasswordError").innerHTML = "Passwords do not match";
+        document.getElementById("confirmPasswordError").innerHTML = "Passwords do not match.";
         valid = false;
     }
 
+    // 7. Terms & Conditions
     if (!termsCheckbox.checked) {
-        document.getElementById("termsError").innerHTML = "You must agree to the terms";
+        document.getElementById("termsError").innerHTML = "You must agree to the Terms of Service.";
         valid = false;
     }
 
@@ -237,10 +264,12 @@ document.getElementById("signupForm").addEventListener("submit", async function 
         const res = await fetch(`${API_BASE_URL}/auth/customer/signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({
                 fullName,
                 email,
                 password,
+                confirmPassword,
                 customerType,
                 identifier: identityValue,
                 mobile: mobileVal
@@ -249,13 +278,27 @@ document.getElementById("signupForm").addEventListener("submit", async function 
         const data = await res.json();
 
         if (res.ok && data.success) {
-            alert("Account registered successfully! Please log in.");
-            window.location.href = data.redirect || "login.html";
+            if (data.user) {
+                sessionStorage.setItem("foodCourtUser", JSON.stringify(data.user));
+            }
+            alert("Account registered successfully! Entering KPR Food Court...");
+            window.location.href = data.redirect || "../customer/dashboard.html";
         } else {
-            document.getElementById("emailError").innerHTML = data.message || "Registration failed.";
+            const msg = data.message || "Registration failed.";
+            if (res.status === 409 || msg.toLowerCase().includes("email")) {
+                document.getElementById("emailError").innerHTML = msg;
+            } else if (msg.toLowerCase().includes("mobile")) {
+                mobileError.innerHTML = msg;
+            } else if (msg.toLowerCase().includes("password")) {
+                document.getElementById("passwordError").innerHTML = msg;
+            } else if (msg.toLowerCase().includes("name")) {
+                document.getElementById("nameError").innerHTML = msg;
+            } else {
+                document.getElementById("emailError").innerHTML = msg;
+            }
         }
     } catch (e) {
-        document.getElementById("emailError").innerHTML = "Connection error. Ensure the Flask API is running.";
+        document.getElementById("emailError").innerHTML = "Connection error. Ensure the backend API server is running.";
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;

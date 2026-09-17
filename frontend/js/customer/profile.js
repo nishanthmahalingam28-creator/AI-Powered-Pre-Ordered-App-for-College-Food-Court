@@ -207,4 +207,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to sign out?')) return;
+            try {
+                await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) {}
+            sessionStorage.removeItem('foodCourtUser');
+            window.location.href = '../auth/login.html';
+        });
+    }
 });
+

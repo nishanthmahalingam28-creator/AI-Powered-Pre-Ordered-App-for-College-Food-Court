@@ -1,8 +1,25 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const API_BASE_URL = window.FOOD_COURT_API_BASE;
-    const customerCartKey = 'kpriet-food-court-cart';
+    const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : 'http://127.0.0.1:5000/api');
 
-    // 1. Initialize User Information from real backend session
+    // Purge legacy financial storage keys to guarantee zero localStorage reliance
+    try {
+        localStorage.removeItem("expenses");
+        localStorage.removeItem("income");
+        localStorage.removeItem("budgets");
+        localStorage.removeItem("goals");
+        localStorage.removeItem("financial_goals");
+        localStorage.removeItem("food_court_expenses");
+        localStorage.removeItem("food_court_income");
+        localStorage.removeItem("food_court_budgets");
+        localStorage.removeItem("food_court_goals");
+    } catch (e) {
+        console.warn("Storage access restricted:", e);
+    }
+
+    let cashFlowChartInstance = null;
+    let categoryChartInstance = null;
+
+    // 1. Initialize User Information from authoritative backend session
     async function initUser() {
         let user = null;
         try {
@@ -12,16 +29,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.authenticated && data.user) {
                     user = data.user;
                     sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
+                } else {
+                    sessionStorage.removeItem('foodCourtUser');
+                    window.location.href = '../auth/login.html';
+                    return;
                 }
+            } else {
+                sessionStorage.removeItem('foodCourtUser');
+                window.location.href = '../auth/login.html';
+                return;
             }
         } catch (e) {
-            try {
-                const raw = sessionStorage.getItem('foodCourtUser');
-                if (raw) user = JSON.parse(raw);
-            } catch (ignore) {}
+            console.warn('Authentication verification check failed:', e);
+            sessionStorage.removeItem('foodCourtUser');
+            window.location.href = '../auth/login.html';
+            return;
         }
 
         if (!user || user.role !== 'customer') {
+            sessionStorage.removeItem('foodCourtUser');
             window.location.href = '../auth/login.html';
             return;
         }
@@ -34,6 +60,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             badgeEl.textContent = user.customer_type.toUpperCase();
         }
     }
+
+    // Global customer logout handler
+    window.handleCustomerLogout = async function () {
+        try {
+            await fetch(`${API_BASE_URL}/auth/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (e) {
+            console.warn('Logout request failed:', e);
+        }
+        sessionStorage.clear();
+        try {
+            localStorage.removeItem("expenses");
+            localStorage.removeItem("income");
+            localStorage.removeItem("budgets");
+            localStorage.removeItem("goals");
+            localStorage.removeItem("financial_goals");
+        } catch (e) {}
+        window.location.href = '../auth/login.html';
+    };
 
     // 2. Fetch AI Recommendations
     async function loadRecommendations() {
@@ -172,48 +219,422 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Global quick cart add
-    window.addQuickCart = function (id, name, shop, price, btn) {
+    // Global quick cart add via authoritative backend cart API
+    window.addQuickCart = async function (id, name, shop, price, btn) {
+        if (btn) btn.disabled = true;
+
         try {
-            const stored = localStorage.getItem(customerCartKey);
-            let cart = stored ? JSON.parse(stored) : [];
+            let res = await fetch(`${API_BASE_URL}/cart`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ item_id: id, quantity: 1 })
+            });
 
-            // Enforce one cart = one shop policy
-            if (cart.length > 0) {
-                const existingShop = cart[0].shop || cart[0].shop_name;
-                if (existingShop && shop && existingShop.toLowerCase() !== shop.toLowerCase()) {
-                    const shouldClear = confirm(
-                        `Your cart currently contains items from "${existingShop}".\n\nCampus policy requires orders to be placed from one stall at a time. Would you like to clear your cart to add "${name}" from "${shop}"?`
-                    );
-                    if (!shouldClear) {
-                        return;
-                    }
-                    cart = [];
+            if (res.status === 401) {
+                const shouldLogin = confirm('Please log in to add items to your cart. Would you like to log in now?');
+                if (shouldLogin) {
+                    window.location.href = '../auth/login.html';
                 }
+                return;
             }
 
-            const item = cart.find(c => c.id === id);
-            if (item) {
-                item.quantity += 1;
+            let data = await res.json().catch(() => ({}));
+
+            if (res.status === 409 && data.conflict) {
+                const shouldClear = confirm(
+                    `${data.message}\n\nWould you like to clear your existing cart to start an order from ${shop}?`
+                );
+                if (!shouldClear) {
+                    return;
+                }
+
+                res = await fetch(`${API_BASE_URL}/cart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ item_id: id, quantity: 1, clear_conflicting_stall: true })
+                });
+                data = await res.json().catch(() => ({}));
+            }
+
+            if (res.ok && data.success) {
+                if (btn) {
+                    const prev = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i> Added!';
+                    btn.classList.add('bg-emerald-600');
+                    setTimeout(() => {
+                        btn.innerHTML = prev;
+                        btn.classList.remove('bg-emerald-600');
+                    }, 1000);
+                }
             } else {
-                cart.push({ id, name, shop, price, quantity: 1 });
-            }
-            localStorage.setItem(customerCartKey, JSON.stringify(cart));
-
-            if (btn) {
-                const prev = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i> Added!';
-                btn.classList.add('bg-emerald-600');
-                setTimeout(() => {
-                    btn.innerHTML = prev;
-                    btn.classList.remove('bg-emerald-600');
-                }, 1000);
+                alert(data.message || 'Unable to add item to cart.');
             }
         } catch (e) {
             console.error('Add cart error:', e);
+            alert('Could not connect to the server to update cart.');
+        } finally {
+            if (btn) btn.disabled = false;
         }
     };
 
+    // =============================================================
+    // 5. Fetch Live Financial Intelligence & Spending Overview
+    // =============================================================
+    async function loadFinancialSummary() {
+        const skeleton = document.getElementById('financial-loading-skeleton');
+        const container = document.getElementById('financial-content-container');
+        const errorBanner = document.getElementById('financial-error-banner');
+        const errorText = document.getElementById('financial-error-text');
+        const refreshIcon = document.getElementById('refresh-financials-icon');
+
+        if (skeleton) skeleton.classList.remove('hidden');
+        if (container) container.classList.add('hidden');
+        if (errorBanner) errorBanner.classList.add('hidden');
+        if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/customer/financial-summary`, {
+                credentials: 'include'
+            });
+
+            if (res.status === 401) {
+                sessionStorage.removeItem('foodCourtUser');
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to retrieve financial summary.');
+            }
+
+            const summary = data.summary || {};
+            const budgets = data.budgets || [];
+            const goals = data.goals || [];
+            const recentTransactions = data.recent_transactions || [];
+            const categoryBreakdown = data.category_breakdown || [];
+
+            // 1. Update Core Metric Cards
+            const incomeEl = document.getElementById('stat-dash-income');
+            const expensesEl = document.getElementById('stat-dash-expenses');
+            const balanceEl = document.getElementById('stat-dash-balance');
+            const budgetEl = document.getElementById('stat-dash-budget');
+            const budgetConsumedEl = document.getElementById('dash-budget-consumed-text');
+            const incCountEl = document.getElementById('dash-income-count');
+            const expCountEl = document.getElementById('dash-expense-count');
+
+            if (incomeEl) incomeEl.textContent = `₹${(summary.total_income || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (expensesEl) expensesEl.textContent = `₹${(summary.total_expenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (balanceEl) {
+                const bal = summary.net_balance || 0;
+                balanceEl.textContent = `₹${bal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                if (bal < 0) {
+                    balanceEl.className = "text-2xl font-black text-rose-600 mt-0.5 block";
+                } else {
+                    balanceEl.className = "text-2xl font-black text-slate-900 mt-0.5 block";
+                }
+            }
+            if (budgetEl) budgetEl.textContent = `₹${(summary.total_budget || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (budgetConsumedEl) {
+                const pct = summary.budget_percent_spent || 0;
+                const spent = (summary.total_budget_spent || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                budgetConsumedEl.textContent = `${pct}% allocated spent (₹${spent})`;
+            }
+            if (incCountEl) incCountEl.textContent = summary.counts?.income_entries ?? 0;
+            if (expCountEl) expCountEl.textContent = summary.counts?.expense_entries ?? 0;
+
+            // 2. Render Chart 1: Cash Flow Comparison
+            const flowCanvas = document.getElementById('cashFlowChart');
+            const flowEmpty = document.getElementById('cash-flow-empty');
+
+            if (flowCanvas && typeof Chart !== 'undefined') {
+                if (summary.total_income === 0 && summary.total_expenses === 0) {
+                    flowCanvas.classList.add('hidden');
+                    if (flowEmpty) flowEmpty.classList.remove('hidden');
+                } else {
+                    if (flowEmpty) flowEmpty.classList.add('hidden');
+                    flowCanvas.classList.remove('hidden');
+
+                    if (cashFlowChartInstance) {
+                        cashFlowChartInstance.destroy();
+                    }
+
+                    const ctxFlow = flowCanvas.getContext('2d');
+                    cashFlowChartInstance = new Chart(ctxFlow, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Total Income', 'Total Expenses', 'Net Balance'],
+                            datasets: [{
+                                data: [summary.total_income, summary.total_expenses, summary.net_balance],
+                                backgroundColor: [
+                                    'rgba(16, 185, 129, 0.85)',
+                                    'rgba(244, 63, 94, 0.85)',
+                                    'rgba(14, 165, 233, 0.85)'
+                                ],
+                                borderRadius: 8,
+                                borderSkipped: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => ` ₹${Number(ctx.raw).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { callback: (val) => '₹' + val },
+                                    grid: { color: 'rgba(226, 232, 240, 0.6)' }
+                                },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // 3. Render Chart 2: Category Expense Breakdown
+            const catCanvas = document.getElementById('categoryChart');
+            const catEmpty = document.getElementById('category-chart-empty');
+
+            if (catCanvas && typeof Chart !== 'undefined') {
+                if (!categoryBreakdown || categoryBreakdown.length === 0) {
+                    catCanvas.classList.add('hidden');
+                    if (catEmpty) catEmpty.classList.remove('hidden');
+                } else {
+                    if (catEmpty) catEmpty.classList.add('hidden');
+                    catCanvas.classList.remove('hidden');
+
+                    if (categoryChartInstance) {
+                        categoryChartInstance.destroy();
+                    }
+
+                    const ctxCat = catCanvas.getContext('2d');
+                    categoryChartInstance = new Chart(ctxCat, {
+                        type: 'doughnut',
+                        data: {
+                            labels: categoryBreakdown.map(c => c.category),
+                            datasets: [{
+                                data: categoryBreakdown.map(c => c.amount),
+                                backgroundColor: [
+                                    '#0d9488', '#06b6d4', '#3b82f6', '#8b5cf6',
+                                    '#ec4899', '#f59e0b', '#10b981', '#64748b'
+                                ],
+                                borderWidth: 2,
+                                borderColor: '#ffffff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { boxWidth: 10, font: { size: 11, weight: 'bold' } }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => ` ${ctx.label}: ₹${Number(ctx.raw).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                    }
+                                }
+                            },
+                            cutout: '65%'
+                        }
+                    });
+                }
+            }
+
+            // 4. Render Budgets List
+            const budgetsListEl = document.getElementById('dash-budgets-list');
+            const budgetsEmptyEl = document.getElementById('dash-budgets-empty');
+
+            if (budgetsListEl) {
+                if (budgets.length === 0) {
+                    budgetsListEl.innerHTML = '';
+                    if (budgetsEmptyEl) budgetsEmptyEl.classList.remove('hidden');
+                } else {
+                    if (budgetsEmptyEl) budgetsEmptyEl.classList.add('hidden');
+                    budgetsListEl.innerHTML = '';
+                    budgets.forEach(b => {
+                        const badgeClass = b.status === 'exceeded'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : b.status === 'near_limit'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                        const badgeText = b.status === 'exceeded'
+                            ? 'Exceeded'
+                            : b.status === 'near_limit'
+                            ? 'Near Limit'
+                            : 'On Track';
+                        const barColor = b.status === 'exceeded'
+                            ? 'bg-rose-500'
+                            : b.status === 'near_limit'
+                            ? 'bg-amber-500'
+                            : 'bg-teal-500';
+
+                        const div = document.createElement('div');
+                        div.className = 'p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 hover:bg-slate-100/70 transition-colors';
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full ${barColor}"></span>
+                                    <span class="font-bold text-xs text-slate-800">${escapeHtml(b.category)}</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${badgeClass}">
+                                    ${badgeText}
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-1.5">
+                                <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, b.percent_spent)}%"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                                <span>Spent: <strong class="text-slate-800">₹${b.spent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> of ₹${b.amount_limit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                <span>${b.percent_spent}%</span>
+                            </div>
+                        `;
+                        budgetsListEl.appendChild(div);
+                    });
+                }
+            }
+
+            // 5. Render Goals List
+            const goalsListEl = document.getElementById('dash-goals-list');
+            const goalsEmptyEl = document.getElementById('dash-goals-empty');
+
+            if (goalsListEl) {
+                if (goals.length === 0) {
+                    goalsListEl.innerHTML = '';
+                    if (goalsEmptyEl) goalsEmptyEl.classList.remove('hidden');
+                } else {
+                    if (goalsEmptyEl) goalsEmptyEl.classList.add('hidden');
+                    goalsListEl.innerHTML = '';
+                    goals.forEach(g => {
+                        const isDone = g.status === 'achieved' || g.current_amount >= g.target_amount;
+                        const badgeClass = isDone
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            : 'bg-cyan-100 text-cyan-800 border-cyan-200';
+                        const badgeText = isDone ? 'Achieved' : 'In Progress';
+
+                        const div = document.createElement('div');
+                        div.className = 'p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 hover:bg-slate-100/70 transition-colors';
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                    <span class="font-bold text-xs text-slate-800">${escapeHtml(g.title)}</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${badgeClass}">
+                                    ${badgeText}
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-1.5">
+                                <div class="bg-gradient-to-r from-teal-500 to-emerald-500 h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, g.progress_percent)}%"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                                <span>Saved: <strong class="text-slate-800">₹${g.current_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> of ₹${g.target_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                <span>${g.progress_percent}%</span>
+                            </div>
+                        `;
+                        goalsListEl.appendChild(div);
+                    });
+                }
+            }
+
+            // 6. Render Recent Transactions Table
+            const txWrapper = document.getElementById('dash-transactions-wrapper');
+            const txTbody = document.getElementById('dash-transactions-tbody');
+            const txEmpty = document.getElementById('dash-transactions-empty');
+
+            if (txTbody) {
+                if (recentTransactions.length === 0) {
+                    txTbody.innerHTML = '';
+                    if (txWrapper) txWrapper.classList.add('hidden');
+                    if (txEmpty) txEmpty.classList.remove('hidden');
+                } else {
+                    if (txEmpty) txEmpty.classList.add('hidden');
+                    if (txWrapper) txWrapper.classList.remove('hidden');
+                    txTbody.innerHTML = '';
+
+                    recentTransactions.forEach(tx => {
+                        const isIncome = tx.type === 'income';
+                        const badgeClass = isIncome
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-rose-50 text-rose-700 border-rose-200';
+                        const iconClass = isIncome ? 'fa-arrow-down' : 'fa-arrow-up';
+                        const typeLabel = isIncome ? 'Income' : 'Expense';
+                        const amountSign = isIncome ? '+' : '-';
+                        const amountColor = isIncome ? 'text-emerald-600' : 'text-rose-600';
+
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50/80 transition-colors';
+                        tr.innerHTML = `
+                            <td class="py-3 px-3">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border inline-flex items-center gap-1 ${badgeClass}">
+                                    <i class="fa-solid ${iconClass} text-[9px]"></i> ${typeLabel}
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 font-bold text-slate-800">
+                                ${escapeHtml(tx.category || 'Dining')}
+                            </td>
+                            <td class="py-3 px-3 text-slate-600">
+                                ${escapeHtml(tx.description || '')}
+                            </td>
+                            <td class="py-3 px-3 text-slate-400 text-[11px]">
+                                ${escapeHtml(tx.date || '')}
+                            </td>
+                            <td class="py-3 px-3 text-right font-black ${amountColor}">
+                                ${amountSign}₹${Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                        `;
+                        txTbody.appendChild(tr);
+                    });
+                }
+            }
+
+            if (skeleton) skeleton.classList.add('hidden');
+            if (container) container.classList.remove('hidden');
+
+        } catch (err) {
+            console.error('Failed to load financial summary:', err);
+            if (skeleton) skeleton.classList.add('hidden');
+            if (container) container.classList.add('hidden');
+            if (errorBanner) errorBanner.classList.remove('hidden');
+            if (errorText) errorText.textContent = err.message || 'An error occurred while communicating with the database.';
+        } finally {
+            if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Bind Refresh and Retry buttons
+    const refreshFinBtn = document.getElementById('refresh-financials-btn');
+    if (refreshFinBtn) refreshFinBtn.addEventListener('click', loadFinancialSummary);
+
+    const retryFinBtn = document.getElementById('retry-financials-btn');
+    if (retryFinBtn) retryFinBtn.addEventListener('click', loadFinancialSummary);
+
     await initUser();
-    await Promise.all([loadRecommendations(), loadActiveOrders(), loadStalls()]);
+    await Promise.all([
+        loadFinancialSummary(),
+        loadRecommendations(),
+        loadActiveOrders(),
+        loadStalls()
+    ]);
 });

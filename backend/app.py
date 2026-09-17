@@ -16,6 +16,11 @@ from routes.customer import customer_bp
 from routes.payments import payments_bp
 from routes.notifications import notifications_bp
 from routes.ai import ai_bp
+from routes.cart import cart_bp
+from routes.expenses import expenses_bp
+from routes.income import income_bp
+from routes.budgets import budgets_bp
+from routes.goals import goals_bp
 
 load_dotenv()
 
@@ -91,6 +96,14 @@ app.register_blueprint(customer_bp, url_prefix="/api/customer")
 app.register_blueprint(payments_bp, url_prefix="/api/payments")
 app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
 app.register_blueprint(ai_bp, url_prefix="/api/ai")
+app.register_blueprint(cart_bp, url_prefix="/api/cart")
+app.register_blueprint(expenses_bp, url_prefix="/api/expenses")
+app.register_blueprint(income_bp, url_prefix="/api/income")
+app.register_blueprint(budgets_bp, url_prefix="/api/budgets")
+app.register_blueprint(goals_bp, url_prefix="/api/goals")
+app.register_blueprint(goals_bp, url_prefix="/api/financial-goals", name="financial_goals")
+
+
 
 
 @app.before_request
@@ -249,7 +262,8 @@ def root():
             "customer": "/api/customer",
             "notifications": "/api/notifications",
             "recommendations": "/api/recommendations",
-            "ai": "/api/ai"
+            "ai": "/api/ai",
+            "cart": "/api/cart"
         }
     })
 

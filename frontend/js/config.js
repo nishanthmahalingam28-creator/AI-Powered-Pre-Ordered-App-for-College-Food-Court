@@ -13,8 +13,10 @@
         );
 
         if (isLocalDev) {
-            window.FOOD_COURT_API_BASE = "https://college-food-court-api.onrender.com/api";
-        }else {
+            window.FOOD_COURT_API_BASE = (origin.indexOf(":5000") !== -1)
+                ? origin + "/api"
+                : "http://127.0.0.1:5000/api";
+        } else {
             window.FOOD_COURT_API_BASE = "https://college-food-court-api.onrender.com/api";
         }
     }

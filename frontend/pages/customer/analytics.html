@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Analytics & Intelligence | KPR Smart Food Court</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../../js/core/tailwind-config.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/base/reset.css">
+    <link rel="stylesheet" href="../../css/pages/customer.css">
+    <!-- Chart.js for High-Definition Financial Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+
+    <!-- Header Navigation -->
+    <div id="navbar-container"></div>
+
+    <!-- Main Content Container -->
+    <main class="customer-shell flex-grow py-8 pb-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
+
+        <!-- Top Welcome & Navigation Banner -->
+        <section class="bg-gradient-to-r from-[#071638] via-[#0f2d6b] to-[#0b245c] rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-950/20 relative overflow-hidden mb-8 border border-white/10">
+            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-3 py-1 rounded-full text-xs font-black bg-teal-400/20 text-teal-300 border border-teal-400/30 flex items-center gap-1.5 uppercase tracking-wider">
+                            <i class="fa-solid fa-chart-line text-[11px]"></i> Financial Intelligence
+                        </span>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-slate-300 border border-white/20">
+                            Authenticated Database Analytics
+                        </span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                        Spending, Income & <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-cyan-200">Budget Analytics</span>
+                    </h1>
+                    <p class="text-slate-300 text-xs sm:text-sm mt-1.5 max-w-xl leading-relaxed">
+                        Deep visual breakdown of your campus dining expenditures, income streams, monthly savings rates, and budget allocations.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
+                    <button
+                        id="refresh-analytics-btn"
+                        class="bg-white/15 hover:bg-white/25 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                        title="Refresh Analytics Data"
+                    >
+                        <i id="refresh-icon" class="fa-solid fa-rotate-right text-teal-300"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <button
+                        id="open-add-transaction-modal-btn"
+                        class="bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-3 rounded-xl shadow-lg hover:shadow-teal-400/30 hover:scale-[1.02] transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                        <i class="fa-solid fa-plus"></i> Add Transaction
+                    </button>
+                    <a href="dashboard.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-table-columns"></i> Dashboard
+                    </a>
+                    <a href="expenses.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-wallet"></i> Expenses
+                    </a>
+                    <a href="income.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-coins"></i> Income
+                    </a>
+                    <a href="budgets.html" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i> Budgets
+                    </a>
+                    <a href="assistant.html" class="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 text-teal-200 font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl border border-teal-400/40 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-teal-300"></i> Assistant
+                    </a>
+                    <button onclick="handleCustomerLogout()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-xs uppercase tracking-wider px-3.5 py-3 rounded-xl border border-rose-400/30 transition-all flex items-center gap-2 cursor-pointer" title="Logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Global Toast / Alert Notification Container -->
+        <div id="analytics-alert" class="hidden mb-6 p-4 rounded-2xl text-xs font-semibold flex items-center justify-between gap-3 shadow-sm transition-all">
+            <div class="flex items-center gap-2.5">
+                <i id="analytics-alert-icon" class="fa-solid fa-circle-info text-base shrink-0"></i>
+                <span id="analytics-alert-text"></span>
+            </div>
+            <button onclick="dismissAlert()" class="text-slate-400 hover:text-slate-700 text-sm cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Loading Skeleton Container -->
+        <div id="analytics-loading-skeleton" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-200"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                        <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-200"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                        <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-200"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                        <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-pulse flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-200"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                        <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-80 animate-pulse"></div>
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-80 animate-pulse"></div>
+            </div>
+        </div>
+
+        <!-- Main Analytics View Shell (revealed after loading) -->
+        <div id="analytics-content-shell" class="hidden space-y-8">
+
+            <!-- 1. Executive Summary Statistics (6 Cards) -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <!-- Total Income -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Income</span>
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+                    </div>
+                    <div id="metric-total-income" class="text-2xl font-black text-slate-900 tracking-tight">₹0.00</div>
+                    <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                        <span id="metric-income-count">0 deposits</span>
+                        <span id="metric-avg-income" class="text-emerald-600 font-semibold">avg ₹0</span>
+                    </div>
+                </div>
+
+                <!-- Total Expenses -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Spent</span>
+                        <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                    </div>
+                    <div id="metric-total-expenses" class="text-2xl font-black text-slate-900 tracking-tight">₹0.00</div>
+                    <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                        <span id="metric-expense-count">0 purchases</span>
+                        <span id="metric-avg-expense" class="text-rose-600 font-semibold">avg ₹0</span>
+                    </div>
+                </div>
+
+                <!-- Net Savings / Balance -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net Savings</span>
+                        <div id="net-balance-icon-container" class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                    </div>
+                    <div id="metric-net-balance" class="text-2xl font-black text-teal-700 tracking-tight">₹0.00</div>
+                    <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Cash flow balance</span>
+                        <span id="metric-cashflow-status" class="text-teal-600 font-semibold">Balanced</span>
+                    </div>
+                </div>
+
+                <!-- Savings Rate -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Savings Rate</span>
+                        <div class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-percent"></i>
+                        </div>
+                    </div>
+                    <div id="metric-savings-rate" class="text-2xl font-black text-slate-900 tracking-tight">0.0%</div>
+                    <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Retained income</span>
+                        <span id="metric-savings-rate-label" class="text-cyan-600 font-semibold">Good</span>
+                    </div>
+                </div>
+
+                <!-- Budget Health -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Budget Health</span>
+                        <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                    </div>
+                    <div id="metric-budget-percent" class="text-2xl font-black text-slate-900 tracking-tight">0%</div>
+                    <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                        <span id="metric-budget-counts">0 active budgets</span>
+                        <span id="metric-budget-status-label" class="text-indigo-600 font-semibold">On Track</span>
+                    </div>
+                </div>
+
+                <!-- Goal Milestones -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Goal Progress</span>
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-bullseye"></i>
+                        </div>
+                    </div>
+                    <div id="metric-goals-percent" class="text-2xl font-black text-slate-900 tracking-tight">0%</div>
+                    <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                        <span id="metric-goals-counts">0 active goals</span>
+                        <span id="metric-goals-saved-total" class="text-purple-600 font-semibold">₹0 saved</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Empty Dataset Zero-State Banner (Hidden if transactions exist) -->
+            <div id="analytics-empty-state" class="hidden bg-white rounded-3xl p-8 sm:p-12 border border-slate-200 shadow-sm text-center">
+                <div class="w-20 h-20 mx-auto rounded-3xl bg-teal-50 text-teal-600 flex items-center justify-center text-3xl mb-4">
+                    <i class="fa-solid fa-chart-simple"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-900 mb-2">No Financial Data Recorded Yet</h3>
+                <p class="text-slate-500 text-sm max-w-md mx-auto mb-6">
+                    Start recording your campus expenses, meal transactions, or income deposits to unlock real-time financial charts, monthly trends, and budget intelligence.
+                </p>
+                <div class="flex items-center justify-center gap-3 flex-wrap">
+                    <button onclick="openAddTransactionModal('expense')" class="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-receipt"></i> Log First Expense
+                    </button>
+                    <button onclick="openAddTransactionModal('income')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-coins"></i> Log First Income
+                    </button>
+                    <a href="menu.html" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-5 py-3 rounded-xl transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-utensils"></i> Order Food Court Meal
+                    </a>
+                </div>
+            </div>
+
+            <!-- 2. Charts Section: 2 Columns of High-Definition Financial Charts -->
+            <section id="charts-grid-section" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Left Column (8 cols): Monthly Trends Time-Series Chart -->
+                <div class="lg:col-span-8 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black uppercase tracking-wider text-teal-700">Time-Series Intelligence</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">Monthly</span>
+                            </div>
+                            <h3 class="text-lg font-black text-slate-900 mt-0.5">Monthly Financial Trends & Savings</h3>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="flex items-center gap-1.5 font-bold text-slate-600">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Income
+                            </span>
+                            <span class="flex items-center gap-1.5 font-bold text-slate-600">
+                                <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Expense
+                            </span>
+                            <span class="flex items-center gap-1.5 font-bold text-slate-600">
+                                <span class="w-3 h-3 rounded-full bg-teal-500 inline-block"></span> Net Savings
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div class="relative w-full h-72 sm:h-80">
+                        <canvas id="monthlyTrendsChart"></canvas>
+                        <div id="monthly-trends-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                            <i class="fa-solid fa-calendar-xmark text-4xl mb-2 text-slate-300"></i>
+                            <p class="text-xs font-bold">No monthly history recorded yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (4 cols): Expense Category Breakdown Doughnut -->
+                <div class="lg:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-black uppercase tracking-wider text-teal-700">Categorization</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">Expenses</span>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-900 mt-0.5">Category Breakdown</h3>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div class="relative w-full h-64 flex items-center justify-center">
+                        <canvas id="categoryExpenseChart"></canvas>
+                        <div id="category-expense-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                            <i class="fa-solid fa-chart-pie text-4xl mb-2 text-slate-300"></i>
+                            <p class="text-xs font-bold">No expense categories yet</p>
+                        </div>
+                    </div>
+
+                    <!-- Category Legend Snippets -->
+                    <div id="category-expense-legend" class="mt-4 pt-4 border-t border-slate-100 space-y-2 max-h-36 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Left Column (6 cols): Income Sources Distribution -->
+                <div class="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-black uppercase tracking-wider text-emerald-700">Revenue Inflow</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">Income Sources</span>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-900 mt-0.5">Income Distribution</h3>
+                    </div>
+
+                    <div class="relative w-full h-64 flex items-center justify-center">
+                        <canvas id="incomeDistributionChart"></canvas>
+                        <div id="income-distribution-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                            <i class="fa-solid fa-coins text-4xl mb-2 text-slate-300"></i>
+                            <p class="text-xs font-bold">No income sources recorded yet</p>
+                        </div>
+                    </div>
+
+                    <div id="income-distribution-legend" class="mt-4 pt-4 border-t border-slate-100 space-y-2 max-h-32 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Right Column (6 cols): Budget vs Actual Spending Comparison -->
+                <div class="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black uppercase tracking-wider text-indigo-700">Pacing & Limits</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">Comparison</span>
+                            </div>
+                            <h3 class="text-lg font-black text-slate-900 mt-0.5">Budget Limit vs Actual Spent</h3>
+                        </div>
+                        <a href="budgets.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                            <span>Manage</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+
+                    <div class="relative w-full h-64">
+                        <canvas id="budgetComparisonChart"></canvas>
+                        <div id="budget-comparison-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                            <i class="fa-solid fa-scale-balanced text-4xl mb-2 text-slate-300"></i>
+                            <p class="text-xs font-bold">No category budgets created yet</p>
+                            <a href="budgets.html" class="mt-2 text-xs text-teal-600 font-bold hover:underline">Create a Budget</a>
+                        </div>
+                    </div>
+
+                    <div id="budget-comparison-summary" class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                        <span id="budget-total-limit-text">Total Limit: ₹0.00</span>
+                        <span id="budget-total-spent-text">Total Spent: ₹0.00</span>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- 3. Category Budgets & Spending Health Table -->
+            <section class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <span class="text-xs font-black uppercase tracking-wider text-teal-700 block">Category Controls</span>
+                        <h3 class="text-lg font-black text-slate-900">Active Category Budgets & Spending Status</h3>
+                    </div>
+                    <a href="budgets.html" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto">
+                        <i class="fa-solid fa-sliders"></i> Edit Budgets
+                    </a>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                <th class="py-3 px-4">Category</th>
+                                <th class="py-3 px-4">Budget Limit</th>
+                                <th class="py-3 px-4">Actual Spent</th>
+                                <th class="py-3 px-4">Remaining</th>
+                                <th class="py-3 px-4">Consumption</th>
+                                <th class="py-3 px-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="budget-table-body" class="divide-y divide-slate-100 text-xs">
+                            <tr>
+                                <td colspan="6" class="py-8 text-center text-slate-400 font-medium">
+                                    No category budgets configured yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. Financial Goals & Savings Milestones -->
+            <section class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <span class="text-xs font-black uppercase tracking-wider text-purple-700 block">Milestones</span>
+                        <h3 class="text-lg font-black text-slate-900">Savings Goals & Financial Targets</h3>
+                    </div>
+                    <a href="budgets.html#goals-section" class="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto">
+                        <i class="fa-solid fa-bullseye"></i> Set New Goal
+                    </a>
+                </div>
+
+                <div id="goals-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="col-span-full py-8 text-center text-slate-400 font-medium bg-slate-50 rounded-2xl border border-slate-200/60">
+                        No financial goals active. Create a savings goal to track your milestones!
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Real-Time Transaction Ledger (Instant Add/Delete Verification) -->
+            <section class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-black uppercase tracking-wider text-teal-700">Live Synchronization</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                                Dynamic Chart Updates
+                            </span>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-900 mt-0.5">Recent Financial Transactions</h3>
+                        <p class="text-xs text-slate-500">
+                            Adding or deleting any transaction immediately recalculates and updates all charts and metrics above in real time.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openAddTransactionModal('expense')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-minus"></i> Add Expense
+                        </button>
+                        <button onclick="openAddTransactionModal('income')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-plus"></i> Add Income
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Date</th>
+                                <th class="py-3 px-4">Category / Source</th>
+                                <th class="py-3 px-4">Description</th>
+                                <th class="py-3 px-4 text-right">Amount</th>
+                                <th class="py-3 px-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-transactions-body" class="divide-y divide-slate-100 text-xs">
+                            <tr>
+                                <td colspan="6" class="py-8 text-center text-slate-400 font-medium">
+                                    No recent transactions found.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- Quick Add Transaction Modal -->
+    <div id="add-transaction-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 relative transform transition-all">
+            <div class="flex items-center justify-between mb-5">
+                <h3 id="modal-title" class="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-teal-600"></i> Record Transaction
+                </h3>
+                <button onclick="closeAddTransactionModal()" class="text-slate-400 hover:text-slate-600 transition-colors text-lg cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="modal-transaction-form" class="space-y-4">
+                <!-- Transaction Type Toggle -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Transaction Type</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            id="type-expense-btn"
+                            onclick="setModalType('expense')"
+                            class="py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer bg-rose-50 border-rose-400 text-rose-700 flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                            <i class="fa-solid fa-arrow-down"></i> Expense
+                        </button>
+                        <button
+                            type="button"
+                            id="type-income-btn"
+                            onclick="setModalType('income')"
+                            class="py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer bg-slate-100 border-slate-200 text-slate-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5"
+                        >
+                            <i class="fa-solid fa-arrow-up"></i> Income
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Amount -->
+                <div>
+                    <label for="modal-amount" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Amount (₹)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-bold">₹</span>
+                        <input
+                            type="number"
+                            id="modal-amount"
+                            name="amount"
+                            step="0.01"
+                            min="1"
+                            max="1000000"
+                            required
+                            placeholder="0.00"
+                            class="w-full pl-8 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white font-bold"
+                        >
+                    </div>
+                </div>
+
+                <!-- Category / Source -->
+                <div>
+                    <label id="modal-cat-label" for="modal-category" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category</label>
+                    <input
+                        type="text"
+                        id="modal-category"
+                        name="category"
+                        required
+                        placeholder="e.g. Dining, Snacks, Beverages, Allowance"
+                        class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
+                    >
+                </div>
+
+                <!-- Date -->
+                <div>
+                    <label for="modal-date" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Date</label>
+                    <input
+                        type="date"
+                        id="modal-date"
+                        name="date"
+                        required
+                        class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
+                    >
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="modal-description" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Description</label>
+                    <input
+                        type="text"
+                        id="modal-description"
+                        name="description"
+                        required
+                        placeholder="e.g. South Indian Thali, Lab Stipend"
+                        class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
+                    >
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-3">
+                    <button
+                        type="button"
+                        onclick="closeAddTransactionModal()"
+                        class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        id="modal-submit-btn"
+                        class="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                    >
+                        <span>Save & Sync</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-200 text-center">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mb-4">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 class="text-base font-black text-slate-900 mb-1">Delete Transaction?</h3>
+            <p class="text-xs text-slate-500 mb-6">
+                This transaction will be permanently deleted from your database. All analytics charts and metrics will recalculate immediately.
+            </p>
+            <div class="flex items-center justify-center gap-3">
+                <button onclick="closeDeleteModal()" class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button id="confirm-delete-btn" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer">
+                    Delete Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Container -->
+    <div id="footer-container"></div>
+
+    <!-- Main Analytics Controller Script -->
+    <script src="../../js/customer/analytics.js"></script>
+</body>
+</html>

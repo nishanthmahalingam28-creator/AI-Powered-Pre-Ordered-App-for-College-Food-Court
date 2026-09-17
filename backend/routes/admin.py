@@ -2,7 +2,7 @@ import re
 import logging
 from datetime import datetime
 from flask import Blueprint, jsonify, request, session
-from werkzeug.security import generate_password_hash
+from security import hash_password
 from db import DB
 from routes.auth import role_required
 from services.audit import AuditService
@@ -373,7 +373,7 @@ def create_vendor():
     if existing:
         return jsonify({"success": False, "message": "An account with this email already exists."}), 409
 
-    pwd_hash = generate_password_hash(password)
+    pwd_hash = hash_password(password)
     user_id = DB.execute(
         "INSERT INTO users (email, password_hash, role, is_active) VALUES (%s, %s, 'vendor', 1)",
         (email, pwd_hash),
