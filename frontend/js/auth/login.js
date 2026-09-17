@@ -8,7 +8,7 @@ const loginForm = document.getElementById("loginForm");
 const loginButton = loginForm?.querySelector('button[type="submit"]');
 
 // Override this value during deployment if the API is hosted elsewhere.
-const API_BASE_URL = window.FOOD_COURT_API_BASE || "http://127.0.0.1:5000/api";
+const API_BASE_URL = window.FOOD_COURT_API_BASE;
 
 function updateCustomerTypeFields() {
     if (customerTypeSelect.value === "guest") {

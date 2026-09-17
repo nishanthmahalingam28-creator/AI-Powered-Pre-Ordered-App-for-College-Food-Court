@@ -4,7 +4,7 @@
  */
 
 (function () {
-    const API_BASE = window.FOOD_COURT_API_BASE || 'http://127.0.0.1:5000/api';
+    const API_BASE = window.FOOD_COURT_API_BASE;
     let pollingTimer = null;
     const POLLING_INTERVAL_MS = 10000; // 10 seconds
 

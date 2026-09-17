@@ -1,4 +1,4 @@
-const API_BASE_URL = window.FOOD_COURT_API_BASE || 'http://127.0.0.1:5000/api';
+const API_BASE_URL = window.FOOD_COURT_API_BASE;
 
 const customerTypeSelect = document.getElementById("customerType");
 const emailLabel = document.getElementById("emailLabel");

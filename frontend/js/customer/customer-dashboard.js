@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const API_BASE_URL = window.FOOD_COURT_API_BASE || 'http://127.0.0.1:5000/api';
+    const API_BASE_URL = window.FOOD_COURT_API_BASE;
     const customerCartKey = 'kpriet-food-court-cart';
 
     // 1. Initialize User Information from real backend session
