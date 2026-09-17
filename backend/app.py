@@ -116,6 +116,13 @@ app.register_blueprint(budgets_bp, url_prefix="/api/budgets")
 app.register_blueprint(goals_bp, url_prefix="/api/goals")
 app.register_blueprint(goals_bp, url_prefix="/api/financial-goals", name="financial_goals")
 
+# Automatic Administrator Account Bootstrapping (Render production & dev environments)
+try:
+    from services.admin_bootstrap import ensure_admin_account
+    ensure_admin_account()
+except Exception as _bootstrap_err:
+    logger.debug("Admin bootstrap check deferred: %s", _bootstrap_err)
+
 
 
 

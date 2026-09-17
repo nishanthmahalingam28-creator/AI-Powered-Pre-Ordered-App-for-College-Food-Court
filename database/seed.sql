@@ -2,14 +2,14 @@ USE food_court_db;
 
 -- 1. Insert Admin and Vendors
 INSERT INTO users (id, email, password_hash, role, is_active) VALUES
-(1, 'admin@kpriet.ac.in', 'scrypt:32768:8:1$kDMEgRswIGIMkuqc$eab9396a7b7cdb2a3d122c7e9e46899c3e31f1437e93be11debc5f8d52a5daa9e5a1b708c0dba5f9e6d84389573e87bfe6b3672e9e7c127f7325b8e732796bbd', 'admin', 1),
-(2, 'ypr@kpriet.ac.in', 'scrypt:32768:8:1$JvyIhZiPzUYhvRQI$477e278bbbf597f48a4a13c4af78a4b229fcbddcb6b7c8560e5208350a5ba38378727a7374b42b818a653ca0afd7eac3e0951bb0b5dfe4bacf1fc970d57ab812', 'vendor', 1),
-(3, 'campus@kpriet.ac.in', 'scrypt:32768:8:1$JvyIhZiPzUYhvRQI$477e278bbbf597f48a4a13c4af78a4b229fcbddcb6b7c8560e5208350a5ba38378727a7374b42b818a653ca0afd7eac3e0951bb0b5dfe4bacf1fc970d57ab812', 'vendor', 1),
-(4, 'german@kpriet.ac.in', 'scrypt:32768:8:1$JvyIhZiPzUYhvRQI$477e278bbbf597f48a4a13c4af78a4b229fcbddcb6b7c8560e5208350a5ba38378727a7374b42b818a653ca0afd7eac3e0951bb0b5dfe4bacf1fc970d57ab812', 'vendor', 1),
-(5, 'royal@kpriet.ac.in', 'scrypt:32768:8:1$JvyIhZiPzUYhvRQI$477e278bbbf597f48a4a13c4af78a4b229fcbddcb6b7c8560e5208350a5ba38378727a7374b42b818a653ca0afd7eac3e0951bb0b5dfe4bacf1fc970d57ab812', 'vendor', 1),
-(6, 'mario@kpriet.ac.in', 'scrypt:32768:8:1$JvyIhZiPzUYhvRQI$477e278bbbf597f48a4a13c4af78a4b229fcbddcb6b7c8560e5208350a5ba38378727a7374b42b818a653ca0afd7eac3e0951bb0b5dfe4bacf1fc970d57ab812', 'vendor', 1),
-(7, 'saaral@kpriet.ac.in', 'scrypt:32768:8:1$JvyIhZiPzUYhvRQI$477e278bbbf597f48a4a13c4af78a4b229fcbddcb6b7c8560e5208350a5ba38378727a7374b42b818a653ca0afd7eac3e0951bb0b5dfe4bacf1fc970d57ab812', 'vendor', 1),
-(8, 'student@kpriet.ac.in', 'scrypt:32768:8:1$DNYeAwHNQA8pkCvz$b644ddf580be342c8499751b264076f8e38edd8c0fdea8dabb51413c3d93c8650747cf831919c828082bf67c30f56f484132c0e2591decc6a065a19fd38e02f8', 'customer', 1)
+(1, 'admin@kpriet.ac.in', '$2b$12$javr8isyS09IuKhtfYcWaOagdgD4a6np/bEC2TNro/.W46emPpZ..', 'admin', 1),
+(2, 'ypr@kpriet.ac.in', '$2b$12$7GBWTk0Rcnao/BtXOmfCEuYCWDSjd2JyIx9UTLS7NIJRDw6.nnJLO', 'vendor', 1),
+(3, 'campus@kpriet.ac.in', '$2b$12$7GBWTk0Rcnao/BtXOmfCEuYCWDSjd2JyIx9UTLS7NIJRDw6.nnJLO', 'vendor', 1),
+(4, 'german@kpriet.ac.in', '$2b$12$7GBWTk0Rcnao/BtXOmfCEuYCWDSjd2JyIx9UTLS7NIJRDw6.nnJLO', 'vendor', 1),
+(5, 'royal@kpriet.ac.in', '$2b$12$7GBWTk0Rcnao/BtXOmfCEuYCWDSjd2JyIx9UTLS7NIJRDw6.nnJLO', 'vendor', 1),
+(6, 'mario@kpriet.ac.in', '$2b$12$7GBWTk0Rcnao/BtXOmfCEuYCWDSjd2JyIx9UTLS7NIJRDw6.nnJLO', 'vendor', 1),
+(7, 'saaral@kpriet.ac.in', '$2b$12$7GBWTk0Rcnao/BtXOmfCEuYCWDSjd2JyIx9UTLS7NIJRDw6.nnJLO', 'vendor', 1),
+(8, 'student@kpriet.ac.in', '$2b$12$RNoQnQ6JWRAf5zK4zYjS8.2hbfSMnt1bQJrVJK7d7EGTR4jeiKNdC', 'customer', 1)
 ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), role=VALUES(role);
 
 -- 2. Customer profile for sample student

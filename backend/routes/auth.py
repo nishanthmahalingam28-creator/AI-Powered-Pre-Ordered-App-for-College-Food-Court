@@ -470,17 +470,34 @@ def admin_login():
     if not identifier or not password:
         return jsonify({"success": False, "message": "Security ID and passphrase are required."}), 400
 
-    # Accept either username 'admin' or email 'admin@kpriet.ac.in'
+    # Accept either username 'admin' or full email 'admin@kpriet.ac.in'
     user = DB.get_one(
         """
-        SELECT id, email, password_hash, role FROM users
-        WHERE (LOWER(email) = %s OR LOWER(email) LIKE %s) AND role = 'admin' AND is_active = 1
+        SELECT id, email, password_hash, role, is_active FROM users
+        WHERE (LOWER(email) = %s OR LOWER(email) LIKE %s) AND role = 'admin'
         LIMIT 1
         """,
         (identifier, f"{identifier}@%"),
     )
 
-    if not user or not verify_password(password, user["password_hash"]):
+    if not user:
+        # Check if ANY admin account exists at all in the database
+        admin_exists = DB.get_one("SELECT id FROM users WHERE role = 'admin' LIMIT 1")
+        if not admin_exists:
+            logger.warning("Admin login attempted but no administrator account exists in database.")
+            return jsonify({
+                "success": False,
+                "message": "Access Denied: Root account is not yet configured. Set ADMIN_EMAIL and ADMIN_PASSWORD in your Render environment."
+            }), 401
+        return jsonify({"success": False, "message": "Access Denied: Invalid root access identifiers."}), 401
+
+    if not user.get("is_active", 1):
+        return jsonify({
+            "success": False,
+            "message": "Access Denied: Root administrator account is deactivated."
+        }), 403
+
+    if not verify_password(password, user["password_hash"]):
         return jsonify({"success": False, "message": "Access Denied: Invalid root access identifiers."}), 401
 
     session.clear()

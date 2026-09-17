@@ -284,6 +284,8 @@ Add the following environment variables in the **Render Web Service Dashboard** 
 | `RAZORPAY_KEY_SECRET` | **YES** | `xxxxxxxxxxxxxxxxxxxxxxxx` | Razorpay Secret Key. |
 | `RAZORPAY_WEBHOOK_SECRET`| **YES** | `whsec_xxxxxxxxxxxxxxxxxxxx` | Razorpay Webhook Signature Verification Secret. |
 | `GOOGLE_CLIENT_ID` | Optional | `123456789-xxxxxx.apps.googleusercontent.com` | Google Identity Services OAuth 2.0 Client ID. |
+| `ADMIN_EMAIL` | Optional | `admin@kpriet.ac.in` | Administrator root account email (defaults to `admin@kpriet.ac.in`). |
+| `ADMIN_PASSWORD` | **Recommended** | `YourStrongAdminPassword123!` | Automatically provisions or resets the root administrator account on startup. |
 | `GEMINI_API_KEY` | Optional | `AIzaSyxxxxxxxxxxxxxxxxxxxxxx` | Google Gemini API Key for AI Financial Assistant. |
 | `GUNICORN_WORKERS` | Optional | `2` | WSGI worker processes (2 is optimal for Render 512MB RAM tier). |
 | `GUNICORN_THREADS` | Optional | `2` | Threads per worker process. |
