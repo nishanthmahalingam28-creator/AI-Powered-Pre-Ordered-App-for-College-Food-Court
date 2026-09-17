@@ -37,7 +37,10 @@ class GoogleAuthService:
     @staticmethod
     def get_client_id() -> str:
         """Returns the configured Google Client ID from environment."""
-        return os.getenv("GOOGLE_CLIENT_ID", "").strip()
+        val = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+        if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+            val = val[1:-1].strip()
+        return val
 
     @classmethod
     def get_public_config(cls) -> Dict[str, Any]:
@@ -127,7 +130,10 @@ class GoogleAuthService:
         # Audience verification (if client_id is set)
         if client_id:
             aud = verified_claims.get("aud")
-            if aud != client_id:
+            if isinstance(aud, list):
+                if client_id not in aud:
+                    raise GoogleTokenVerificationError("Google token was not issued for this application (audience mismatch).")
+            elif aud != client_id:
                 raise GoogleTokenVerificationError("Google token was not issued for this application (audience mismatch).")
 
         # Email & verification checks

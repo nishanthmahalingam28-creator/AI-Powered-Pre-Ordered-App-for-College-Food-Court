@@ -60,7 +60,18 @@ if not secret_key or (not is_development and (secret_key.startswith("dev-") or "
 
 app.config["SECRET_KEY"] = secret_key
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+# Session cookie SameSite policy:
+# - Production with HTTPS and cross-origin frontend: "None" enables cross-site authenticated cookies on modern browsers.
+# - Can be configured explicitly via SESSION_COOKIE_SAMESITE or COOKIE_SAMESITE environment variable.
+# - Development default: "Lax".
+samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") or os.getenv("COOKIE_SAMESITE") or "").strip()
+if samesite_env:
+    app.config["SESSION_COOKIE_SAMESITE"] = samesite_env.capitalize() if samesite_env.lower() in ("lax", "strict", "none") else samesite_env
+elif not is_development and os.getenv("COOKIE_SECURE", "1").lower() in ("1", "true"):
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+else:
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 # Session cookie security:
 # In development: default to False to support local HTTP development.

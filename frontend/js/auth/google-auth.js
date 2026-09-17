@@ -96,17 +96,42 @@
         });
     }
 
-    // Fetch public configuration from backend
+    // Fetch public configuration from backend, with optional window.GOOGLE_CLIENT_ID fallback
     async function fetchGoogleConfig() {
+        if (googleConfig && googleConfig.client_id) {
+            return googleConfig;
+        }
+
         try {
             const res = await fetch(`${API_BASE_URL}/auth/google/config`);
             if (res.ok) {
-                googleConfig = await res.json();
-                return googleConfig;
+                const data = await res.json();
+                if (data && data.client_id && data.client_id.trim()) {
+                    googleConfig = {
+                        success: true,
+                        client_id: data.client_id.trim(),
+                        enabled: Boolean(data.enabled),
+                        environment: data.environment || 'production'
+                    };
+                    return googleConfig;
+                }
             }
         } catch (e) {
             console.warn('[GoogleAuth] Failed to load server Google OAuth config:', e);
         }
+
+        // Fallback: Check if client_id was configured on window.GOOGLE_CLIENT_ID (e.g. via config.js)
+        const fallbackId = (window.GOOGLE_CLIENT_ID || '').trim();
+        if (fallbackId) {
+            googleConfig = {
+                success: true,
+                client_id: fallbackId,
+                enabled: true,
+                environment: 'client_configured'
+            };
+            return googleConfig;
+        }
+
         return { success: false, client_id: '', enabled: false };
     }
 
@@ -193,7 +218,7 @@
 
                 if (!config || !config.client_id) {
                     showAuthNotice(
-                        'Google Sign-In is not configured on this server. Set GOOGLE_CLIENT_ID in your environment (.env) configuration.',
+                        'Google Sign-In is not configured on this server. Set GOOGLE_CLIENT_ID in your Render environment variables or .env file.',
                         'error'
                     );
                     return;
@@ -212,7 +237,32 @@
                     if (notification.isNotDisplayed()) {
                         const reason = notification.getNotDisplayedReason();
                         console.info('[GoogleAuth] Prompt not displayed:', reason);
-                        showAuthNotice(`Google Sign-In prompt could not be displayed (${reason}). Please allow third-party cookies or try again.`, 'error');
+
+                        // Try rendering the standard Google Sign-In button directly if One-Tap was suppressed
+                        let renderedContainer = document.getElementById('googleGsiRenderedBtn');
+                        if (!renderedContainer && btn.parentNode) {
+                            renderedContainer = document.createElement('div');
+                            renderedContainer.id = 'googleGsiRenderedBtn';
+                            renderedContainer.className = 'w-full my-2 flex justify-center';
+                            btn.parentNode.insertBefore(renderedContainer, btn.nextSibling);
+                            try {
+                                window.google.accounts.id.renderButton(renderedContainer, {
+                                    theme: 'outline',
+                                    size: 'large',
+                                    type: 'standard',
+                                    shape: 'rectangular',
+                                    text: 'continue_with',
+                                    width: btn.offsetWidth || 280
+                                });
+                            } catch (renderErr) {
+                                console.warn('[GoogleAuth] renderButton fallback error:', renderErr);
+                            }
+                        }
+
+                        showAuthNotice(
+                            `Google One-Tap was not displayed (${reason}). Use the Google button or ensure third-party cookies are allowed.`,
+                            'info'
+                        );
                     } else if (notification.isSkippedMoment()) {
                         const reason = notification.getSkippedReason();
                         console.info('[GoogleAuth] Prompt skipped:', reason);

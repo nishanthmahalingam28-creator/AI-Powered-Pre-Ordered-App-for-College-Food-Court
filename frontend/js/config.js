@@ -28,6 +28,13 @@
         window.RAZORPAY_KEY_ID = "";
     }
 
+    // Public Google OAuth 2.0 Client ID for Google Identity Services (GIS)
+    // Note: Google Client ID is safe for public client-side exposure (unlike Client Secret).
+    // The backend /api/auth/google/config endpoint is the primary source; this serves as an optional fallback.
+    if (!window.GOOGLE_CLIENT_ID) {
+        window.GOOGLE_CLIENT_ID = "";
+    }
+
     window.getApiUrl = function (path) {
         var base = window.FOOD_COURT_API_BASE.replace(/\/+$/, "");
         var cleanPath = (path || "").replace(/^\/+/, "");

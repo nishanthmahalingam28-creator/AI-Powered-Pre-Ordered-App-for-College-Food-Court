@@ -303,6 +303,52 @@ class TestGoogleAuthentication(unittest.TestCase):
         self.assertFalse(res.get_json().get("success"))
         self.assertIn("deactivated", res.get_json().get("message", "").lower())
 
+    # -------------------------------------------------------------
+    # Client ID Formatting & Quoting Resilience
+    # -------------------------------------------------------------
+    def test_client_id_quotes_and_whitespace_stripped(self):
+        """GOOGLE_CLIENT_ID handles whitespace, double quotes, and single quotes from deployment configs."""
+        with patch.dict(os.environ, {"GOOGLE_CLIENT_ID": '  "quoted-client-id.apps.googleusercontent.com"  '}):
+            self.assertEqual(GoogleAuthService.get_client_id(), "quoted-client-id.apps.googleusercontent.com")
+
+        with patch.dict(os.environ, {"GOOGLE_CLIENT_ID": " 'single-quoted-id.apps.googleusercontent.com' "}):
+            self.assertEqual(GoogleAuthService.get_client_id(), "single-quoted-id.apps.googleusercontent.com")
+
+    # -------------------------------------------------------------
+    # Token Audience Verification with List and String aud Claims
+    # -------------------------------------------------------------
+    @patch("services.google_auth.id_token.verify_oauth2_token")
+    def test_verify_token_aud_list_accepted(self, mock_verify):
+        """Token with list audience containing the configured client_id is accepted."""
+        test_client_id = GoogleAuthService.get_client_id()
+        mock_verify.return_value = {
+            "iss": "https://accounts.google.com",
+            "aud": [test_client_id, "secondary-app-id"],
+            "sub": "sub-12345",
+            "email": "test.aud.list@kpriet.ac.in",
+            "email_verified": True,
+            "name": "Aud List User"
+        }
+
+        claims = GoogleAuthService.verify_token("mock.jwt.aud.list")
+        self.assertEqual(claims["email"], "test.aud.list@kpriet.ac.in")
+
+    @patch("services.google_auth.id_token.verify_oauth2_token")
+    def test_verify_token_aud_mismatch_rejected(self, mock_verify):
+        """Token with audience not matching configured client_id raises GoogleTokenVerificationError."""
+        mock_verify.return_value = {
+            "iss": "https://accounts.google.com",
+            "aud": "different-unauthorized-client-id.apps.googleusercontent.com",
+            "sub": "sub-12345",
+            "email": "mismatch@kpriet.ac.in",
+            "email_verified": True,
+            "name": "Mismatch User"
+        }
+
+        with self.assertRaises(GoogleTokenVerificationError):
+            GoogleAuthService.verify_token("mock.jwt.mismatch")
+
 
 if __name__ == "__main__":
     unittest.main()
+
