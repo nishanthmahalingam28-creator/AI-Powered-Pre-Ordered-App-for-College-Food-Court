@@ -155,7 +155,7 @@ def place_order():
     except ValueError as ve:
         return jsonify({"success": False, "message": str(ve)}), 400
     except Exception as e:
-        logger.error("Order placement error for customer_id=%s: %s", customer_id, type(e).__name__)
+        logger.error("Order placement error for customer_id=%s: %s: %s", customer_id, type(e).__name__, str(e))
         return jsonify({"success": False, "message": "Failed to process order. Please try again."}), 500
 
     shop = DB.get_one("SELECT name FROM shops WHERE id = %s", (shop_id,))

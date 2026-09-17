@@ -41,7 +41,6 @@ def chat_with_ai_assistant():
 
 
 @ai_bp.get("/recommendations")
-@login_required
 def get_ai_recommendations():
     """
     AI-Powered Food Recommendations API.
@@ -49,7 +48,7 @@ def get_ai_recommendations():
     Query Parameters:
     - shop_id: Optional shop ID to strictly scope recommendations.
     - limit: Max items to return (default 5, max 20).
-    Owner user ID is strictly derived from the authenticated session.
+    Owner user ID is derived from the authenticated session (or None for guest users).
     """
     customer_id = session.get("user_id")
 
@@ -60,6 +59,13 @@ def get_ai_recommendations():
             shop_id = int(raw_shop_id)
         except (ValueError, TypeError):
             shop_id = raw_shop_id
+
+    # Personalized customer recommendations without a stall scope strictly require authentication
+    if not shop_id and not customer_id:
+        return jsonify({
+            "success": False,
+            "message": "Authentication required for personalized recommendations."
+        }), 401
 
     try:
         limit = int(request.args.get("limit", 5))

@@ -104,10 +104,15 @@ class ProductionConfig(BaseConfig):
     ENV = "production"
     DEBUG = False
     TESTING = False
-    SESSION_COOKIE_SECURE = os.getenv("COOKIE_SECURE", "1").lower() in ("1", "true")
+    SESSION_COOKIE_SECURE = True
 
     def __init__(self):
         super().__init__()
+        cookie_sec = os.getenv("COOKIE_SECURE")
+        if cookie_sec is not None:
+            self.SESSION_COOKIE_SECURE = cookie_sec.lower() in ("1", "true")
+        else:
+            self.SESSION_COOKIE_SECURE = True
         self.SECRET_KEY = os.getenv("SECRET_KEY")
         if not self.SECRET_KEY or self.SECRET_KEY.startswith("dev-") or len(self.SECRET_KEY) < 16:
             raise RuntimeError(

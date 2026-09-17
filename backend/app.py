@@ -22,7 +22,9 @@ from routes.income import income_bp
 from routes.budgets import budgets_bp
 from routes.goals import goals_bp
 
-load_dotenv()
+# Load local .env only if not explicitly in production mode
+if os.getenv("FLASK_ENV", "").lower() not in ("production", "prod"):
+    load_dotenv()
 
 # Determine environment: strictly production by default unless explicitly specified as development/test
 flask_env = os.getenv("FLASK_ENV", "production").lower()
@@ -39,10 +41,10 @@ logger = logging.getLogger("food_court.app")
 app = Flask(__name__)
 
 # Secret key validation:
-# - Production: MUST be supplied via environment variable; refuses to start if missing.
+# - Production: MUST be supplied via environment variable; refuses to start if missing or insecure default.
 # - Development: Reads from .env or generates an ephemeral development key with warning.
 secret_key = os.getenv("SECRET_KEY")
-if not secret_key:
+if not secret_key or (not is_development and (secret_key.startswith("dev-") or "change-this" in secret_key.lower())):
     if not is_development:
         logger.critical("FATAL: SECRET_KEY environment variable is required in production mode.")
         raise RuntimeError(
