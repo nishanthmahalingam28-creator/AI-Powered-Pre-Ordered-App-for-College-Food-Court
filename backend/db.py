@@ -113,9 +113,13 @@ def get_db_connection():
             return ("mysql", get_mysql_connection())
         except Exception as e:
             logger.critical(
-                "PRODUCTION DATABASE FAILURE: Unable to connect to MySQL at %s:%s/%s (Error: %s). "
-                "SQLite fallback is strictly prohibited in production.",
-                config["host"], config["port"], config["database"], type(e).__name__
+                "PRODUCTION DATABASE FAILURE: Unable to connect to MySQL at %s:%s/%s "
+                "(Error: %s: %s). SQLite fallback is strictly prohibited in production.",
+                config["host"],
+                config["port"],
+                config["database"],
+                type(e).__name__,
+                str(e),
             )
             raise DatabaseConnectionError(
                 "Production database service unavailable. Please verify MySQL configuration."
