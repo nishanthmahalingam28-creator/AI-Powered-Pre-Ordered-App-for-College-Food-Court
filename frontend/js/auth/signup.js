@@ -1,4 +1,4 @@
-const API_BASE_URL = window.FOOD_COURT_API_BASE;
+const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
 const customerTypeSelect = document.getElementById("customerType");
 const emailLabel = document.getElementById("emailLabel");

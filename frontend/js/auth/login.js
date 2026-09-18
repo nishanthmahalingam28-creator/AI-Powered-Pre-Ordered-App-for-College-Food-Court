@@ -7,8 +7,7 @@ const passwordError = document.getElementById("passwordError");
 const loginForm = document.getElementById("loginForm");
 const loginButton = loginForm?.querySelector('button[type="submit"]');
 
-// Override this value during deployment if the API is hosted elsewhere.
-const API_BASE_URL = window.FOOD_COURT_API_BASE;
+const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
 function updateCustomerTypeFields() {
     if (customerTypeSelect.value === "guest") {

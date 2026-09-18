@@ -313,10 +313,10 @@ The application contains files in three distinct directory tiers:
 - **Problem:**
   The local `.env` file contains live, plaintext Aiven Cloud database credentials:
   ```env
-  DB_HOST=college-foodcourt-db-college-food-court.b.aivencloud.com
-  DB_PORT=18736
-  DB_USER=avnadmin
-  DB_PASSWORD=AVNS_VOptnq0HCGn2qnbhWNh
+  DB_HOST=[REDACTED_HOST].aivencloud.com
+  DB_PORT=[REDACTED_PORT]
+  DB_USER=[REDACTED_USER]
+  DB_PASSWORD=[REDACTED_PASSWORD]
   DB_NAME=food_court_db
   ```
 - **Why it is a problem:**

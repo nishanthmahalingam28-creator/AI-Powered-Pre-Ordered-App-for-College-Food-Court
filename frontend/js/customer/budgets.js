@@ -35,11 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.getApiUrl === "function") {
             return window.getApiUrl(path);
         }
-        const origin = window.location.origin;
-        if (origin && origin.startsWith("http")) {
-            return `${origin}${path}`;
-        }
-        return `http://127.0.0.1:5000${path}`;
+        const base = (window.FOOD_COURT_API_BASE || "/api").replace(/\/+$/, "");
+        const cleanPath = (path || "").replace(/^\/+/, "");
+        return `${base}/${cleanPath}`;
     }
 
     // -------------------------------------------------------------

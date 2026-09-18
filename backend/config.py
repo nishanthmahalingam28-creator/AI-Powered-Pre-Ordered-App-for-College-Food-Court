@@ -45,6 +45,16 @@ class BaseConfig:
     RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
     RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
     
+    # Public Frontend URL
+    FRONTEND_URL = (os.getenv("FRONTEND_URL") or os.getenv("APP_URL") or "https://college-food-court-frontend.onrender.com").rstrip("/")
+
+    # SMS Gateway Configuration (Mobile OTP - Twilio Verify)
+    SMS_PROVIDER = os.getenv("SMS_PROVIDER", "twilio_verify").strip().lower()
+    TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
+    TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
+    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "").strip()
+    TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID", "").strip()
+
     # Multi-worker & WSGI Tuning
     GUNICORN_WORKERS = int(os.getenv("GUNICORN_WORKERS", "4"))
     GUNICORN_THREADS = int(os.getenv("GUNICORN_THREADS", "2"))
@@ -105,14 +115,14 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "None"
 
     def __init__(self):
         super().__init__()
-        cookie_sec = os.getenv("COOKIE_SECURE")
-        if cookie_sec is not None:
-            self.SESSION_COOKIE_SECURE = cookie_sec.lower() in ("1", "true")
-        else:
-            self.SESSION_COOKIE_SECURE = True
+        self.SESSION_COOKIE_SECURE = True
+        self.SESSION_COOKIE_HTTPONLY = True
+        self.SESSION_COOKIE_SAMESITE = "None"
         self.SECRET_KEY = os.getenv("SECRET_KEY")
         if not self.SECRET_KEY or self.SECRET_KEY.startswith("dev-") or len(self.SECRET_KEY) < 16:
             raise RuntimeError(

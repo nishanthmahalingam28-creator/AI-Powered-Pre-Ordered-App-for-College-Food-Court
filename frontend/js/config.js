@@ -9,6 +9,7 @@
             origin.indexOf(":5500") !== -1 ||
             origin.indexOf(":3000") !== -1 ||
             origin.indexOf(":8080") !== -1 ||
+            origin.indexOf(":5000") !== -1 ||
             window.location.protocol === "file:"
         );
 

@@ -4,7 +4,7 @@
  */
 
 (function () {
-    const API_BASE = window.FOOD_COURT_API_BASE;
+    const API_BASE = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
     let pollingTimer = null;
     const POLLING_INTERVAL_MS = 10000; // 10 seconds
 

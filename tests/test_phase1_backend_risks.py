@@ -370,7 +370,8 @@ class TestCORSAndErrorHandling(unittest.TestCase):
         old_env = os.environ.get("FLASK_ENV")
         try:
             os.environ["FLASK_ENV"] = "production"
-            with patch("routes.auth.DB.execute", return_value=1):
+            with patch("routes.auth.DB.execute", return_value=1), \
+                 patch("services.sms_service.SMSService.send_otp", return_value=(True, "OTP sent successfully via SMS.")):
                 resp = self.client.post("/api/auth/otp/send", json={
                     "email": "security_test@kpriet.ac.in",
                     "purpose": "signup"
@@ -380,6 +381,7 @@ class TestCORSAndErrorHandling(unittest.TestCase):
                 self.assertTrue(data["success"])
                 self.assertNotIn("demo_otp", data)
                 self.assertNotIn("debug_code", data)
+
         finally:
             if old_env is not None:
                 os.environ["FLASK_ENV"] = old_env

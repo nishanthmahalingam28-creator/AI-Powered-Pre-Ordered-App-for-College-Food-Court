@@ -1,3 +1,5 @@
+const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
+
 let serverCart = [];
 let serverCartSummary = null;
 

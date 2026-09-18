@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // -------------------------------------------------------------
     // 1. API Configuration & Storage Sanitization
     // -------------------------------------------------------------
-    const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === "function" ? window.getApiUrl("") : "http://127.0.0.1:5000/api");
+    const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === "function" ? window.getApiUrl("") : "/api");
 
     try {
         localStorage.removeItem("expenses");

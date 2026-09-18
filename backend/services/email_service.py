@@ -27,6 +27,8 @@ class EmailService:
     @classmethod
     def get_smtp_config(cls) -> Dict[str, Any]:
         """Reads and normalizes SMTP configuration from environment variables."""
+        default_frontend = "https://college-food-court-frontend.onrender.com"
+        frontend_url = (os.getenv("FRONTEND_URL") or os.getenv("APP_URL") or default_frontend).strip().rstrip("/")
         return {
             "host": (os.getenv("SMTP_HOST") or "").strip(),
             "port": int(os.getenv("SMTP_PORT") or 587),
@@ -34,7 +36,8 @@ class EmailService:
             "password": (os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD") or "").strip(),
             "use_tls": str(os.getenv("SMTP_USE_TLS", "1")).lower() in ("1", "true", "yes"),
             "sender": (os.getenv("MAIL_DEFAULT_SENDER") or "KPRIET Smart Food Court <noreply@kpriet.ac.in>").strip(),
-            "app_url": (os.getenv("APP_URL") or os.getenv("FRONTEND_URL") or "http://localhost:5000").rstrip("/"),
+            "app_url": frontend_url,
+            "frontend_url": frontend_url,
         }
 
     @classmethod

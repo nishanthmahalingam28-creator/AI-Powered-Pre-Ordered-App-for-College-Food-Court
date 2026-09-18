@@ -1,4 +1,4 @@
-const API_BASE_URL = window.FOOD_COURT_API_BASE;
+const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
 let currentShopId = 1;
 let currentShopName = 'YPR';
@@ -18,13 +18,13 @@ async function initShopProfile() {
         const authRes = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
         if (!authRes.ok) {
             sessionStorage.removeItem('foodCourtUser');
-            window.location.href = '../auth/login.html';
+            window.location.href = 'login.html';
             return false;
         }
         const authData = await authRes.json();
         if (!authData.authenticated || (authData.user.role !== 'vendor' && authData.user.role !== 'admin')) {
             sessionStorage.removeItem('foodCourtUser');
-            window.location.href = '../auth/login.html';
+            window.location.href = 'login.html';
             return false;
         }
 
@@ -66,7 +66,7 @@ window.handleVendorLogout = async function() {
     }
     sessionStorage.removeItem('foodCourtUser');
     localStorage.removeItem('foodCourtUser');
-    window.location.href = '../auth/login.html';
+    window.location.href = 'login.html';
 };
 
 async function initShopNameFallback() {

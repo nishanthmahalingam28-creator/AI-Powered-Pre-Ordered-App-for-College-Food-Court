@@ -68,18 +68,18 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") or os.getenv("COOKIE_SAMESITE") or "").strip()
 if samesite_env:
     app.config["SESSION_COOKIE_SAMESITE"] = samesite_env.capitalize() if samesite_env.lower() in ("lax", "strict", "none") else samesite_env
-elif not is_development and os.getenv("COOKIE_SECURE", "1").lower() in ("1", "true"):
+elif not is_development:
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
 else:
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 # Session cookie security:
 # In development: default to False to support local HTTP development.
-# In production: default to True unless explicitly disabled via COOKIE_SECURE=0.
+# In production: strictly True for HTTPS.
 if is_development:
     app.config["SESSION_COOKIE_SECURE"] = os.getenv("COOKIE_SECURE", "0").lower() in ("1", "true")
 else:
-    app.config["SESSION_COOKIE_SECURE"] = os.getenv("COOKIE_SECURE", "1").lower() in ("1", "true")
+    app.config["SESSION_COOKIE_SECURE"] = True
 
 # CORS Origin Configuration:
 # Never permit wildcard '*' with credentials in production.

@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, session
 from security import hash_password, verify_password
 from services.google_auth import GoogleAuthService, GoogleTokenVerificationError
 from services.email_service import EmailService
+from services.sms_service import SMSService
 
 from db import DB
 
@@ -119,26 +120,42 @@ def send_otp():
     send_history.append(now_ts)
     _otp_send_limits[target] = send_history
 
-    # Generate 6-digit numeric OTP
-    otp_code = str(secrets.randbelow(900000) + 100000)
-    expires_at = (datetime.now() + timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
-
+    # Invalidate any prior active unverified/unconsumed OTPs for this target & purpose
     DB.execute(
-        "INSERT INTO otp_codes (target, code, purpose, expires_at, is_verified, is_consumed) VALUES (%s, %s, %s, %s, 0, 0)",
-        (target, otp_code, purpose, expires_at),
+        "UPDATE otp_codes SET is_consumed = 1 WHERE target = %s AND purpose = %s AND is_consumed = 0",
+        (target, purpose),
+    )
+
+    # Start verification with SMS provider (Twilio Verify)
+    is_dev = os.getenv("FLASK_ENV", "production").lower() in ("development", "dev", "test", "testing")
+    sms_success, sms_msg = SMSService.send_otp(target)
+
+    if not sms_success and not is_dev:
+        logger.error("Production SMS dispatch failed for target: %s - %s", target, sms_msg)
+        return jsonify({
+            "success": False,
+            "message": "Unable to deliver OTP via SMS at this time. Please try again later."
+        }), 503
+
+    # Record verification request in database (safe placeholder 'VERIFY', NEVER stores actual OTP)
+    expires_at = (datetime.now() + timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
+    DB.execute(
+        "INSERT INTO otp_codes (target, code, purpose, expires_at, is_verified, is_consumed) VALUES (%s, 'VERIFY', %s, %s, 0, 0)",
+        (target, purpose, expires_at),
     )
 
     response_data = {
         "success": True,
-        "message": f"OTP sent successfully to {target}.",
-        "expires_in_minutes": 5,
+        "message": "OTP sent successfully.",
+        "expires_in_minutes": 10,
     }
 
     # Only expose demo_otp in development testing mode (strictly suppressed in production)
-    is_dev = os.getenv("FLASK_ENV", "production").lower() in ("development", "dev", "test", "testing")
     if is_dev:
-        response_data["demo_otp"] = otp_code
-        response_data["debug_code"] = otp_code
+        dev_info = SMSService.get_last_sms_for_testing() or {}
+        dev_code = dev_info.get("dev_otp") or "123456"
+        response_data["demo_otp"] = dev_code
+        response_data["debug_code"] = dev_code
 
     return jsonify(response_data), 200
 
@@ -148,7 +165,7 @@ def verify_otp():
     data = request.get_json(silent=True) or {}
     raw_target = str(data.get("mobile") or data.get("target") or data.get("phone") or data.get("email", "")).strip()
     code = str(data.get("code") or data.get("otp", "")).strip()
-    purpose = str(data.get("purpose", "")).strip()
+    purpose = str(data.get("purpose", "signup")).strip() or "signup"
 
     if not raw_target or not code:
         return jsonify({"success": False, "message": "Target and OTP code are required."}), 400
@@ -169,34 +186,44 @@ def verify_otp():
         }), 429
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if purpose:
-        otp_record = DB.get_one(
-            """
-            SELECT id FROM otp_codes
-            WHERE target = %s AND code = %s AND purpose = %s AND is_verified = 0 AND expires_at >= %s
-            ORDER BY id DESC LIMIT 1
-            """,
-            (target, code, purpose, now_str),
-        )
-    else:
-        otp_record = DB.get_one(
-            """
-            SELECT id FROM otp_codes
-            WHERE target = %s AND code = %s AND is_verified = 0 AND expires_at >= %s
-            ORDER BY id DESC LIMIT 1
-            """,
-            (target, code, now_str),
-        )
+
+    # Check for active unconsumed verification request in database
+    otp_record = DB.get_one(
+        """
+        SELECT id FROM otp_codes
+        WHERE target = %s AND purpose = %s AND is_verified = 0 AND is_consumed = 0 AND expires_at >= %s
+        ORDER BY id DESC LIMIT 1
+        """,
+        (target, purpose, now_str),
+    )
 
     if not otp_record:
         _otp_failed_verifications[target] = (attempts + 1, window_start)
-        return jsonify({"success": False, "message": "Invalid or expired OTP. Please try again."}), 400
+        return jsonify({
+            "success": False,
+            "message": "Invalid or expired OTP. Please try again."
+        }), 400
 
+    # Verify code via configured SMS provider (Twilio Verify)
+    verified, verify_msg = SMSService.check_verification(target, code)
+
+    if not verified:
+        _otp_failed_verifications[target] = (attempts + 1, window_start)
+        return jsonify({
+            "success": False,
+            "message": "Invalid or expired OTP. Please try again."
+        }), 400
+
+    # Verification approved: clear rate limiting and mark verification record
     _otp_failed_verifications.pop(target, None)
     now_ts_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    DB.execute("UPDATE otp_codes SET is_verified = 1, verified_at = %s WHERE id = %s", (now_ts_str, otp_record["id"]))
+    DB.execute(
+        "UPDATE otp_codes SET is_verified = 1, verified_at = %s WHERE id = %s",
+        (now_ts_str, otp_record["id"])
+    )
 
     return jsonify({"success": True, "verified": True, "message": "Mobile number verified successfully."}), 200
+
 
 
 @auth_bp.post("/customer/signup")
@@ -346,6 +373,7 @@ def customer_signup():
 
 
 @auth_bp.post("/customer/login")
+@auth_bp.post("/login")
 def customer_login():
     data = request.get_json(silent=True) or {}
     email = str(data.get("email", "")).strip().lower()
@@ -740,8 +768,8 @@ def forgot_password():
 
         # Build reset URL
         cfg = EmailService.get_smtp_config()
-        base_url = cfg["app_url"]
-        reset_url = f"{base_url}/frontend/pages/auth/reset-password.html?token={raw_token}"
+        frontend_base = cfg.get("frontend_url") or cfg.get("app_url") or "https://college-food-court-frontend.onrender.com"
+        reset_url = f"{frontend_base}/pages/auth/reset-password.html?token={raw_token}"
 
         # Dispatch reset email (never logs token)
         EmailService.send_password_reset_email(
@@ -826,7 +854,7 @@ def reset_password():
     """
     data = request.get_json(silent=True) or {}
     raw_token = str(data.get("token", "")).strip()
-    password = str(data.get("password", ""))
+    password = str(data.get("password") or data.get("new_password", ""))
     confirm_password = str(data.get("confirmPassword") or data.get("confirm_password", ""))
 
     if not raw_token:
