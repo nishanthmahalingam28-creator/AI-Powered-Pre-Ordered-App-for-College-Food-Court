@@ -179,16 +179,6 @@ The application can be deployed to Render via two architectural patterns:
 
 ---
 
-### 2.11. Google Identity Services (GIS) Variables
-* **Required Variable**: `GOOGLE_CLIENT_ID` (set on the backend).
-* **Google Cloud Console Requirement**:
-  - In Google Cloud Console (`APIs & Services > Credentials > OAuth 2.0 Client IDs`), add the Render frontend URL to **Authorized JavaScript origins**:
-    ```
-    https://<your-frontend-service>.onrender.com
-    ```
-  - Failure to add this origin will cause the Google Sign-In prompt to fail with `idpiframe_initialization_failed` or `origin_mismatch`.
-
----
 
 ### 2.12. AI / Gemini Assistant Variables
 * **Supported Variables**: `GEMINI_API_KEY` (or `AI_API_KEY`, `GOOGLE_AI_KEY`).
@@ -283,7 +273,6 @@ Add the following environment variables in the **Render Web Service Dashboard** 
 | `RAZORPAY_KEY_ID` | **YES** | `rzp_live_xxxxxxxxxxxxxx` *(or `rzp_test_...` if `FLASK_ENV=development`)* | Razorpay Public Key ID. |
 | `RAZORPAY_KEY_SECRET` | **YES** | `xxxxxxxxxxxxxxxxxxxxxxxx` | Razorpay Secret Key. |
 | `RAZORPAY_WEBHOOK_SECRET`| **YES** | `whsec_xxxxxxxxxxxxxxxxxxxx` | Razorpay Webhook Signature Verification Secret. |
-| `GOOGLE_CLIENT_ID` | Optional | `123456789-xxxxxx.apps.googleusercontent.com` | Google Identity Services OAuth 2.0 Client ID. |
 | `ADMIN_EMAIL` | Optional | `admin@kpriet.ac.in` | Administrator root account email (defaults to `admin@kpriet.ac.in`). |
 | `ADMIN_PASSWORD` | **Recommended** | `YourStrongAdminPassword123!` | Automatically provisions or resets the root administrator account on startup. |
 | `GEMINI_API_KEY` | Optional | `AIzaSyxxxxxxxxxxxxxxxxxxxxxx` | Google Gemini API Key for AI Financial Assistant. |

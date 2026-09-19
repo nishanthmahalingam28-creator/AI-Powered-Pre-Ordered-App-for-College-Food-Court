@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Blueprint, jsonify, request, session
 from security import hash_password, verify_password
-from services.google_auth import GoogleAuthService, GoogleTokenVerificationError
 from services.email_service import EmailService
 from services.sms_service import SMSService
 
@@ -587,123 +586,6 @@ def current_user():
             "shop_id": user.get("shop_id"),
             "shop_name": user.get("shop_name"),
         },
-    }), 200
-
-
-@auth_bp.get("/google/config")
-def google_auth_config():
-    """Returns public Google OAuth configuration without exposing secrets."""
-    config = GoogleAuthService.get_public_config()
-    return jsonify(config), 200
-
-
-@auth_bp.post("/google")
-def google_auth():
-    """
-    Authoritative Google OAuth / GIS Authentication Endpoint.
-
-    Verifies the submitted Google ID token server-side.
-    If valid:
-      - Finds or creates user in database.
-      - Never allows bypass or silent fake-user logins.
-      - Creates secure server-side session.
-    """
-    data = request.get_json(silent=True) or {}
-    token = data.get("credential") or data.get("id_token") or data.get("token")
-
-    if not token or not str(token).strip():
-        return jsonify({
-            "success": False,
-            "message": "Google authentication credential is required."
-        }), 400
-
-    try:
-        verified_info = GoogleAuthService.verify_token(str(token))
-    except GoogleTokenVerificationError as err:
-        logger.warning("Google token verification error: %s", err)
-        return jsonify({
-            "success": False,
-            "message": str(err)
-        }), 401
-    except Exception as exc:
-        logger.error("Unexpected error during Google token verification: %s", exc)
-        return jsonify({
-            "success": False,
-            "message": "Internal error verifying Google authentication."
-        }), 500
-
-    email = verified_info["email"]
-    name = verified_info["name"]
-    requested_type = str(data.get("customerType", "")).strip().lower()
-
-    # Look for existing user by verified email
-    user = DB.get_one(
-        "SELECT id, email, role, is_active FROM users WHERE LOWER(email) = %s LIMIT 1",
-        (email,)
-    )
-
-    if user:
-        if not user.get("is_active", 1):
-            return jsonify({
-                "success": False,
-                "message": "Account has been deactivated. Please contact the campus administrator."
-            }), 403
-
-        user_id = user["id"]
-        role = user.get("role", "customer")
-
-        profile = DB.get_one(
-            "SELECT customer_type, full_name, mobile, wallet_balance FROM customer_profiles WHERE user_id = %s LIMIT 1",
-            (user_id,)
-        )
-        customer_type = profile["customer_type"] if profile else "student"
-        full_name = profile["full_name"] if profile else name
-    else:
-        # Create new customer user with secure unguessable bcrypt password hash
-        role = "customer"
-        if requested_type in ALLOWED_CUSTOMER_TYPES:
-            customer_type = requested_type
-        elif email.endswith("@kpriet.ac.in"):
-            customer_type = "student"
-        else:
-            customer_type = "guest"
-
-        dummy_pw = secrets.token_hex(32)
-        pw_hash = hash_password(dummy_pw)
-
-        user_id = DB.execute(
-            "INSERT INTO users (email, password_hash, role, is_active) VALUES (%s, %s, %s, 1)",
-            (email, pw_hash, role)
-        )
-
-        DB.execute(
-            """
-            INSERT INTO customer_profiles (user_id, customer_type, full_name, wallet_balance)
-            VALUES (%s, %s, %s, 500.00)
-            """,
-            (user_id, customer_type, name)
-        )
-        full_name = name
-
-    # Establish secure server session
-    session.clear()
-    session["user_id"] = user_id
-    session["email"] = email
-    session["role"] = role
-    session["auth_provider"] = "google"
-
-    return jsonify({
-        "success": True,
-        "message": "Google authentication successful.",
-        "user": {
-            "id": user_id,
-            "email": email,
-            "role": role,
-            "customer_type": customer_type,
-            "full_name": full_name,
-            "auth_provider": "google"
-        },
-        "redirect": "/pages/customer/dashboard.html"
     }), 200
 
 
