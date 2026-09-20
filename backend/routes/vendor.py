@@ -186,7 +186,7 @@ def update_vendor_operational_status():
 @vendor_bp.get("/analytics")
 @role_required(["vendor", "admin"])
 def get_vendor_analytics():
-    """Returns real-time sales, order volume, and inventory telemetry for the stall."""
+    """Returns shop-scoped operational metrics plus today's completed sales analytics."""
     shop_id = _get_active_shop_id()
     if not shop_id:
         return jsonify({
@@ -194,11 +194,17 @@ def get_vendor_analytics():
             "message": "No active stall specified or stall is currently deactivated."
         }), 403
 
-    shop = DB.get_one("SELECT * FROM shops WHERE id = %s", (shop_id,))
-    shop_name = shop["name"] if shop else "Stall"
-    operational_status = str(shop.get("operational_status") or "OPEN").upper() if shop else "OPEN"
+    shop = DB.get_one(
+        "SELECT id, name, operational_status FROM shops WHERE id = %s",
+        (shop_id,),
+    )
+    if not shop:
+        return jsonify({"success": False, "message": "Shop not found."}), 404
 
-    # Orders count and revenue
+    shop_name = shop["name"]
+    operational_status = str(shop.get("operational_status") or "OPEN").upper()
+
+    # Existing live operational/inventory telemetry.
     revenue_row = DB.get_one(
         """
         SELECT COALESCE(SUM(total_amount), 0) as total_revenue,
@@ -214,7 +220,6 @@ def get_vendor_analytics():
         (shop_id,),
     ) or {}
 
-    # Menu item count and stock stats
     menu_stats = DB.get_one(
         """
         SELECT COUNT(id) as total_dishes,
@@ -226,6 +231,143 @@ def get_vendor_analytics():
         """,
         (shop_id,),
     ) or {}
+
+    # Sales are measured by completed, paid orders. This prevents pending,
+    # abandoned, failed, refunded, or cancelled orders from being counted as sales.
+    # The app/database timestamps are stored as UTC; the reporting day is Asia/Kolkata.
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+    report_date = now_ist.date()
+    start_ist = datetime.combine(report_date, datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
+    end_ist = datetime.combine(report_date + __import__("datetime").timedelta(days=1), datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
+    start_utc = start_ist.astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc = end_ist.astimezone(timezone.utc).replace(tzinfo=None)
+
+    sales_summary = DB.get_one(
+        """
+        SELECT COUNT(*) AS total_orders,
+               COALESCE(SUM(total_amount), 0) AS total_revenue,
+               COALESCE(AVG(total_amount), 0) AS average_order_value
+        FROM orders
+        WHERE shop_id = %s
+          AND order_status = 'completed'
+          AND payment_status = 'paid'
+          AND completed_time >= %s
+          AND completed_time < %s
+        """,
+        (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
+    ) or {}
+
+    food_total = DB.get_one(
+        """
+        SELECT COALESCE(SUM(oi.quantity), 0) AS total_food_sold
+        FROM order_items oi
+        INNER JOIN orders o ON o.id = oi.order_id
+        WHERE o.shop_id = %s
+          AND o.order_status = 'completed'
+          AND o.payment_status = 'paid'
+          AND o.completed_time >= %s
+          AND o.completed_time < %s
+        """,
+        (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
+    ) or {}
+
+    meal_rows = DB.query(
+        """
+        SELECT
+            COALESCE(oi.meal_period, mi.meal_period, 'unknown') AS meal_period,
+            COALESCE(SUM(oi.quantity), 0) AS food_sold,
+            COUNT(DISTINCT o.id) AS total_orders,
+            COALESCE(SUM(oi.subtotal), 0) AS revenue
+        FROM order_items oi
+        INNER JOIN orders o ON o.id = oi.order_id
+        LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+        WHERE o.shop_id = %s
+          AND o.order_status = 'completed'
+          AND o.payment_status = 'paid'
+          AND o.completed_time >= %s
+          AND o.completed_time < %s
+        GROUP BY COALESCE(oi.meal_period, mi.meal_period, 'unknown')
+        """,
+        (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
+    )
+
+    meal_map = {str(row.get("meal_period") or "unknown").lower(): row for row in meal_rows}
+    meal_periods = []
+    for period in ("breakfast", "lunch", "dinner"):
+        row = meal_map.get(period, {})
+        meal_periods.append({
+            "meal_period": period,
+            "food_sold": int(row.get("food_sold") or 0),
+            "total_orders": int(row.get("total_orders") or 0),
+            "revenue": float(row.get("revenue") or 0.0),
+        })
+
+    unknown_row = meal_map.get("unknown")
+    if unknown_row:
+        meal_periods.append({
+            "meal_period": "unknown",
+            "food_sold": int(unknown_row.get("food_sold") or 0),
+            "total_orders": int(unknown_row.get("total_orders") or 0),
+            "revenue": float(unknown_row.get("revenue") or 0.0),
+        })
+
+    top_rows = DB.query(
+        """
+        SELECT oi.item_name,
+               COALESCE(oi.meal_period, mi.meal_period, 'unknown') AS meal_period,
+               COALESCE(SUM(oi.quantity), 0) AS units_sold,
+               COALESCE(SUM(oi.subtotal), 0) AS revenue
+        FROM order_items oi
+        INNER JOIN orders o ON o.id = oi.order_id
+        LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+        WHERE o.shop_id = %s
+          AND o.order_status = 'completed'
+          AND o.payment_status = 'paid'
+          AND o.completed_time >= %s
+          AND o.completed_time < %s
+        GROUP BY oi.item_name, COALESCE(oi.meal_period, mi.meal_period, 'unknown')
+        ORDER BY units_sold DESC, revenue DESC, oi.item_name ASC
+        LIMIT 10
+        """,
+        (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
+    )
+
+    hourly_rows = DB.query(
+        """
+        SELECT HOUR(o.completed_time) AS hour_of_day,
+               COUNT(DISTINCT o.id) AS total_orders,
+               COALESCE(SUM(oi.quantity), 0) AS food_sold,
+               COALESCE(SUM(oi.subtotal), 0) AS revenue
+        FROM orders o
+        INNER JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.shop_id = %s
+          AND o.order_status = 'completed'
+          AND o.payment_status = 'paid'
+          AND o.completed_time >= %s
+          AND o.completed_time < %s
+        GROUP BY HOUR(o.completed_time)
+        ORDER BY hour_of_day ASC
+        """,
+        (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
+    )
+
+    cancelled_row = DB.get_one(
+        """
+        SELECT COUNT(*) AS cancelled_orders
+        FROM orders
+        WHERE shop_id = %s
+          AND order_status = 'cancelled'
+          AND cancellation_time >= %s
+          AND cancellation_time < %s
+        """,
+        (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
+    ) or {}
+
+    total_revenue = float(sales_summary.get("total_revenue") or 0.0)
+    total_orders = int(sales_summary.get("total_orders") or 0)
 
     return jsonify({
         "success": True,
@@ -246,6 +388,34 @@ def get_vendor_analytics():
             "available_dishes": int(menu_stats.get("available_dishes") or 0),
             "out_of_stock_dishes": int(menu_stats.get("out_of_stock_dishes") or 0),
             "total_stock": int(menu_stats.get("total_stock") or 0),
+            "today_sales": {
+                "date": report_date.isoformat(),
+                "timezone": "Asia/Kolkata",
+                "total_food_sold": int(food_total.get("total_food_sold") or 0),
+                "total_orders": total_orders,
+                "total_revenue": total_revenue,
+                "average_order_value": float(sales_summary.get("average_order_value") or 0.0),
+                "cancelled_orders": int(cancelled_row.get("cancelled_orders") or 0),
+                "meal_periods": meal_periods,
+                "top_items": [
+                    {
+                        "item_name": str(r.get("item_name") or "Unknown"),
+                        "meal_period": str(r.get("meal_period") or "unknown"),
+                        "units_sold": int(r.get("units_sold") or 0),
+                        "revenue": float(r.get("revenue") or 0.0),
+                    }
+                    for r in top_rows
+                ],
+                "hourly_sales": [
+                    {
+                        "hour": int(r.get("hour_of_day") or 0),
+                        "total_orders": int(r.get("total_orders") or 0),
+                        "food_sold": int(r.get("food_sold") or 0),
+                        "revenue": float(r.get("revenue") or 0.0),
+                    }
+                    for r in hourly_rows
+                ],
+            },
         }
     }), 200
 
