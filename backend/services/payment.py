@@ -166,6 +166,37 @@ class PaymentService:
         }
 
     @classmethod
+    def _record_food_expense(cls, order_id, executor):
+        """Create exactly one student expense when an order is successfully paid."""
+        order = executor.get_one(
+            "SELECT id, customer_id, total_amount, order_reference FROM orders WHERE id = %s",
+            (order_id,),
+        )
+        if not order or not order.get("customer_id"):
+            return
+        # Unique order_id makes this idempotent across payment verification + webhook retries.
+        existing = executor.get_one(
+            "SELECT id FROM expenses WHERE order_id = %s LIMIT 1",
+            (order_id,),
+        )
+        if existing:
+            return
+        executor.execute(
+            """
+            INSERT INTO expenses
+                (user_id, order_id, amount, category, description, expense_date)
+            VALUES
+                (%s, %s, %s, 'Food', %s, CURRENT_DATE)
+            """,
+            (
+                order["customer_id"],
+                order_id,
+                float(order["total_amount"]),
+                f"Food order #{order['order_reference']}",
+            ),
+        )
+
+    @classmethod
     def verify_gateway_payment(cls, order_id, transaction_ref=None, gateway_token=None,
                                gateway_order_id=None, gateway_payment_id=None, gateway_signature=None,
                                customer_id=None, tx=None):
@@ -257,6 +288,9 @@ class PaymentService:
             "UPDATE orders SET payment_status = 'paid', payment_time = %s WHERE id = %s",
             (now_str, order_id),
         )
+
+        # Automatically add the paid food order to the student's Expenses.
+        cls._record_food_expense(order_id, executor)
 
         try:
             from services.notification import NotificationService
