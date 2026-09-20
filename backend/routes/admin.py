@@ -466,7 +466,7 @@ def get_admin_customers():
     search_q = request.args.get("q", "").strip().lower()
 
     sql = """
-        SELECT u.id, u.email, u.is_active, u.created_at,
+        SELECT u.id, u.email, u.is_active, u.is_temporary, u.account_expires_at, u.created_at,
                cp.full_name, cp.customer_type, cp.identifier, cp.mobile,
                cp.wallet_balance,
                COUNT(o.id) as total_orders,
@@ -492,6 +492,7 @@ def get_admin_customers():
     customers = DB.query(sql, tuple(params))
     for c in customers:
         c["is_active"] = int(c.get("is_active", 1))
+        c["is_temporary"] = int(c.get("is_temporary", 0))
         c["wallet_balance"] = float(c.get("wallet_balance") or 0.0)
         c["total_orders"] = int(c.get("total_orders") or 0)
         c["total_spent"] = float(c.get("total_spent") or 0.0)
@@ -530,6 +531,76 @@ def toggle_customer_status(user_id):
         "message": f"Customer '{user['email']}' {status_text}.",
         "is_active": new_status
     }), 200
+
+
+# ============================================================================
+# TEMPORARY CUSTOMER ACCOUNTS
+# ============================================================================
+
+@admin_bp.post("/customers/temporary")
+@role_required(["admin"])
+def create_temporary_customer():
+    """Creates a temporary student/faculty/guest customer account with expiry."""
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    password = str(data.get("password", "")).strip()
+    customer_type = str(data.get("customer_type", "guest")).strip().lower()
+    full_name = str(data.get("full_name", "Temporary User")).strip()
+    identifier = str(data.get("identifier", "")).strip() or None
+    mobile = str(data.get("mobile", "")).strip() or None
+    try:
+        duration_hours = int(data.get("duration_hours", 24))
+    except (TypeError, ValueError):
+        duration_hours = 24
+    if customer_type not in {"student", "faculty", "guest"}:
+        return jsonify({"success": False, "message": "Customer type must be student, faculty, or guest."}), 400
+    if not email or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"success": False, "message": "A valid email address is required."}), 400
+    if len(password) < 8:
+        return jsonify({"success": False, "message": "Temporary account password must contain at least 8 characters."}), 400
+    if not full_name:
+        return jsonify({"success": False, "message": "Full name is required."}), 400
+    if duration_hours < 1 or duration_hours > 720:
+        return jsonify({"success": False, "message": "Duration must be between 1 hour and 30 days."}), 400
+    expires_at = datetime.now().replace(microsecond=0) + __import__("datetime").timedelta(hours=duration_hours)
+    pwd_hash = hash_password(password)
+    with DB.transaction() as tx:
+        existing = tx.get_one("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
+        if existing:
+            return jsonify({"success": False, "message": "An account with this email already exists."}), 409
+        user_id = tx.execute(
+            """INSERT INTO users (email, password_hash, role, is_active, is_temporary, account_expires_at)
+               VALUES (%s, %s, 'customer', 1, 1, %s)""",
+            (email, pwd_hash, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+        tx.execute(
+            """INSERT INTO customer_profiles (user_id, customer_type, full_name, identifier, mobile)
+               VALUES (%s, %s, %s, %s, %s)""",
+            (user_id, customer_type, full_name, identifier, mobile),
+        )
+        AuditService.log_action(actor_id=session.get("user_id"), action="TEMPORARY_CUSTOMER_CREATED", entity_type="user",
+                                entity_id=user_id, details={"email": email, "customer_type": customer_type,
+                                "expires_at": expires_at.strftime("%Y-%m-%d %H:%M:%S")}, tx=tx)
+    return jsonify({"success": True, "message": f"Temporary {customer_type} account created successfully.",
+                    "account": {"id": user_id, "email": email, "customer_type": customer_type, "full_name": full_name,
+                    "identifier": identifier, "mobile": mobile, "is_active": 1, "is_temporary": 1,
+                    "account_expires_at": expires_at.strftime("%Y-%m-%d %H:%M:%S")}}), 201
+
+
+@admin_bp.delete("/customers/<int:user_id>/temporary")
+@role_required(["admin"])
+def delete_temporary_customer(user_id):
+    """Deletes only temporary customer accounts created by the admin."""
+    with DB.transaction() as tx:
+        user = tx.get_one("SELECT id, email, is_temporary, role FROM users WHERE id = %s AND role = 'customer'", (user_id,))
+        if not user:
+            return jsonify({"success": False, "message": "Customer account not found."}), 404
+        if not int(user.get("is_temporary") or 0):
+            return jsonify({"success": False, "message": "Permanent customer accounts cannot be deleted here."}), 400
+        tx.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        AuditService.log_action(actor_id=session.get("user_id"), action="TEMPORARY_CUSTOMER_DELETED", entity_type="user",
+                                entity_id=user_id, details={"email": user["email"]}, tx=tx)
+    return jsonify({"success": True, "message": "Temporary account deleted."}), 200
 
 
 # Backward-compatible general users endpoint
