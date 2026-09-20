@@ -617,6 +617,21 @@ def init_mysql():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """)
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS morning_survey_votes (
+                    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    survey_id INT UNSIGNED NOT NULL,
+                    menu_item_id INT UNSIGNED NOT NULL,
+                    student_user_id INT UNSIGNED NOT NULL,
+                    voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_msv_survey FOREIGN KEY (survey_id) REFERENCES vendor_daily_surveys(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_msv_menu FOREIGN KEY (menu_item_id) REFERENCES vendor_daily_menu_items(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_msv_student FOREIGN KEY (student_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY uq_msv_student_survey (survey_id, student_user_id),
+                    INDEX idx_msv_item (survey_id, menu_item_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """)
+
             # Preserve the existing production YPR shop as Admin-created.
             cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
 
