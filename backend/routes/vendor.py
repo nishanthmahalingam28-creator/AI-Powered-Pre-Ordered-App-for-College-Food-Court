@@ -235,13 +235,13 @@ def get_vendor_analytics():
     # Sales are measured by completed, paid orders. This prevents pending,
     # abandoned, failed, refunded, or cancelled orders from being counted as sales.
     # The app/database timestamps are stored as UTC; the reporting day is Asia/Kolkata.
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     from zoneinfo import ZoneInfo
 
     now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
     report_date = now_ist.date()
     start_ist = datetime.combine(report_date, datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
-    end_ist = datetime.combine(report_date + __import__("datetime").timedelta(days=1), datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
+    end_ist = datetime.combine(report_date + timedelta(days=1), datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
     start_utc = start_ist.astimezone(timezone.utc).replace(tzinfo=None)
     end_utc = end_ist.astimezone(timezone.utc).replace(tzinfo=None)
 
@@ -335,12 +335,9 @@ def get_vendor_analytics():
         (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
     )
 
-    hourly_rows = DB.query(
+    hourly_rows_raw = DB.query(
         """
-        SELECT HOUR(o.completed_time) AS hour_of_day,
-               COUNT(DISTINCT o.id) AS total_orders,
-               COALESCE(SUM(oi.quantity), 0) AS food_sold,
-               COALESCE(SUM(oi.subtotal), 0) AS revenue
+        SELECT o.id, o.completed_time, oi.quantity, oi.subtotal
         FROM orders o
         INNER JOIN order_items oi ON oi.order_id = o.id
         WHERE o.shop_id = %s
@@ -348,11 +345,31 @@ def get_vendor_analytics():
           AND o.payment_status = 'paid'
           AND o.completed_time >= %s
           AND o.completed_time < %s
-        GROUP BY HOUR(o.completed_time)
-        ORDER BY hour_of_day ASC
+        ORDER BY o.completed_time ASC
         """,
         (shop_id, start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")),
     )
+
+    hourly_map = {}
+    for row in hourly_rows_raw:
+        completed = row.get("completed_time")
+        if not completed:
+            continue
+        hour = completed.hour if hasattr(completed, "hour") else int(str(completed)[11:13])
+        bucket = hourly_map.setdefault(hour, {"order_ids": set(), "food_sold": 0, "revenue": 0.0})
+        bucket["order_ids"].add(row["id"])
+        bucket["food_sold"] += int(row.get("quantity") or 0)
+        bucket["revenue"] += float(row.get("subtotal") or 0.0)
+
+    hourly_rows = [
+        {
+            "hour": hour,
+            "total_orders": len(bucket["order_ids"]),
+            "food_sold": bucket["food_sold"],
+            "revenue": bucket["revenue"],
+        }
+        for hour, bucket in sorted(hourly_map.items())
+    ]
 
     cancelled_row = DB.get_one(
         """
