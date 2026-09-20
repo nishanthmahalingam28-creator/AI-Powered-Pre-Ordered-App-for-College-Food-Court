@@ -46,3 +46,48 @@ body.customer-workspace-page .customer-workspace-main [class*="overflow-x-auto"]
  .customer-workspace-actions{gap:8px}
  .customer-workspace-role{padding:5px 9px;font-size:10px}
 }
+
+/* Universal responsive safeguards */
+html, body { max-width: 100%; overflow-x: hidden; }
+body.customer-workspace-page button,
+body.customer-workspace-page input,
+body.customer-workspace-page select,
+body.customer-workspace-page textarea { max-width: 100%; box-sizing: border-box; }
+body.customer-workspace-page .customer-workspace-main table { min-width: 0; }
+body.customer-workspace-page .customer-workspace-main pre,
+body.customer-workspace-page .customer-workspace-main code { max-width: 100%; overflow-x: auto; }
+@media (max-width: 480px) {
+  .customer-workspace-header { padding: 0 12px; }
+  .customer-workspace-header h2 { font-size: 17px; }
+  .customer-workspace-top-avatar,
+  .customer-workspace-notification { width: 34px; height: 34px; }
+  .customer-workspace-role { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.customer-workspace-page .customer-workspace-main {
+    padding-left: 10px!important;
+    padding-right: 10px!important;
+  }
+  body.customer-workspace-page .student-welcome-card {
+    padding: 18px!important;
+    border-radius: 20px!important;
+  }
+  body.customer-workspace-page .student-welcome-card h1 {
+    font-size: clamp(24px, 7vw, 34px);
+    line-height: 1.12;
+  }
+  body.customer-workspace-page .student-welcome-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  body.customer-workspace-page .student-welcome-actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (max-width: 360px) {
+  .customer-workspace-actions { gap: 5px; }
+  .customer-workspace-role { display: none; }
+  body.customer-workspace-page .customer-workspace-main { padding-left: 8px!important; padding-right: 8px!important; }
+  body.customer-workspace-page .student-welcome-actions { grid-template-columns: 1fr; }
+}
