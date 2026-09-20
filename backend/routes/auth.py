@@ -406,7 +406,7 @@ def customer_login():
 
     user = DB.get_one(
         """
-        SELECT u.id, u.email, u.password_hash, u.role, cp.customer_type, cp.full_name, cp.identifier, cp.mobile
+        SELECT u.id, u.email, u.password_hash, u.role, u.is_temporary, u.account_expires_at, cp.customer_type, cp.full_name, cp.identifier, cp.mobile
         FROM users u
         LEFT JOIN customer_profiles cp ON cp.user_id = u.id
         WHERE LOWER(u.email) = %s AND u.role = 'customer' AND u.is_active = 1
