@@ -186,7 +186,7 @@ def update_vendor_operational_status():
 @vendor_bp.get("/analytics")
 @role_required(["vendor", "admin"])
 def get_vendor_analytics():
-    """Returns shop-scoped operational metrics plus today's completed sales analytics."""
+    """Returns shop-scoped operational metrics plus range-filtered completed sales analytics."""
     shop_id = _get_active_shop_id()
     if not shop_id:
         return jsonify({
@@ -232,18 +232,51 @@ def get_vendor_analytics():
         (shop_id,),
     ) or {}
 
-    # Sales are measured by completed, paid orders. This prevents pending,
-    # abandoned, failed, refunded, or cancelled orders from being counted as sales.
-    # The app/database timestamps are stored as UTC; the reporting day is Asia/Kolkata.
+    # Sales are measured by completed, paid orders. The reporting range is
+    # selected in Asia/Kolkata and converted to UTC for the database queries.
     from datetime import datetime, timezone, timedelta
     from zoneinfo import ZoneInfo
 
-    now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
-    report_date = now_ist.date()
-    start_ist = datetime.combine(report_date, datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
-    end_ist = datetime.combine(report_date + timedelta(days=1), datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata"))
+    ist = ZoneInfo("Asia/Kolkata")
+    now_ist = datetime.now(ist)
+    period = str(request.args.get("period") or "daily").strip().lower()
+    if period not in {"daily", "weekly", "monthly", "yearly", "custom"}:
+        return jsonify({"success": False, "message": "Invalid sales period."}), 400
+
+    def parse_date(value):
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            return None
+
+    if period == "daily":
+        start_date = now_ist.date()
+        end_date = start_date
+    elif period == "weekly":
+        start_date = now_ist.date() - timedelta(days=now_ist.weekday())
+        end_date = start_date + timedelta(days=6)
+    elif period == "monthly":
+        start_date = now_ist.date().replace(day=1)
+        next_month = (start_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+        end_date = next_month - timedelta(days=1)
+    elif period == "yearly":
+        start_date = now_ist.date().replace(month=1, day=1)
+        end_date = now_ist.date().replace(month=12, day=31)
+    else:
+        start_date = parse_date(request.args.get("start_date"))
+        end_date = parse_date(request.args.get("end_date"))
+        if not start_date or not end_date:
+            return jsonify({"success": False, "message": "Custom range requires start_date and end_date in YYYY-MM-DD format."}), 400
+        if end_date < start_date:
+            return jsonify({"success": False, "message": "End date cannot be before start date."}), 400
+        if (end_date - start_date).days > 366:
+            return jsonify({"success": False, "message": "Custom sales range cannot exceed 366 days."}), 400
+
+    start_ist = datetime.combine(start_date, datetime.min.time(), tzinfo=ist)
+    end_ist = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=ist)
     start_utc = start_ist.astimezone(timezone.utc).replace(tzinfo=None)
     end_utc = end_ist.astimezone(timezone.utc).replace(tzinfo=None)
+    range_label = f"{start_date.isoformat()} to {end_date.isoformat()}"
 
     sales_summary = DB.get_one(
         """
