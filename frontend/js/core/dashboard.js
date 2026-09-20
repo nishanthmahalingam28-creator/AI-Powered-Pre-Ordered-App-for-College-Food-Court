@@ -755,7 +755,9 @@ function renderDailyMealOptions(period, selectedRows) {
     const selectedMap = {};
     selectedRows.forEach(row => { selectedMap[String(row.menu_item_id)] = row; });
     if (!vendorDailyMenuCatalog.length) { container.innerHTML = '<p class="text-[11px] text-slate-400">No permanent menu items yet. Add dishes below in Update Menu first.</p>'; return; }
-    container.innerHTML = vendorDailyMenuCatalog.map(item => {
+    const periodItems = vendorDailyMenuCatalog.filter(item => (item.meal_period || 'lunch').toLowerCase() === period);
+    if (!periodItems.length) { container.innerHTML = '<p class="text-[11px] text-slate-400">No dishes assigned to this meal section. Use Update Menu to assign dishes.</p>'; return; }
+    container.innerHTML = periodItems.map(item => {
         const selected = selectedMap[String(item.id)];
         const qty = selected ? selected.quantity : item.stock_quantity;
         return '<label class="block bg-white rounded-xl border border-slate-100 p-2.5 cursor-pointer hover:border-amber-300 transition-colors">' +
