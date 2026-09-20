@@ -142,6 +142,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+
+    // When pickup OTP verification completes an order, refresh the financial cards immediately.
+    window.addEventListener('foodcourt:order-status', function (event) {
+        const status = String(event.detail?.order_status || '').toLowerCase();
+        if (status === 'completed') {
+            loadFoodBudgetSnapshot();
+        }
+    });
+
     // Global customer logout handler
     window.handleCustomerLogout = async function () {
         try {
@@ -209,6 +218,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (e) {
             if (grid) grid.innerHTML = '<p class="text-xs text-slate-400 p-4">Unable to load AI smart recommendations right now.</p>';
+        }
+    }
+
+    // 3. Load the authoritative Food Budget/Spent snapshot.
+    // The backend calculates spending from completed-order expense records.
+    async function loadFoodBudgetSnapshot() {
+        try {
+            const res = await fetch(`${API_BASE_URL}/customer/financial-summary`, { credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success) return;
+            const budget = Number(data.total_budget || 0);
+            const spent = Number(data.total_budget_spent || 0);
+            const remaining = Math.max(0, budget - spent);
+            const money = value => `₹${value.toFixed(2)}`;
+            const budgetEl = document.getElementById('dashboard-food-budget');
+            const spentEl = document.getElementById('dashboard-food-spent');
+            const remainingEl = document.getElementById('dashboard-food-remaining');
+            if (budgetEl) budgetEl.textContent = money(budget);
+            if (spentEl) spentEl.textContent = money(spent);
+            if (remainingEl) remainingEl.textContent = money(remaining);
+        } catch (e) {
+            console.warn('Food budget snapshot refresh failed:', e);
         }
     }
 
@@ -335,6 +367,7 @@ await initUser();
     await Promise.all([
         loadMorningSurveyStatus(),
         loadRecommendations(),
-        loadActiveOrders()
+        loadActiveOrders(),
+        loadFoodBudgetSnapshot()
     ]);
 });
