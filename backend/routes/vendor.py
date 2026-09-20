@@ -349,6 +349,9 @@ def add_menu_item():
         return jsonify({"success": False, "message": qty_err}), 400
 
     category = str(data.get("category", "Food")).strip()
+    meal_period = str(data.get("meal_period", "lunch")).strip().lower()
+    if meal_period not in {"breakfast", "lunch", "dinner"}:
+        return jsonify({"success": False, "message": "Meal period must be Breakfast, Lunch, or Dinner."}), 400
     if not category:
         return jsonify({"success": False, "message": "Category is required."}), 400
     if len(category) > 100:
@@ -367,10 +370,10 @@ def add_menu_item():
 
     item_id = DB.execute(
         """
-        INSERT INTO menu_items (shop_id, name, description, price, category, quantity, is_available)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO menu_items (shop_id, name, description, price, category, meal_period, quantity, is_available)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (shop_id, name, description, price, category, quantity, available),
+        (shop_id, name, description, price, category, meal_period, quantity, available),
     )
 
     actor_id = session.get("user_id")
@@ -392,6 +395,7 @@ def add_menu_item():
             "description": description,
             "price": price,
             "category": category,
+            "meal_period": meal_period,
             "quantity": quantity,
             "is_available": available,
         }
@@ -424,7 +428,18 @@ def update_menu_item(item_id):
             "message": "Forbidden: You cannot modify dishes belonging to another stall."
         }), 403
 
+    if "meal_period" in data:
+        meal_period = str(data.get("meal_period") or "").strip().lower()
+        if meal_period not in {"breakfast", "lunch", "dinner"}:
+            return jsonify({"success": False, "message": "Meal period must be Breakfast, Lunch, or Dinner."}), 400
+    else:
+        meal_period = item.get("meal_period") or "lunch"
+
     # Validate price if provided
+    if "meal_period" in data:
+        fields.append("meal_period = %s")
+        params.append(meal_period)
+
     if "price" in data:
         price, price_err = validate_price(data.get("price"))
         if price_err:
