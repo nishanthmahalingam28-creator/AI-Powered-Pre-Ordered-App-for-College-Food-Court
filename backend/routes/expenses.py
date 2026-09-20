@@ -183,7 +183,7 @@ def get_expenses():
             WHERE o.customer_id = %s
               AND o.order_status <> 'cancelled'
               AND e.id IS NULL
-            """
+            """,
             (user_id,)
         )
 
