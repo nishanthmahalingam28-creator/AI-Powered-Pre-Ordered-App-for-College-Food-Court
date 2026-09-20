@@ -85,12 +85,15 @@ else:
 # Never permit wildcard '*' with credentials in production.
 raw_origins = os.getenv("CORS_ORIGINS") or os.getenv("FRONTEND_ORIGINS")
 if raw_origins:
-    allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    allowed_origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
 elif is_development:
     allowed_origins = ["http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000"]
 else:
-    logger.warning("CORS_ORIGINS not specified in production. Cross-origin access restricted.")
-    allowed_origins = []
+    # Production fallback: keep the deployed frontend able to use authenticated
+    # session cookies even when CORS_ORIGINS was not added to Render.
+    configured_frontend = (os.getenv("FRONTEND_URL") or os.getenv("APP_URL") or "https://college-food-court-frontend.onrender.com").strip().rstrip("/")
+    allowed_origins = [configured_frontend]
+    logger.warning("CORS_ORIGINS not specified; using FRONTEND_URL fallback: %s", configured_frontend)
 
 if "*" in allowed_origins and not is_development:
     logger.error("Insecure CORS configuration: Wildcard '*' with credentials is forbidden in production.")
