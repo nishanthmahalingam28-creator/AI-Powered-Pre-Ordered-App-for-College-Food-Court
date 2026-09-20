@@ -20,6 +20,7 @@ async function loadSurvey(){
   const serving=document.getElementById('serving-today'); if(serving)serving.checked=currentSurvey?currentSurvey.is_serving_today!==false:true;
   ['breakfast','lunch','dinner'].forEach(p=>renderMeal(p,(data.selected&&data.selected[p])||[]));
   renderResult(data);
+  await loadVoteResults();
 }
 
 function renderMeal(period,selectedRows){
@@ -33,6 +34,25 @@ function renderResult(data){
   const s=data.survey||{}, selected=data.selected||{};
   const status=document.getElementById('survey-status'); status.textContent=s.submitted?'Submitted Today':'Not Submitted'; status.className='px-3 py-1.5 rounded-full text-[10px] font-black uppercase '+(s.submitted?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-600');
   document.getElementById('result-summary').innerHTML=['breakfast','lunch','dinner'].map(p=>`<div class="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p class="text-[10px] font-black uppercase text-slate-400">${p}</p><p class="text-2xl font-black text-slate-800 mt-1">${(selected[p]||[]).length}</p><p class="text-[10px] text-slate-400">dishes published</p></div>`).join('');
+}
+
+async function loadVoteResults(){
+  const wrap=document.getElementById('vote-results'), totalEl=document.getElementById('vote-total');
+  if(!wrap) return;
+  try{
+    const res=await fetch(MORNING_SURVEY_API+'/vendor/daily-survey/vote-results',{credentials:'include'});
+    const data=await res.json();
+    if(!res.ok||!data.success) throw new Error(data.message||'Unable to load student votes.');
+    const total=Number(data.total_votes)||0, options=data.options||[];
+    if(totalEl) totalEl.textContent=total+' vote'+(total===1?'':'s');
+    if(!options.length){
+      wrap.innerHTML='<p class="text-xs text-slate-400 py-4">No food choices or votes available for today.</p>';
+      return;
+    }
+    wrap.innerHTML=options.map(o=>'<div class="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div class="flex items-center justify-between gap-3"><div><p class="text-xs font-black text-slate-800">'+escapeHtml(o.item_name)+'</p><p class="text-[10px] text-slate-400 uppercase">'+escapeHtml(o.meal_period||'food')+'</p></div><span class="text-sm font-black text-blue-700">'+(Number(o.vote_count)||0)+' vote'+(Number(o.vote_count)===1?'':'s')+'</span></div><div class="h-2 rounded-full bg-slate-200 overflow-hidden mt-3"><div class="h-full rounded-full bg-blue-500" style="width:'+Math.min(100,Number(o.percentage)||0)+'%"></div></div><p class="text-[10px] text-slate-400 mt-1 text-right">'+(Number(o.percentage)||0)+'% of votes</p></div>').join('');
+  }catch(e){
+    wrap.innerHTML='<p class="text-xs text-rose-600">'+escapeHtml(e.message||'Unable to load student votes.')+'</p>';
+  }
 }
 
 async function saveSurvey(){
