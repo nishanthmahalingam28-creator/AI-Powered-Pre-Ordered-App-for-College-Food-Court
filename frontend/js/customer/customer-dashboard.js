@@ -308,6 +308,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
             }
+
+            // A completed/cancelled order must disappear from the Active Pre-Order
+            // section as soon as the realtime status event refreshes this function.
+            if (container) {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center text-slate-400 py-8">
+                        <i class="fa-regular fa-clock text-3xl mb-2 text-slate-300"></i>
+                        <p class="text-sm font-semibold">No active orders right now.</p>
+                        <a href="menu.html" class="inline-block mt-3 text-xs font-bold text-teal-700 hover:underline">Browse stalls to order →</a>
+                    </div>
+                `;
+            }
         } catch (e) {}
     }
     window.refreshRealtimeOrderData = loadActiveOrders;
