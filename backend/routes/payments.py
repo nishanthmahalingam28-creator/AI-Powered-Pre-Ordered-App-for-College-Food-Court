@@ -106,8 +106,6 @@ def razorpay_webhook():
                 """,
                 (local_order_id,),
             )
-            # Keep Expenses synchronized with successful Razorpay payments.
-            PaymentService._record_food_expense(local_order_id, tx)
         logger.info("Webhook successfully confirmed payment for order_id=%s", local_order_id)
 
         try:
