@@ -16,44 +16,17 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/core/public-components.js" defer></script>
+    <script src="../../js/customer/customer-workspace.js" defer></script>
+    <link rel="stylesheet" href="../../css/pages/customer-workspace.css">
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans antialiased overflow-x-hidden">
 
     <!-- Header Navigation -->
     <div id="navbar-container" class="hidden"></div>
 
-    <aside class="student-sidebar">
-        <div class="student-brand">
-            <div class="student-brand-mark"><i class="fa-solid fa-utensils"></i></div>
-            <div><strong>KPRIET</strong><span>Smart Food Court</span></div>
-        </div>
-        <nav class="student-nav">
-            <a class="active" href="dashboard.html"><i class="fa-solid fa-grid-2"></i><span>Dashboard</span></a>
-            <a href="menu.html"><i class="fa-solid fa-utensils"></i><span>Order Food</span></a>
-            <a href="orders.html"><i class="fa-solid fa-receipt"></i><span>My Orders</span></a>
-            <a href="morning-survey.html"><i class="fa-solid fa-sun"></i><span>Morning Survey</span></a>
-            <a href="expenses.html"><i class="fa-solid fa-wallet"></i><span>Expenses</span></a>
-            <a href="income.html"><i class="fa-solid fa-coins"></i><span>Income</span></a>
-            <a href="budgets.html"><i class="fa-solid fa-chart-pie"></i><span>Budgets & Goals</span></a>
-            <a href="analytics.html"><i class="fa-solid fa-chart-line"></i><span>Analytics</span></a>
-            <a href="assistant.html"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Assistant</span></a>
-            <a href="profile.html"><i class="fa-solid fa-user"></i><span>Profile</span></a>
-        </nav>
-        <div class="student-sidebar-user">
-            <div class="student-avatar" id="sidebar-avatar">S</div>
-            <div class="min-w-0"><strong id="sidebar-user-name">Student</strong><span id="sidebar-user-type">Student</span></div>
-            <button onclick="handleCustomerLogout()" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-        </div>
-    </aside>
 
-    <header class="student-topbar">
-        <div><span class="student-topbar-label">Student workspace</span><h2>Dashboard</h2></div>
-        <div class="student-topbar-actions">
-            <button class="student-notification-btn notification-bell-trigger" title="Notifications"><i class="fa-regular fa-bell"></i><span class="notification-badge hidden">0</span></button>
-            <span id="topbar-customer-type" class="student-role-pill">Student</span>
-            <div class="student-top-avatar" id="topbar-avatar">S</div>
-        </div>
-    </header>
+
+
 
     <!-- Main Content Container -->
     <main class="student-dashboard-main flex-grow py-8 pb-20 w-full px-4 sm:px-6">
