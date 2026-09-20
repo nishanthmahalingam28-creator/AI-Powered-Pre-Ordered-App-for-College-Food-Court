@@ -12,9 +12,11 @@ bind = f"0.0.0.0:{os.getenv('PORT', '5000')}"
 # Formula: 2-4 workers is optimal for memory and I/O balance on typical 2-4 core college VM
 cpu_count = multiprocessing.cpu_count()
 default_workers = min(max(cpu_count * 2, 2), 4)
-workers = int(os.getenv("GUNICORN_WORKERS", str(default_workers)))
+workers = int(os.getenv("GUNICORN_WORKERS", "1"))
+# Flask-SocketIO requires a single worker unless a message queue + sticky
+# sessions are configured. simple-websocket provides WebSocket support here.
 worker_class = "gthread"
-threads = int(os.getenv("GUNICORN_THREADS", "2"))
+threads = int(os.getenv("GUNICORN_THREADS", "50"))
 
 # Process Lifecycle & Memory Protection
 max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1000"))
