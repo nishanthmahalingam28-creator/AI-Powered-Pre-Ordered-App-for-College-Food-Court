@@ -56,7 +56,7 @@ function build(){
  var header=document.createElement('header');
  header.className='customer-workspace-header';
  header.innerHTML='<div><span class="customer-workspace-header-label">Student workspace</span><h2>'+ (titles[page]||'Student Workspace') +'</h2></div>'+
-  '<div class="customer-workspace-actions"><button class="customer-workspace-notification notification-bell-trigger" title="Notifications"><i class="fa-regular fa-bell"></i><span class="notification-badge hidden">0</span></button><span class="customer-workspace-role">'+role+'</span><div class="customer-workspace-top-avatar">'+initial+'</div></div>';
+  '<div class="customer-workspace-actions"><button class="customer-workspace-notification notification-bell-trigger" title="Notifications"><i class="fa-regular fa-bell"></i><span class="notification-badge hidden">0</span></button><span class="customer-workspace-role" id="topbar-customer-type">'+role+'</span><div class="customer-workspace-top-avatar" id="topbar-avatar">'+initial+'</div></div>';
 
  document.body.classList.add('customer-workspace-page');
  document.body.prepend(aside);
