@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     order_id INTEGER NOT NULL,
     menu_item_id INTEGER,
     item_name TEXT NOT NULL,
+    meal_period TEXT NOT NULL DEFAULT 'lunch',
     unit_price REAL NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
     subtotal REAL NOT NULL,
@@ -365,6 +366,7 @@ def init_sqlite():
     _safe_add_column("shops", "created_by_admin", "TINYINT(1) NOT NULL DEFAULT 0")
     _safe_add_column("morning_surveys", "plans_to_eat", "INTEGER NOT NULL DEFAULT 1")
     _safe_add_column("menu_items", "meal_period", "TEXT NOT NULL DEFAULT 'lunch'")
+    _safe_add_column("order_items", "meal_period", "TEXT NOT NULL DEFAULT 'lunch'")
 
     # Preserve the current production workflow: YPR is the existing Admin-created shop.
     # Future shops created through the Admin API are explicitly marked created_by_admin=1.
@@ -445,6 +447,21 @@ def init_mysql():
                 cur.execute("ALTER TABLE menu_items ADD COLUMN meal_period ENUM('breakfast','lunch','dinner') NOT NULL DEFAULT 'lunch'")
                 print("MySQL migration: added menu_items.meal_period.")
             cur.execute("UPDATE menu_items SET meal_period = 'breakfast' WHERE LOWER(category) = 'breakfast'")
+
+            # Order-item meal-period migration for immutable sales analytics.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'order_items' AND COLUMN_NAME = 'meal_period'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE order_items ADD COLUMN meal_period ENUM('breakfast','lunch','dinner') NOT NULL DEFAULT 'lunch'")
+                print("MySQL migration: added order_items.meal_period.")
+            cur.execute("""
+                UPDATE order_items oi
+                INNER JOIN menu_items mi ON mi.id = oi.menu_item_id
+                SET oi.meal_period = mi.meal_period
+                WHERE oi.menu_item_id IS NOT NULL
+            """)
 
             # Customer morning survey migration
             cur.execute("""
