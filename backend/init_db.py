@@ -526,6 +526,23 @@ def init_mysql():
                 cur.execute("ALTER TABLE morning_surveys ADD COLUMN plans_to_eat TINYINT(1) NOT NULL DEFAULT 1")
                 print("MySQL migration: added morning_surveys.plans_to_eat.")
 
+            # Temporary customer account migration.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'users' AND COLUMN_NAME = 'is_temporary'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE users ADD COLUMN is_temporary TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active")
+                print("MySQL migration: added users.is_temporary.")
+
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'users' AND COLUMN_NAME = 'account_expires_at'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE users ADD COLUMN account_expires_at DATETIME NULL AFTER is_temporary")
+                print("MySQL migration: added users.account_expires_at.")
+
             # Expenses migration for databases created before order-linked food expenses.
             # CREATE TABLE IF NOT EXISTS does not modify an existing expenses table.
             cur.execute("""
