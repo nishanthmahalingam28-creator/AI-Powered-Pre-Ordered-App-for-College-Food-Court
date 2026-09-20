@@ -14,7 +14,7 @@
   <script src="../../js/core/public-components.js" defer></script>
     <link rel="stylesheet" href="../../css/pages/customer-workspace.css">
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden customer-workspace-page">
 <!-- STATIC CUSTOMER WORKSPACE -->
 <aside class="customer-workspace-sidebar" aria-label="Customer navigation"><div class="customer-workspace-brand"><div class="customer-workspace-brand-mark"><i class="fa-solid fa-utensils"></i></div><div><strong>KPRIET</strong><span>Smart Food Court</span></div></div><nav class="customer-workspace-nav">
 <a href="dashboard.html" data-workspace-link="dashboard.html"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a><a href="menu.html" data-workspace-link="menu.html"><i class="fa-solid fa-utensils"></i><span>Order Food</span></a><a href="preorder.html" data-workspace-link="preorder.html"><i class="fa-solid fa-basket-shopping"></i><span>My Cart</span></a><a href="orders.html" data-workspace-link="orders.html"><i class="fa-solid fa-receipt"></i><span>My Orders</span></a><a href="morning-survey.html" data-workspace-link="morning-survey.html"><i class="fa-solid fa-sun"></i><span>Morning Survey</span></a><a href="expenses.html" data-workspace-link="expenses.html"><i class="fa-solid fa-wallet"></i><span>Expenses</span></a><a href="income.html" data-workspace-link="income.html"><i class="fa-solid fa-coins"></i><span>Income</span></a><a href="budgets.html" data-workspace-link="budgets.html"><i class="fa-solid fa-chart-pie"></i><span>Budgets &amp; Goals</span></a><a href="analytics.html" data-workspace-link="analytics.html"><i class="fa-solid fa-chart-line"></i><span>Analytics</span></a><a href="assistant.html" data-workspace-link="assistant.html"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Assistant</span></a><a href="profile.html" data-workspace-link="profile.html"><i class="fa-solid fa-user"></i><span>Profile</span></a></nav><div class="customer-workspace-user"><div class="customer-workspace-avatar" id="sidebar-avatar">S</div><div class="min-w-0"><strong id="sidebar-user-name">Student</strong><span id="sidebar-user-type">Student</span></div><button class="customer-workspace-logout" id="customer-workspace-logout" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></div></aside>
@@ -22,7 +22,7 @@
 
   <div id="navbar-container"></div>
 
-  <main class="customer-shell py-8 pb-16 max-w-5xl mx-auto px-4 sm:px-6 w-full flex-grow">
+  <main class="customer-shell py-8 pb-16 max-w-5xl mx-auto px-4 sm:px-6 w-full flex-grow customer-workspace-main">
     
     <div class="mb-8">
       <span class="text-xs font-black uppercase tracking-widest text-teal-700 block">Express Pre-Order</span>
