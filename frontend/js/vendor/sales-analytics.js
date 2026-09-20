@@ -122,7 +122,6 @@ async function loadSalesAnalytics(period = selectedPeriod, customStart = getDate
 
         renderMealPeriods(sales);
         renderTopItems(sales);
-        populateHourFilter(sales.hourly_sales || []);
         renderFilteredSummary(sales);
         updatePeriodUI();
     } catch (error) {
