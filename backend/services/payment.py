@@ -47,7 +47,7 @@ class PaymentService:
         if label:
             canonical = "campus_wallet" if "wallet" in clean or "kpr" in clean else ("upi" if "upi" in clean or "online" in clean or "razorpay" in clean else "cash")
             return canonical, label
-        return "campus_wallet", "Campus Wallet / KPR Pay"
+        return "cash", "Cash / Pay at Counter"
 
     @classmethod
     def generate_gateway_token(cls, order_id, tx_ref, amount):
