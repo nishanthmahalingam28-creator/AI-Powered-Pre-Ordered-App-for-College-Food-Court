@@ -114,3 +114,47 @@ body.customer-workspace-page .customer-workspace-main code { max-width: 100%; ov
 @media (min-width:481px){
   .mobile-workspace-menu,.mobile-workspace-panel{display:none!important}
 }
+
+/* Final phone-only Student Dashboard menu visibility fix */
+@media screen and (max-width:480px){
+  body.customer-workspace-page .student-mobile-menu-toggle{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    position:relative!important;
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:12px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    flex-direction:column!important;
+    gap:5px!important;
+    background:rgba(255,255,255,.10)!important;
+    cursor:pointer!important;
+    z-index:1002!important;
+  }
+  body.customer-workspace-page .student-mobile-menu-toggle span{
+    display:block!important;
+    width:21px!important;
+    height:2px!important;
+    min-height:2px!important;
+    padding:0!important;
+    margin:0!important;
+    background:#fff!important;
+    border-radius:99px!important;
+  }
+  body.customer-workspace-page .mobile-workspace-panel{
+    z-index:1003!important;
+  }
+}
+@media screen and (min-width:481px){
+  body.customer-workspace-page .student-mobile-menu-toggle,
+  body.customer-workspace-page .mobile-workspace-panel{
+    display:none!important;
+  }
+}
