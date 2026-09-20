@@ -21,16 +21,30 @@
 .student-notification-btn{position:relative;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.10);color:#fff;cursor:pointer}
 .student-notification-btn .notification-badge{position:absolute;right:-2px;top:-2px;background:#ef4444;color:#fff;width:16px;height:16px;border-radius:50%;font-size:8px;display:flex;align-items:center;justify-content:center}
 .student-role-pill{background:rgba(255,255,255,.12);color:#dffcf9;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 12px;font-size:11px;font-weight:900}
-.student-dashboard-main{box-sizing:border-box;margin-left:270px;padding-top:110px!important;padding-left:28px!important;padding-right:28px!important;padding-bottom:36px!important;max-width:none!important;width:calc(100vw - 270px)!important;min-width:0;overflow-x:hidden}
-.student-welcome-card{background:linear-gradient(135deg,#ffffff,#f8fbff);border:1px solid #e3eaf2;border-radius:22px;padding:26px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:25px;box-shadow:0 8px 28px rgba(15,23,42,.05)}
+
+/* Responsive main workspace: never center the content underneath the fixed sidebar. */
+.student-dashboard-main{
+  box-sizing:border-box;
+  margin-left:270px!important;
+  margin-right:0!important;
+  padding-top:110px!important;
+  padding-left:28px!important;
+  padding-right:28px!important;
+  padding-bottom:36px!important;
+  width:calc(100% - 270px)!important;
+  max-width:none!important;
+  min-width:0!important;
+  overflow-x:hidden;
+}
+.student-welcome-card{box-sizing:border-box;width:100%;max-width:none;background:linear-gradient(135deg,#ffffff,#f8fbff);border:1px solid #e3eaf2;border-radius:22px;padding:26px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:25px;box-shadow:0 8px 28px rgba(15,23,42,.05)}
 .student-eyebrow{color:#0f766e;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.11em;margin-bottom:8px}
 .student-welcome-card h1{font-size:28px;line-height:1.15;color:#0f172a;font-weight:900;margin:0}
 .student-welcome-card h1 span{color:#0f766e}
 .student-welcome-card p{font-size:12px;color:#64748b;max-width:650px;margin:8px 0 12px}
 .student-badges{display:flex;flex-wrap:wrap;gap:7px}
 .student-badges span{display:inline-flex;align-items:center;gap:6px;background:#f0fdfa;color:#0f766e;border:1px solid #ccfbf1;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:800}
-.student-welcome-actions{display:flex;gap:9px;flex-wrap:wrap}
-.student-welcome-actions a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:11px;padding:11px 15px;font-size:11px;font-weight:900}
+.student-welcome-actions{display:flex;gap:9px;flex-wrap:wrap;flex-shrink:0}
+.student-welcome-actions a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:11px;padding:11px 15px;font-size:11px;font-weight:900;white-space:nowrap}
 .student-welcome-actions .primary-action{background:#0f9488;color:#fff;box-shadow:0 8px 18px rgba(15,148,136,.2)}
 .student-welcome-actions .secondary-action{background:#fff;color:#475569;border:1px solid #e2e8f0}
 .student-dashboard-main section:not(.student-welcome-card){border-radius:20px}
@@ -38,28 +52,45 @@
 .student-dashboard-main > *{max-width:100%;min-width:0}
 .student-dashboard-main img{max-width:100%;height:auto}
 .student-dashboard-main .grid{min-width:0}
+.student-dashboard-main .grid > *{min-width:0;max-width:100%}
+.student-dashboard-main canvas{max-width:100%!important}
 .student-dashboard-main [class*="overflow-x-auto"]{max-width:100%;overflow-x:auto}
+.student-dashboard-main table{min-width:620px}
 @media(max-width:1100px){
  .student-dashboard-main{padding-left:20px!important;padding-right:20px!important}
  .student-welcome-card{padding:22px}
 }
-
 @media(max-width:900px){
  .student-sidebar{width:76px}
  .student-brand{justify-content:center;padding:16px 8px}
  .student-brand>div:last-child,.student-nav a span,.student-sidebar-user>div:nth-child(2),.student-sidebar-user button{display:none}
  .student-nav a{justify-content:center;padding:13px}
  .student-topbar{left:76px;padding:0 18px}
- .student-dashboard-main{margin-left:76px;width:calc(100vw - 76px)!important;padding-left:18px!important;padding-right:18px!important}
+ .student-dashboard-main{margin-left:76px!important;width:calc(100% - 76px)!important;padding-left:18px!important;padding-right:18px!important}
  .student-welcome-card{align-items:flex-start;flex-direction:column}
+ .student-welcome-actions{width:100%}
 }
 @media(max-width:640px){
  .student-sidebar{display:none}
  .student-topbar{left:0;height:70px}
- .student-dashboard-main{margin-left:0;width:100vw!important;padding-top:88px!important;padding-left:14px!important;padding-right:14px!important}
+ .student-dashboard-main{margin-left:0!important;width:100%!important;padding-top:88px!important;padding-left:14px!important;padding-right:14px!important}
  .student-topbar-label{display:none}
+ .student-topbar-actions{gap:8px}
  .student-welcome-card{padding:20px}
  .student-welcome-card h1{font-size:23px}
  .student-welcome-actions{width:100%}
  .student-welcome-actions a{flex:1;justify-content:center}
+ .student-dashboard-main .grid{grid-template-columns:minmax(0,1fr)!important}
+ .student-dashboard-main h1,.student-dashboard-main h2,.student-dashboard-main h3{overflow-wrap:anywhere}
+}
+@media(min-width:641px) and (max-width:1024px){
+ .student-dashboard-main .grid[class*="lg:grid-cols-3"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+ .student-topbar{padding:0 12px}
+ .student-role-pill{padding:5px 9px;font-size:10px}
+ .student-welcome-card{padding:16px}
+ .student-welcome-card h1{font-size:20px}
+ .student-welcome-actions a{font-size:10px;padding:10px 9px}
+ .student-dashboard-main .bg-white{padding-left:16px!important;padding-right:16px!important}
 }
