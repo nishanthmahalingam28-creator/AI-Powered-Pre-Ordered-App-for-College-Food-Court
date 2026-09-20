@@ -758,37 +758,38 @@ def verify_pickup_otp():
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Mark as completed and record completed timestamp
-    # If Pay at Counter was pending, confirm payment now
-    DB.execute(
-        """
-        UPDATE orders
-        SET order_status = 'completed',
-            completed_time = %s,
-            payment_status = 'paid',
-            payment_time = COALESCE(payment_time, %s)
-        WHERE id = %s
-        """,
-        (now_str, now_str, order["id"]),
-    )
-    DB.execute(
-        "UPDATE payments SET status = 'successful' WHERE order_id = %s AND status = 'pending'",
-        (order["id"],),
-    )
-
-    # Record the customer's food expense only when the order is actually completed.
-    # The expenses.order_id UNIQUE constraint makes this idempotent if completion
-    # handling is retried. This also drives the Food Budget "spent" calculation.
+    # Complete the order, settle any pending payment, and record the food
+    # expense in ONE database transaction. This guarantees that a completed
+    # order always has its matching expense entry.
     try:
-        PaymentService._record_food_expense(order["id"], DB)
-    except Exception as expense_error:
-        # Do not roll back a successfully completed/picked-up order because of a
-        # financial-summary write failure; log it so it can be repaired safely.
+        with DB.transaction() as tx:
+            tx.execute(
+                """
+                UPDATE orders
+                SET order_status = 'completed',
+                    completed_time = %s,
+                    payment_status = 'paid',
+                    payment_time = COALESCE(payment_time, %s)
+                WHERE id = %s
+                """,
+                (now_str, now_str, order["id"]),
+            )
+            tx.execute(
+                "UPDATE payments SET status = 'successful' WHERE order_id = %s AND status = 'pending'",
+                (order["id"],),
+            )
+            # expenses.order_id is UNIQUE, so this is safe to retry.
+            PaymentService._record_food_expense(order["id"], tx)
+    except Exception as completion_error:
         logger.error(
-            "Failed to record food expense for completed order %s: %s",
+            "Failed to complete order %s and record food expense: %s",
             order["id"],
-            expense_error,
+            completion_error,
         )
+        return jsonify({
+            "success": False,
+            "message": "Could not complete the order and record the food expense. Please try again."
+        }), 500
 
     actor_id = session.get("user_id")
     AuditService.log_action(
