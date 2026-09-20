@@ -600,7 +600,6 @@ def submit_morning_survey():
             "survey_id": existing["id"]
         }), 409
     plans_to_eat = bool(data.get("plans_to_eat", True))
-    plans_to_eat = bool(data.get("plans_to_eat", True))
     meal_preference = str(data.get("meal_preference") or "").strip()
     if not meal_preference:
         return jsonify({"success": False, "message": "Meal preference is required."}), 400
