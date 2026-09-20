@@ -6,7 +6,7 @@ async function loadAdminCreatedShops() {
     select.disabled = true;
     select.innerHTML = '<option value="" selected>Loading available shops...</option>';
     try {
-        const response = await fetch(API_BASE_URL + '/shops', { credentials: 'include' });
+        const response = await fetch(API_BASE_URL + '/shops/admin-created', { credentials: 'include' });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load shops.');
         const shops = Array.isArray(result.shops) ? result.shops : [];
