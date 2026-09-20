@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     description TEXT NULL,
     price DECIMAL(10,2) NOT NULL,
     category VARCHAR(100) NOT NULL DEFAULT 'Main Course',
+    meal_period ENUM('breakfast','lunch','dinner') NOT NULL DEFAULT 'lunch',
     quantity INT NOT NULL DEFAULT 0,
     is_available TINYINT(1) NOT NULL DEFAULT 1,
     image_url VARCHAR(500) NULL,
