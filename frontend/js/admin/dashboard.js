@@ -3,6 +3,8 @@ const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 
 let cachedShops = [];
 let cachedCustomers = [];
 let cachedVendors = [];
+let cachedAdminCount = 0;
+let cachedCustomerCount = null;
 const loadedAdminTabs = new Set(['shops']);
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -58,26 +60,23 @@ function switchTab(tabId) {
 
 function updateAdminCardsFromCache() {
     const activeShops = cachedShops.filter(s => Number(s.is_active) === 1);
-    const openShops = activeShops.filter(s => String(s.operational_status || '').toUpperCase() === 'OPEN');
-    const closedShops = activeShops.filter(s => String(s.operational_status || '').toUpperCase() === 'CLOSED');
-    const unavailableShops = activeShops.filter(s => String(s.operational_status || '').toUpperCase() === 'TEMPORARILY_UNAVAILABLE');
+    const openShops = activeShops.filter(s => String(s.operational_status || "").toUpperCase() === "OPEN");
+    const closedShops = activeShops.filter(s => String(s.operational_status || "").toUpperCase() === "CLOSED");
+    const unavailableShops = activeShops.filter(s => String(s.operational_status || "").toUpperCase() === "TEMPORARILY_UNAVAILABLE");
 
-    const shopEl = document.getElementById('stat-shops');
+    const shopEl = document.getElementById("stat-shops");
     if (shopEl) shopEl.innerText = `${activeShops.length} Active Stalls`;
-    const shopOp = document.getElementById('stat-shops-op');
+    const shopOp = document.getElementById("stat-shops-op");
     if (shopOp) shopOp.innerText = `${openShops.length} Open · ${closedShops.length} Closed · ${unavailableShops.length} Unavail`;
 
-    const vendorCount = document.querySelectorAll('#vendors-table-body tr[data-vendor-id]').length || null;
-    if (vendorCount !== null) {
-        const usersEl = document.getElementById('stat-users-breakdown');
-        if (usersEl) {
-            const customerCount = cachedCustomers.length;
-            const adminMatch = (usersEl.innerText.match(/(\\d+) Admins/) || [null, 0])[1];
-            usersEl.innerText = `${customerCount} Cust · ${vendorCount} Vendors · ${adminMatch || 0} Admins`;
-        }
+    const vendorCount = cachedVendors.length;
+    const usersEl = document.getElementById("stat-users-breakdown");
+    if (usersEl) {
+        const customerCount = cachedCustomerCount === null ? ((usersEl.innerText.match(/(\\d+) Cust/) || [null, 0])[1]) : cachedCustomerCount;
+        usersEl.innerText = `${customerCount} Cust · ${vendorCount} Vendors · ${cachedAdminCount} Admins`;
     }
-    const vendorsEl = document.getElementById('stat-vendors');
-    if (vendorsEl) vendorsEl.innerText = vendorCount === null ? vendorsEl.innerText : vendorCount;
+    const vendorsEl = document.getElementById("stat-vendors");
+    if (vendorsEl) vendorsEl.innerText = vendorCount;
 }
 
 async function loadOverview() {
@@ -87,6 +86,7 @@ async function loadOverview() {
 
         if (data.success && data.overview) {
             const o = data.overview;
+            cachedAdminCount = Number(o.total_admins || 0);
             const revEl = document.getElementById('stat-turnover');
             if (revEl) revEl.innerText = `₹${o.total_turnover.toFixed(2)}`;
 
@@ -335,7 +335,9 @@ async function loadCustomers() {
         if (data.success && data.customers) {
             loadedAdminTabs.add('customers');
             cachedCustomers = data.customers;
+            cachedCustomerCount = cachedCustomers.length;
             renderCustomers(cachedCustomers);
+            updateAdminCardsFromCache();
         }
     } catch (e) {
         console.error('Customers fetch error:', e);
@@ -409,7 +411,10 @@ async function toggleCustomerStatus(userId) {
         });
         const data = await res.json();
         if (data.success) {
-            await loadCustomers();
+            const customer = cachedCustomers.find(c => Number(c.id) === Number(userId));
+            if (customer) customer.is_active = Number(data.is_active);
+            renderCustomers(cachedCustomers);
+            updateAdminCardsFromCache();
         } else {
             alert(data.message || 'Failed to update customer status.');
         }
