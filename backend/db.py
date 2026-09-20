@@ -299,6 +299,32 @@ class DB:
                 conn.close()
 
     @staticmethod
+    def query_many(queries):
+        """Execute several read-only queries on one pooled connection."""
+        db_type, conn = get_db_connection()
+        try:
+            results = []
+            for sql, params in queries:
+                if db_type == "mysql":
+                    with conn.cursor() as cur:
+                        cur.execute(sql, params)
+                        results.append(cur.fetchall())
+                else:
+                    sqlite_sql = sql.replace("%s", "?")
+                    cur = conn.cursor()
+                    try:
+                        cur.execute(sqlite_sql, params)
+                        results.append([dict(row) for row in cur.fetchall()])
+                    finally:
+                        cur.close()
+            return results
+        finally:
+            if db_type == "mysql":
+                release_mysql_connection(conn)
+            else:
+                conn.close()
+
+    @staticmethod
     def get_one(sql, params=()):
         rows = DB.query(sql, params)
         return rows[0] if rows else None
