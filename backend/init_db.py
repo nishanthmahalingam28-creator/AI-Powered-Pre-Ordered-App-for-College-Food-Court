@@ -364,6 +364,7 @@ def init_sqlite():
     _safe_add_column("shops", "operational_status", "TEXT NOT NULL DEFAULT 'OPEN'")
     _safe_add_column("shops", "created_by_admin", "TINYINT(1) NOT NULL DEFAULT 0")
     _safe_add_column("morning_surveys", "plans_to_eat", "INTEGER NOT NULL DEFAULT 1")
+    _safe_add_column("menu_items", "meal_period", "TEXT NOT NULL DEFAULT 'lunch'")
 
     # Preserve the current production workflow: YPR is the existing Admin-created shop.
     # Future shops created through the Admin API are explicitly marked created_by_admin=1.
@@ -376,6 +377,7 @@ def init_sqlite():
     cur.execute("INSERT OR REPLACE INTO customer_profiles (id, user_id, customer_type, full_name, identifier, mobile) VALUES (1, 8, 'student', 'KPR Student', '21CS042', '9876543210')")
     cur.executemany("INSERT OR REPLACE INTO shops (id, name, slug, owner_user_id, description, category, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)", DEFAULT_STALLS)
     cur.executemany("INSERT OR REPLACE INTO menu_items (id, shop_id, name, description, price, category, quantity, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", DEFAULT_MENU)
+    cur.execute("UPDATE menu_items SET meal_period = 'breakfast' WHERE LOWER(category) = 'breakfast'")
 
     conn.commit()
     conn.close()
