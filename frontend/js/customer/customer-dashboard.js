@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    const mobileWorkspaceMenu = document.getElementById('mobile-workspace-menu');
+    if (mobileWorkspaceMenu) {
+        mobileWorkspaceMenu.addEventListener('change', (event) => {
+            const target = event.target.value;
+            if (target) window.location.href = target;
+        });
+    }
     const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
     // Purge legacy financial storage keys to guarantee zero localStorage reliance
