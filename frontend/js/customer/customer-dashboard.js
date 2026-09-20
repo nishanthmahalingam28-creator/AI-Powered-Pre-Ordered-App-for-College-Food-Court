@@ -48,26 +48,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        const customerType = String(user.customer_type || 'student').toLowerCase();
+        const customerTypeLabel = customerType === 'faculty'
+            ? 'Faculty'
+            : customerType === 'guest'
+                ? 'Guest'
+                : 'Student';
+
         const nameEl = document.getElementById('customer-name');
         if (nameEl && user.full_name) nameEl.textContent = user.full_name;
 
-        // Student workspace identity
-        const displayName = user.full_name || 'Student';
+        // Use the same dashboard experience for Student, Faculty, and Guest.
+        // Guest accounts do not use the Food Budget feature.
+        const foodBudgetSnapshot = document.getElementById('food-budget-snapshot');
+        const foodBudgetNav = document.querySelector('[data-workspace-link="budgets.html"]');
+        if (customerType === 'guest') {
+            if (foodBudgetSnapshot) foodBudgetSnapshot.classList.add('hidden');
+            if (foodBudgetNav) foodBudgetNav.remove();
+        } else {
+            if (foodBudgetSnapshot) foodBudgetSnapshot.classList.remove('hidden');
+            if (foodBudgetNav) foodBudgetNav.classList.remove('hidden');
+        }
+
+        const workspaceLabel = document.querySelector('.customer-workspace-header-label');
+        if (workspaceLabel) workspaceLabel.textContent = customerTypeLabel + ' workspace';
+
+        const pageTitle = document.getElementById('customer-workspace-page-title');
+        if (pageTitle) pageTitle.textContent = 'Dashboard';
+
+        // Customer workspace identity
+        const displayName = user.full_name || customerTypeLabel;
         const sidebarName = document.getElementById('sidebar-user-name');
         const sidebarType = document.getElementById('sidebar-user-type');
         const sidebarAvatar = document.getElementById('sidebar-avatar');
         const topbarAvatar = document.getElementById('topbar-avatar');
         const topbarType = document.getElementById('topbar-customer-type');
         if (sidebarName) sidebarName.textContent = displayName;
-        if (sidebarType) sidebarType.textContent = (user.customer_type || 'Student').toUpperCase();
+        if (sidebarType) sidebarType.textContent = customerTypeLabel.toUpperCase();
         if (sidebarAvatar) sidebarAvatar.textContent = displayName.charAt(0).toUpperCase();
         if (topbarAvatar) topbarAvatar.textContent = displayName.charAt(0).toUpperCase();
-        if (topbarType) topbarType.textContent = (user.customer_type || 'Student').replace(/_/g, ' ');
+        if (topbarType) topbarType.textContent = customerTypeLabel;
 
 
         const badgeEl = document.getElementById('customer-type-badge');
         if (badgeEl && user.customer_type) {
-            badgeEl.textContent = user.customer_type.toUpperCase();
+            badgeEl.textContent = customerTypeLabel.toUpperCase();
         }
 
         const rollEl = document.getElementById('customer-roll-badge');
