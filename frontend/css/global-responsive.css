@@ -1,0 +1,51 @@
+/* Global responsive layer - applies to every frontend page. */
+html { width: 100%; max-width: 100%; overflow-x: hidden; }
+body { width: 100%; max-width: 100%; overflow-x: hidden; }
+img, video, canvas, svg { max-width: 100%; }
+iframe { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; box-sizing: border-box; }
+table { max-width: 100%; }
+pre, code { max-width: 100%; overflow-x: auto; }
+@media (max-width: 1024px) {
+  .container, main, section { max-width: 100%; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 768px) {
+  main { width: 100%; }
+  [class*="grid-cols-4"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  [class*="grid-cols-3"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  [class*="grid-cols-2"] { grid-template-columns: minmax(0, 1fr) !important; }
+  [class*="md:grid-cols-2"], [class*="md:grid-cols-3"], [class*="md:grid-cols-4"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  [class*="md:flex-row"] { flex-direction: column !important; }
+  [class*="md:items-center"] { align-items: stretch !important; }
+  [class*="md:justify-between"] { justify-content: flex-start !important; }
+  [class*="md:px-8"] { padding-left: 1rem !important; padding-right: 1rem !important; }
+  [class*="md:px-6"] { padding-left: 1rem !important; padding-right: 1rem !important; }
+  [class*="md:p-8"] { padding: 1rem !important; }
+  [class*="md:gap-8"] { gap: 1rem !important; }
+  [class*="md:gap-6"] { gap: 1rem !important; }
+  [class*="text-4xl"], [class*="text-5xl"] { font-size: clamp(1.75rem, 7vw, 2.5rem) !important; }
+  [class*="text-3xl"] { font-size: clamp(1.5rem, 6vw, 2rem) !important; }
+  .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl, .max-w-3xl, .max-w-2xl {
+    width: 100%;
+  }
+}
+@media (max-width: 480px) {
+  .px-4 { padding-left: .75rem !important; padding-right: .75rem !important; }
+  .p-6 { padding: 1rem !important; }
+  .p-8 { padding: 1rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-6 { gap: .75rem !important; }
+  .rounded-3xl { border-radius: 1.25rem !important; }
+  .rounded-2xl { border-radius: 1rem !important; }
+  input, select, textarea, button { min-height: 40px; }
+  table { font-size: .75rem; }
+}
+@media (max-width: 360px) {
+  .px-4, .px-3 { padding-left: .5rem !important; padding-right: .5rem !important; }
+  .p-6, .p-8 { padding: .75rem !important; }
+  .text-2xl { font-size: 1.35rem !important; }
+  .text-xl { font-size: 1.1rem !important; }
+}
