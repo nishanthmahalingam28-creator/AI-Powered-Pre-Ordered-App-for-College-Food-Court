@@ -255,6 +255,32 @@ def update_shop(shop_id):
     }), 200
 
 
+@admin_bp.delete("/shops/<int:shop_id>")
+@role_required(["admin"])
+def delete_shop(shop_id):
+    """Permanently deletes a stall only when it has no historical orders."""
+    shop = DB.get_one("SELECT id, name FROM shops WHERE id = %s", (shop_id,))
+    if not shop:
+        return jsonify({"success": False, "message": "Shop not found."}), 404
+
+    order_count = DB.get_one("SELECT COUNT(id) AS total FROM orders WHERE shop_id = %s", (shop_id,))
+    if int((order_count or {}).get("total") or 0) > 0:
+        return jsonify({
+            "success": False,
+            "message": "This stall cannot be permanently deleted because it has order history. Deactivate it instead."
+        }), 409
+
+    DB.execute("DELETE FROM shops WHERE id = %s", (shop_id,))
+    AuditService.log_action(
+        actor_id=session.get("user_id"),
+        action="SHOP_DELETED",
+        entity_type="shop",
+        entity_id=shop_id,
+        details={"shop_name": shop["name"]}
+    )
+    return jsonify({"success": True, "message": f"Stall '{shop['name']}' deleted successfully."}), 200
+
+
 @admin_bp.put("/shops/<int:shop_id>/status")
 @role_required(["admin"])
 def toggle_shop_status(shop_id):
@@ -405,6 +431,43 @@ def create_vendor():
         "assigned_shop_id": shop_id,
         "assigned_shop_name": assigned_shop_name
     }), 201
+
+
+@admin_bp.delete("/vendors/<int:user_id>")
+@role_required(["admin"])
+def delete_vendor(user_id):
+    """Permanently deletes a vendor account and unassigns its stall."""
+    vendor = DB.get_one(
+        "SELECT id, email, role FROM users WHERE id = %s AND role = 'vendor'",
+        (user_id,)
+    )
+    if not vendor:
+        return jsonify({"success": False, "message": "Vendor user not found."}), 404
+
+    assigned_shop = DB.get_one(
+        "SELECT id, name FROM shops WHERE owner_user_id = %s LIMIT 1",
+        (user_id,)
+    )
+    DB.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
+    DB.execute("DELETE FROM users WHERE id = %s AND role = 'vendor'", (user_id,))
+
+    AuditService.log_action(
+        actor_id=session.get("user_id"),
+        action="VENDOR_DELETED",
+        entity_type="user",
+        entity_id=user_id,
+        details={
+            "vendor_email": vendor["email"],
+            "unassigned_shop_id": assigned_shop["id"] if assigned_shop else None,
+            "unassigned_shop_name": assigned_shop["name"] if assigned_shop else None,
+        }
+    )
+    return jsonify({
+        "success": True,
+        "message": f"Vendor '{vendor['email']}' deleted successfully.",
+        "vendor_id": user_id,
+        "unassigned_shop_id": assigned_shop["id"] if assigned_shop else None,
+    }), 200
 
 
 @admin_bp.put("/vendors/<int:user_id>/shop")
