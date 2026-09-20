@@ -128,7 +128,7 @@ def create_expense():
 
         expense = DB.get_one(
             """
-            SELECT id, user_id, amount, category, description, expense_date, created_at, updated_at
+            SELECT id, user_id, order_id, amount, category, description, expense_date, created_at, updated_at
             FROM expenses
             WHERE id = %s
             """,
@@ -181,6 +181,7 @@ def get_expenses():
             expenses.append({
                 "id": r["id"],
                 "user_id": r["user_id"],
+                "order_id": r.get("order_id"),
                 "amount": amt,
                 "category": r["category"],
                 "description": r["description"],
@@ -213,7 +214,7 @@ def get_single_expense(expense_id: int):
 
     expense = DB.get_one(
         """
-        SELECT id, user_id, amount, category, description, expense_date, created_at, updated_at
+        SELECT id, user_id, order_id, amount, category, description, expense_date, created_at, updated_at
         FROM expenses
         WHERE id = %s
         """,
@@ -246,7 +247,7 @@ def update_expense(expense_id: int):
     user_id = session.get("user_id")
 
     existing = DB.get_one(
-        "SELECT id, user_id, amount, category, description, expense_date FROM expenses WHERE id = %s",
+        "SELECT id, user_id, order_id, amount, category, description, expense_date FROM expenses WHERE id = %s",
         (expense_id,)
     )
 
@@ -256,6 +257,10 @@ def update_expense(expense_id: int):
     # IDOR protection: verify ownership
     if existing["user_id"] != user_id:
         return jsonify({"success": False, "message": "Access denied. You do not own this expense."}), 403
+
+    # Completed-order food expenses are authoritative ledger entries.
+    if existing.get("order_id"):
+        return jsonify({"success": False, "message": "Completed-order food expenses cannot be edited."}), 409
 
     payload = request.get_json(silent=True) or {}
     cleaned, err = _validate_expense_payload(payload, is_update=True)
@@ -324,6 +329,10 @@ def delete_expense(expense_id: int):
     # IDOR protection: verify ownership
     if existing["user_id"] != user_id:
         return jsonify({"success": False, "message": "Access denied. You do not own this expense."}), 403
+
+    # Completed-order food expenses must remain linked to the completed order.
+    if existing.get("order_id"):
+        return jsonify({"success": False, "message": "Completed-order food expenses cannot be deleted."}), 409
 
     try:
         DB.execute(
