@@ -187,14 +187,38 @@ def get_expenses():
             (user_id,)
         )
 
+    try:
+        # Read saved expenses and also include any existing food orders that
+        # do not yet have an expense row. This makes older orders visible
+        # without running a write operation during page loading.
         rows = DB.get_all(
             """
-            SELECT id, user_id, order_id, amount, category, description, expense_date, created_at, updated_at
+            SELECT id, user_id, order_id, amount, category, description,
+                   expense_date, created_at, updated_at
             FROM expenses
             WHERE user_id = %s
-            ORDER BY expense_date DESC, id DESC
+
+            UNION ALL
+
+            SELECT
+                0 AS id,
+                o.customer_id AS user_id,
+                o.id AS order_id,
+                o.total_amount AS amount,
+                'Food' AS category,
+                CONCAT('Food order #', o.order_reference) AS description,
+                DATE(COALESCE(o.completed_time, o.created_at)) AS expense_date,
+                o.created_at AS created_at,
+                o.updated_at AS updated_at
+            FROM orders o
+            LEFT JOIN expenses e ON e.order_id = o.id
+            WHERE o.customer_id = %s
+              AND o.order_status <> 'cancelled'
+              AND e.id IS NULL
+
+            ORDER BY expense_date DESC, order_id DESC
             """,
-            (user_id,)
+            (user_id, user_id)
         )
 
         expenses = []
