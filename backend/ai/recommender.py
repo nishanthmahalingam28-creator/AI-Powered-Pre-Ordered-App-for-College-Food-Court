@@ -66,6 +66,7 @@ class FoodCourtRecommender:
             # and the vendor-published breakfast/lunch/dinner menu.
             today_survey = None
             daily_item_ids = []
+            daily_menu_published = False
             if customer_id:
                 try:
                     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -75,6 +76,17 @@ class FoodCourtRecommender:
                         (customer_id, today_str)
                     )
                     if today_survey and bool(today_survey.get("plans_to_eat", 1)):
+                        daily_params = [today_str]
+                        survey_sql = """
+                            SELECT v.id FROM vendor_daily_surveys v
+                            WHERE v.survey_date = %s AND v.is_serving_today = 1
+                        """
+                        if target_shop_id:
+                            survey_sql += " AND v.shop_id = %s"
+                            daily_params.append(target_shop_id)
+                        survey_sql += " LIMIT 1"
+                        published = DB.get_one(survey_sql, tuple(daily_params))
+                        daily_menu_published = bool(published)
                         daily_params = [today_str, today_survey.get("meal_type") or meal_slot]
                         daily_sql = """
                             SELECT d.menu_item_id
@@ -120,11 +132,11 @@ class FoodCourtRecommender:
             if customer_id and today_survey:
                 if not bool(today_survey.get("plans_to_eat", 1)):
                     sql += " AND 1 = 0"
-                elif daily_item_ids:
+                elif daily_menu_published and daily_item_ids:
                     placeholders = ",".join(["%s"] * len(daily_item_ids))
                     sql += f" AND m.id IN ({placeholders})"
                     params.extend(daily_item_ids)
-                else:
+                elif daily_menu_published:
                     sql += " AND 1 = 0"
 
             raw_candidates = DB.query(sql, tuple(params))
