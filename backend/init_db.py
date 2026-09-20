@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     description TEXT,
     price REAL NOT NULL,
     category TEXT NOT NULL DEFAULT 'Main Course',
+    meal_period TEXT NOT NULL DEFAULT 'lunch',
     quantity INTEGER NOT NULL DEFAULT 0,
     is_available INTEGER NOT NULL DEFAULT 1,
     image_url TEXT,
