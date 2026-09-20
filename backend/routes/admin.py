@@ -150,7 +150,7 @@ def get_admin_shops():
 @admin_bp.post("/shops")
 @role_required(["admin"])
 def add_shop():
-    """Creates a new food court stall and logs audit action."""
+    """Creates a new food court stall in one atomic DB transaction."""
     data = request.get_json(silent=True) or {}
     name = str(data.get("name", "")).strip()
     slug = str(data.get("slug") or name.lower().replace(" ", "-")).strip()
@@ -160,42 +160,43 @@ def add_shop():
 
     if operational_status not in ALLOWED_OPERATIONAL_STATUSES:
         operational_status = "OPEN"
-
     if not name:
         return jsonify({"success": False, "message": "Stall name is required."}), 400
 
-    existing = DB.get_one(
-        "SELECT id FROM shops WHERE LOWER(name) = %s OR LOWER(slug) = %s LIMIT 1",
-        (name.lower(), slug.lower()),
-    )
-    if existing:
-        return jsonify({
-            "success": False,
-            "message": f"A stall with name '{name}' or slug '{slug}' already exists."
-        }), 409
+    with DB.transaction() as tx:
+        existing = tx.get_one(
+            "SELECT id FROM shops WHERE LOWER(name) = %s OR LOWER(slug) = %s LIMIT 1",
+            (name.lower(), slug.lower()),
+        )
+        if existing:
+            return jsonify({
+                "success": False,
+                "message": f"A stall with name '{name}' or slug '{slug}' already exists."
+            }), 409
 
-    shop_id = DB.execute(
-        """
-        INSERT INTO shops (name, slug, description, category, is_active, operational_status)
-        VALUES (%s, %s, %s, %s, 1, %s)
-        """,
-        (name, slug, description, category, operational_status),
-    )
-
-    actor_id = session.get("user_id")
-    AuditService.log_action(
-        actor_id=actor_id,
-        action="SHOP_CREATED",
-        entity_type="shop",
-        entity_id=shop_id,
-        details={"name": name, "slug": slug, "category": category, "operational_status": operational_status}
-    )
+        shop_id = tx.execute(
+            """INSERT INTO shops (name, slug, description, category, is_active, operational_status)
+               VALUES (%s, %s, %s, %s, 1, %s)""",
+            (name, slug, description, category, operational_status),
+        )
+        AuditService.log_action(
+            actor_id=session.get("user_id"),
+            action="SHOP_CREATED",
+            entity_type="shop",
+            entity_id=shop_id,
+            details={"name": name, "slug": slug, "category": category, "operational_status": operational_status},
+            tx=tx,
+        )
 
     return jsonify({
         "success": True,
         "message": f"Stall '{name}' created successfully.",
         "shop_id": shop_id,
-        "operational_status": operational_status
+        "shop": {
+            "id": shop_id, "name": name, "slug": slug, "description": description,
+            "category": category, "is_active": 1, "operational_status": operational_status,
+            "owner_user_id": None, "owner_email": None, "total_items": 0,
+        },
     }), 201
 
 
@@ -259,104 +260,77 @@ def update_shop(shop_id):
 @role_required(["admin"])
 def delete_shop(shop_id):
     """Permanently deletes a stall only when it has no historical orders."""
-    shop = DB.get_one("SELECT id, name FROM shops WHERE id = %s", (shop_id,))
-    if not shop:
-        return jsonify({"success": False, "message": "Shop not found."}), 404
+    with DB.transaction() as tx:
+        shop = tx.get_one("SELECT id, name FROM shops WHERE id = %s", (shop_id,))
+        if not shop:
+            return jsonify({"success": False, "message": "Shop not found."}), 404
 
-    order_count = DB.get_one("SELECT COUNT(id) AS total FROM orders WHERE shop_id = %s", (shop_id,))
-    if int((order_count or {}).get("total") or 0) > 0:
-        return jsonify({
-            "success": False,
-            "message": "This stall cannot be permanently deleted because it has order history. Deactivate it instead."
-        }), 409
+        order_count = tx.get_one("SELECT COUNT(id) AS total FROM orders WHERE shop_id = %s", (shop_id,))
+        if int((order_count or {}).get("total") or 0) > 0:
+            return jsonify({
+                "success": False,
+                "message": "This stall cannot be permanently deleted because it has order history. Deactivate it instead."
+            }), 409
 
-    DB.execute("DELETE FROM shops WHERE id = %s", (shop_id,))
-    AuditService.log_action(
-        actor_id=session.get("user_id"),
-        action="SHOP_DELETED",
-        entity_type="shop",
-        entity_id=shop_id,
-        details={"shop_name": shop["name"]}
-    )
-    return jsonify({"success": True, "message": f"Stall '{shop['name']}' deleted successfully."}), 200
+        tx.execute("DELETE FROM shops WHERE id = %s", (shop_id,))
+        AuditService.log_action(
+            actor_id=session.get("user_id"), action="SHOP_DELETED", entity_type="shop",
+            entity_id=shop_id, details={"shop_name": shop["name"]}, tx=tx
+        )
+
+    return jsonify({"success": True, "message": f"Stall '{shop['name']}' deleted successfully.",
+                    "shop_id": shop_id}), 200
 
 
 @admin_bp.put("/shops/<int:shop_id>/status")
 @role_required(["admin"])
 def toggle_shop_status(shop_id):
-    """Toggles shop active status (is_active: 0 or 1) and logs audit action."""
-    shop = DB.get_one("SELECT id, is_active, name FROM shops WHERE id = %s", (shop_id,))
-    if not shop:
-        return jsonify({"success": False, "message": "Shop not found."}), 404
-
-    data = request.get_json(silent=True) or {}
-    if "is_active" in data:
-        new_status = 1 if data["is_active"] else 0
-    else:
-        new_status = 0 if shop["is_active"] == 1 else 1
-
-    DB.execute("UPDATE shops SET is_active = %s WHERE id = %s", (new_status, shop_id))
-
-    actor_id = session.get("user_id")
-    AuditService.log_action(
-        actor_id=actor_id,
-        action="SHOP_STATUS_TOGGLED",
-        entity_type="shop",
-        entity_id=shop_id,
-        details={"shop_name": shop["name"], "is_active": new_status}
-    )
+    """Toggles shop active status atomically."""
+    with DB.transaction() as tx:
+        shop = tx.get_one("SELECT id, is_active, name FROM shops WHERE id = %s", (shop_id,))
+        if not shop:
+            return jsonify({"success": False, "message": "Shop not found."}), 404
+        data = request.get_json(silent=True) or {}
+        new_status = 1 if data["is_active"] else 0 if "is_active" in data else 0 if shop["is_active"] == 1 else 1
+        tx.execute("UPDATE shops SET is_active = %s WHERE id = %s", (new_status, shop_id))
+        AuditService.log_action(
+            actor_id=session.get("user_id"), action="SHOP_STATUS_TOGGLED", entity_type="shop",
+            entity_id=shop_id, details={"shop_name": shop["name"], "is_active": new_status}, tx=tx
+        )
 
     status_text = "Activated" if new_status == 1 else "Deactivated"
-    return jsonify({
-        "success": True,
-        "message": f"Stall '{shop['name']}' {status_text}.",
-        "is_active": new_status
-    }), 200
+    return jsonify({"success": True, "message": f"Stall '{shop['name']}' {status_text}.",
+                    "shop_id": shop_id, "is_active": new_status}), 200
 
 
 @admin_bp.put("/shops/<int:shop_id>/operational-status")
 @role_required(["admin"])
 def update_shop_operational_status(shop_id):
-    """
-    Sets shop operational status (OPEN, CLOSED, TEMPORARILY_UNAVAILABLE).
-    Enforces business rules and logs audit action.
-    """
-    shop = DB.get_one("SELECT id, name, is_active, operational_status FROM shops WHERE id = %s", (shop_id,))
-    if not shop:
-        return jsonify({"success": False, "message": "Shop not found."}), 404
-
+    """Sets shop operational status atomically."""
     data = request.get_json(silent=True) or {}
     new_status = str(data.get("operational_status") or data.get("status") or "").strip().upper()
-
     if new_status not in ALLOWED_OPERATIONAL_STATUSES:
         return jsonify({
             "success": False,
             "message": f"Invalid operational status. Must be one of {sorted(list(ALLOWED_OPERATIONAL_STATUSES))}."
         }), 400
 
-    old_status = str(shop.get("operational_status") or "OPEN").upper()
-    DB.execute("UPDATE shops SET operational_status = %s WHERE id = %s", (new_status, shop_id))
+    with DB.transaction() as tx:
+        shop = tx.get_one("SELECT id, name, operational_status FROM shops WHERE id = %s", (shop_id,))
+        if not shop:
+            return jsonify({"success": False, "message": "Shop not found."}), 404
+        old_status = str(shop.get("operational_status") or "OPEN").upper()
+        tx.execute("UPDATE shops SET operational_status = %s WHERE id = %s", (new_status, shop_id))
+        AuditService.log_action(
+            actor_id=session.get("user_id"), action="SHOP_OPERATIONAL_STATUS_CHANGED", entity_type="shop",
+            entity_id=shop_id,
+            details={"shop_name": shop["name"], "old_status": old_status, "new_status": new_status},
+            tx=tx,
+        )
 
-    actor_id = session.get("user_id")
-    AuditService.log_action(
-        actor_id=actor_id,
-        action="SHOP_OPERATIONAL_STATUS_CHANGED",
-        entity_type="shop",
-        entity_id=shop_id,
-        details={"shop_name": shop["name"], "old_status": old_status, "new_status": new_status}
-    )
+    return jsonify({"success": True, "message": f"Stall '{shop['name']}' operational status updated to {new_status}.",
+                    "shop_id": shop_id, "operational_status": new_status}), 200
 
-    return jsonify({
-        "success": True,
-        "message": f"Stall '{shop['name']}' operational status updated to {new_status}.",
-        "shop_id": shop_id,
-        "operational_status": new_status
-    }), 200
-
-
-# ============================================================================
-# VENDOR MANAGEMENT & ASSIGNMENT
-# ============================================================================
 
 @admin_bp.get("/vendors")
 @role_required(["admin"])
@@ -383,7 +357,7 @@ def get_admin_vendors():
 @admin_bp.post("/vendors")
 @role_required(["admin"])
 def create_vendor():
-    """Creates a new vendor user account with optional stall assignment and logs audit action."""
+    """Creates a vendor account atomically, including optional stall assignment."""
     data = request.get_json(silent=True) or {}
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", "")).strip()
@@ -391,150 +365,118 @@ def create_vendor():
 
     if not email or not password:
         return jsonify({"success": False, "message": "Vendor email and initial password are required."}), 400
-
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
         return jsonify({"success": False, "message": "Invalid email address format."}), 400
 
-    existing = DB.get_one("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
-    if existing:
-        return jsonify({"success": False, "message": "An account with this email already exists."}), 409
-
     pwd_hash = hash_password(password)
-    user_id = DB.execute(
-        "INSERT INTO users (email, password_hash, role, is_active) VALUES (%s, %s, 'vendor', 1)",
-        (email, pwd_hash),
-    )
 
-    assigned_shop_name = None
-    if shop_id:
-        target_shop = DB.get_one("SELECT id, name, is_active FROM shops WHERE id = %s", (shop_id,))
-        if not target_shop or not target_shop.get("is_active"):
-            return jsonify({"success": False, "message": "Cannot assign vendor to an inactive or non-existent stall."}), 400
-        # Clear existing owner if any to maintain 1-to-1 vendor-to-shop relationship
-        DB.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
-        DB.execute("UPDATE shops SET owner_user_id = %s WHERE id = %s", (user_id, shop_id))
-        assigned_shop_name = target_shop["name"]
+    with DB.transaction() as tx:
+        existing = tx.get_one("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
+        if existing:
+            return jsonify({"success": False, "message": "An account with this email already exists."}), 409
 
-    actor_id = session.get("user_id")
-    AuditService.log_action(
-        actor_id=actor_id,
-        action="VENDOR_CREATED",
-        entity_type="user",
-        entity_id=user_id,
-        details={"email": email, "assigned_shop_id": shop_id, "assigned_shop_name": assigned_shop_name}
-    )
+        assigned_shop_name = None
+        target_shop = None
+        if shop_id:
+            target_shop = tx.get_one("SELECT id, name, is_active FROM shops WHERE id = %s", (shop_id,))
+            if not target_shop or not target_shop.get("is_active"):
+                return jsonify({"success": False, "message": "Cannot assign vendor to an inactive or non-existent stall."}), 400
+            assigned_shop_name = target_shop["name"]
+
+        user_id = tx.execute(
+            "INSERT INTO users (email, password_hash, role, is_active) VALUES (%s, %s, 'vendor', 1)",
+            (email, pwd_hash),
+        )
+
+        if shop_id:
+            tx.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
+            tx.execute("UPDATE shops SET owner_user_id = %s WHERE id = %s", (user_id, shop_id))
+
+        AuditService.log_action(
+            actor_id=session.get("user_id"), action="VENDOR_CREATED", entity_type="user",
+            entity_id=user_id,
+            details={"email": email, "assigned_shop_id": shop_id, "assigned_shop_name": assigned_shop_name},
+            tx=tx,
+        )
 
     return jsonify({
         "success": True,
         "message": f"Vendor account '{email}' created successfully.",
         "user_id": user_id,
         "assigned_shop_id": shop_id,
-        "assigned_shop_name": assigned_shop_name
+        "assigned_shop_name": assigned_shop_name,
+        "vendor": {
+            "id": user_id, "email": email, "role": "vendor", "is_active": 1,
+            "assigned_shop_id": shop_id, "assigned_shop_name": assigned_shop_name,
+            "assigned_shop_status": target_shop.get("operational_status") if target_shop else None,
+        },
     }), 201
 
 
 @admin_bp.delete("/vendors/<int:user_id>")
 @role_required(["admin"])
 def delete_vendor(user_id):
-    """Permanently deletes a vendor account and unassigns its stall."""
-    vendor = DB.get_one(
-        "SELECT id, email, role FROM users WHERE id = %s AND role = 'vendor'",
-        (user_id,)
-    )
-    if not vendor:
-        return jsonify({"success": False, "message": "Vendor user not found."}), 404
+    """Permanently deletes a vendor account and unassigns its stall atomically."""
+    with DB.transaction() as tx:
+        vendor = tx.get_one("SELECT id, email, role FROM users WHERE id = %s AND role = 'vendor'", (user_id,))
+        if not vendor:
+            return jsonify({"success": False, "message": "Vendor user not found."}), 404
 
-    assigned_shop = DB.get_one(
-        "SELECT id, name FROM shops WHERE owner_user_id = %s LIMIT 1",
-        (user_id,)
-    )
-    DB.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
-    DB.execute("DELETE FROM users WHERE id = %s AND role = 'vendor'", (user_id,))
+        assigned_shop = tx.get_one("SELECT id, name FROM shops WHERE owner_user_id = %s LIMIT 1", (user_id,))
+        tx.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
+        tx.execute("DELETE FROM users WHERE id = %s AND role = 'vendor'", (user_id,))
+        AuditService.log_action(
+            actor_id=session.get("user_id"), action="VENDOR_DELETED", entity_type="user",
+            entity_id=user_id,
+            details={"vendor_email": vendor["email"],
+                     "unassigned_shop_id": assigned_shop["id"] if assigned_shop else None,
+                     "unassigned_shop_name": assigned_shop["name"] if assigned_shop else None},
+            tx=tx,
+        )
 
-    AuditService.log_action(
-        actor_id=session.get("user_id"),
-        action="VENDOR_DELETED",
-        entity_type="user",
-        entity_id=user_id,
-        details={
-            "vendor_email": vendor["email"],
-            "unassigned_shop_id": assigned_shop["id"] if assigned_shop else None,
-            "unassigned_shop_name": assigned_shop["name"] if assigned_shop else None,
-        }
-    )
-    return jsonify({
-        "success": True,
-        "message": f"Vendor '{vendor['email']}' deleted successfully.",
-        "vendor_id": user_id,
-        "unassigned_shop_id": assigned_shop["id"] if assigned_shop else None,
-    }), 200
+    return jsonify({"success": True, "message": f"Vendor '{vendor['email']}' deleted successfully.",
+                    "vendor_id": user_id,
+                    "unassigned_shop_id": assigned_shop["id"] if assigned_shop else None}), 200
 
 
 @admin_bp.put("/vendors/<int:user_id>/shop")
 @role_required(["admin"])
 def assign_vendor_shop(user_id):
-    """
-    Assigns or unassigns a vendor to a specific active food court stall.
-    Enforces 1-to-1 mapping and logs audit action.
-    """
+    """Assigns or unassigns a vendor to a stall atomically."""
     data = request.get_json(silent=True) or {}
     shop_id = data.get("shop_id")
 
-    vendor = DB.get_one("SELECT id, email, role FROM users WHERE id = %s AND role = 'vendor'", (user_id,))
-    if not vendor:
-        return jsonify({"success": False, "message": "Vendor user not found."}), 404
+    with DB.transaction() as tx:
+        vendor = tx.get_one("SELECT id, email, role FROM users WHERE id = %s AND role = 'vendor'", (user_id,))
+        if not vendor:
+            return jsonify({"success": False, "message": "Vendor user not found."}), 404
 
-    actor_id = session.get("user_id")
+        actor_id = session.get("user_id")
+        if shop_id is None or shop_id == 0 or shop_id == "null":
+            tx.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
+            AuditService.log_action(actor_id=actor_id, action="VENDOR_UNASSIGNED", entity_type="user",
+                                    entity_id=user_id, details={"vendor_email": vendor["email"]}, tx=tx)
+            return jsonify({"success": True, "message": f"Vendor '{vendor['email']}' unassigned from stall.",
+                            "vendor_id": user_id, "shop_id": None}), 200
 
-    # Unassignment case
-    if shop_id is None or shop_id == 0 or shop_id == "null":
-        DB.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
+        shop = tx.get_one("SELECT id, name, is_active, operational_status FROM shops WHERE id = %s", (shop_id,))
+        if not shop:
+            return jsonify({"success": False, "message": "Target shop not found."}), 404
+        if not shop.get("is_active"):
+            return jsonify({"success": False, "message": "Cannot assign vendor to an inactive stall."}), 400
+
+        tx.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
+        tx.execute("UPDATE shops SET owner_user_id = NULL WHERE id = %s", (shop_id,))
+        tx.execute("UPDATE shops SET owner_user_id = %s WHERE id = %s", (user_id, shop_id))
         AuditService.log_action(
-            actor_id=actor_id,
-            action="VENDOR_UNASSIGNED",
-            entity_type="user",
-            entity_id=user_id,
-            details={"vendor_email": vendor["email"]}
+            actor_id=actor_id, action="VENDOR_ASSIGNED", entity_type="user", entity_id=user_id,
+            details={"vendor_email": vendor["email"], "shop_id": shop_id, "shop_name": shop["name"]}, tx=tx
         )
-        return jsonify({
-            "success": True,
-            "message": f"Vendor '{vendor['email']}' unassigned from stall.",
-            "vendor_id": user_id,
-            "shop_id": None
-        }), 200
 
-    shop = DB.get_one("SELECT id, name, is_active FROM shops WHERE id = %s", (shop_id,))
-    if not shop:
-        return jsonify({"success": False, "message": "Target shop not found."}), 404
+    return jsonify({"success": True, "message": f"Vendor '{vendor['email']}' successfully assigned to stall '{shop['name']}'.",
+                    "vendor_id": user_id, "shop_id": shop_id, "shop_name": shop["name"],
+                    "assigned_shop_status": shop.get("operational_status")}), 200
 
-    if not shop.get("is_active"):
-        return jsonify({"success": False, "message": "Cannot assign vendor to an inactive stall."}), 400
-
-    # Clear any previous stall ownership for this vendor to ensure 1-to-1 mapping
-    DB.execute("UPDATE shops SET owner_user_id = NULL WHERE owner_user_id = %s", (user_id,))
-    # Clear any vendor previously assigned to this target shop
-    DB.execute("UPDATE shops SET owner_user_id = %s WHERE id = %s", (user_id, shop_id))
-
-    AuditService.log_action(
-        actor_id=actor_id,
-        action="VENDOR_ASSIGNED",
-        entity_type="user",
-        entity_id=user_id,
-        details={"vendor_email": vendor["email"], "shop_id": shop_id, "shop_name": shop["name"]}
-    )
-
-    return jsonify({
-        "success": True,
-        "message": f"Vendor '{vendor['email']}' successfully assigned to stall '{shop['name']}'.",
-        "vendor_id": user_id,
-        "shop_id": shop_id,
-        "shop_name": shop["name"]
-    }), 200
-
-
-# ============================================================================
-# CUSTOMER MANAGEMENT
-# ============================================================================
 
 @admin_bp.get("/customers")
 @role_required(["admin"])
