@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     order_id INT UNSIGNED NOT NULL,
     menu_item_id INT UNSIGNED NULL,
     item_name VARCHAR(150) NOT NULL,
+    meal_period ENUM('breakfast','lunch','dinner') NOT NULL DEFAULT 'lunch',
     unit_price DECIMAL(10,2) NOT NULL,
     quantity INT NOT NULL DEFAULT 1,
     subtotal DECIMAL(10,2) NOT NULL,
