@@ -1138,3 +1138,304 @@ def save_vendor_daily_survey():
     except Exception as e:
         logger.exception("Failed to save vendor daily survey: %s", e)
         return jsonify({"success": False, "message": "Unable to save today's menu survey."}), 500
+
+
+# ============================================================================
+# WORKER MANAGEMENT
+# ============================================================================
+
+def _worker_shop_or_forbidden():
+    shop_id = _get_active_shop_id()
+    if not shop_id:
+        return None, (jsonify({"success": False, "message": "No active stall assigned."}), 403)
+    return shop_id, None
+
+
+def _validate_worker_name(value):
+    name = str(value or "").strip()
+    if not name or len(name) > 150 or not re.match(r"^[\w\s.'\-&]+$", name, re.UNICODE):
+        return None
+    return name
+
+
+@vendor_bp.get("/workers")
+@role_required(["vendor", "admin"])
+def list_workers():
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    workers = DB.query(
+        """
+        SELECT w.id, w.employee_code, w.full_name, w.phone, w.role_title,
+               w.salary_type, w.salary_amount, w.joining_date, w.status,
+               COALESCE(SUM(CASE WHEN a.status = 'present' THEN 1 WHEN a.status = 'half_day' THEN 0.5 ELSE 0 END), 0) AS attendance_days
+        FROM workers w
+        LEFT JOIN worker_attendance a
+          ON a.worker_id = w.id
+         AND a.attendance_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
+         AND a.attendance_date < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
+        WHERE w.shop_id = %s
+        GROUP BY w.id
+        ORDER BY w.status ASC, w.full_name ASC
+        """,
+        (shop_id,),
+    )
+    for w in workers:
+        w["salary_amount"] = float(w.get("salary_amount") or 0)
+        w["attendance_days"] = float(w.get("attendance_days") or 0)
+    return jsonify({"success": True, "workers": workers, "shop_id": shop_id}), 200
+
+
+@vendor_bp.post("/workers")
+@role_required(["vendor", "admin"])
+def create_worker():
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    name = _validate_worker_name(data.get("full_name"))
+    if not name:
+        return jsonify({"success": False, "message": "Enter a valid worker name."}), 400
+
+    code = str(data.get("employee_code") or "").strip().upper()
+    if not code or len(code) > 50 or not re.match(r"^[A-Z0-9_-]+$", code):
+        return jsonify({"success": False, "message": "Employee ID can contain only letters, numbers, hyphens and underscores."}), 400
+
+    role_title = str(data.get("role_title") or "Kitchen Staff").strip()
+    phone = str(data.get("phone") or "").strip()
+    salary_type = str(data.get("salary_type") or "monthly").lower()
+    if salary_type not in {"monthly", "daily"}:
+        return jsonify({"success": False, "message": "Salary type must be monthly or daily."}), 400
+
+    try:
+        salary = Decimal(str(data.get("salary_amount") or "0"))
+        if salary < 0 or salary > Decimal("1000000"):
+            raise InvalidOperation
+        salary = salary.quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError, TypeError):
+        return jsonify({"success": False, "message": "Enter a valid salary amount."}), 400
+
+    joining_date = str(data.get("joining_date") or "").strip() or None
+    if joining_date:
+        try:
+            from datetime import datetime as _dt
+            _dt.strptime(joining_date, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"success": False, "message": "Joining date must be YYYY-MM-DD."}), 400
+
+    existing = DB.get_one("SELECT id FROM workers WHERE shop_id = %s AND employee_code = %s", (shop_id, code))
+    if existing:
+        return jsonify({"success": False, "message": "Employee ID already exists in this stall."}), 409
+
+    worker_id = DB.execute(
+        """
+        INSERT INTO workers
+            (shop_id, employee_code, full_name, phone, role_title, salary_type, salary_amount, joining_date, status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'active')
+        """,
+        (shop_id, code, name, phone or None, role_title, salary_type, salary, joining_date),
+    )
+    AuditService.log_action(
+        actor_id=session.get("user_id"), action="WORKER_CREATED",
+        entity_type="worker", entity_id=worker_id,
+        details={"shop_id": shop_id, "employee_code": code, "name": name}
+    )
+    return jsonify({"success": True, "message": "Worker added successfully.", "worker_id": worker_id}), 201
+
+
+@vendor_bp.put("/workers/<int:worker_id>")
+@role_required(["vendor", "admin"])
+def update_worker(worker_id):
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    worker = DB.get_one("SELECT * FROM workers WHERE id = %s AND shop_id = %s", (worker_id, shop_id))
+    if not worker:
+        return jsonify({"success": False, "message": "Worker not found."}), 404
+    data = request.get_json(silent=True) or {}
+
+    name = _validate_worker_name(data.get("full_name", worker["full_name"]))
+    if not name:
+        return jsonify({"success": False, "message": "Enter a valid worker name."}), 400
+    role_title = str(data.get("role_title", worker["role_title"]) or "Kitchen Staff").strip()
+    phone = str(data.get("phone", worker["phone"] or "") or "").strip()
+    salary_type = str(data.get("salary_type", worker["salary_type"]) or "monthly").lower()
+    if salary_type not in {"monthly", "daily"}:
+        return jsonify({"success": False, "message": "Salary type must be monthly or daily."}), 400
+    try:
+        salary = Decimal(str(data.get("salary_amount", worker["salary_amount"]) or "0")).quantize(Decimal("0.01"))
+        if salary < 0 or salary > Decimal("1000000"):
+            raise InvalidOperation
+    except (InvalidOperation, ValueError, TypeError):
+        return jsonify({"success": False, "message": "Enter a valid salary amount."}), 400
+
+    DB.execute(
+        """
+        UPDATE workers
+        SET full_name=%s, phone=%s, role_title=%s, salary_type=%s, salary_amount=%s
+        WHERE id=%s AND shop_id=%s
+        """,
+        (name, phone or None, role_title, salary_type, salary, worker_id, shop_id),
+    )
+    AuditService.log_action(
+        actor_id=session.get("user_id"), action="WORKER_UPDATED",
+        entity_type="worker", entity_id=worker_id, details={"shop_id": shop_id}
+    )
+    return jsonify({"success": True, "message": "Worker updated successfully."}), 200
+
+
+@vendor_bp.delete("/workers/<int:worker_id>")
+@role_required(["vendor", "admin"])
+def delete_worker(worker_id):
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    worker = DB.get_one("SELECT id, full_name FROM workers WHERE id=%s AND shop_id=%s", (worker_id, shop_id))
+    if not worker:
+        return jsonify({"success": False, "message": "Worker not found."}), 404
+    DB.execute("DELETE FROM workers WHERE id=%s AND shop_id=%s", (worker_id, shop_id))
+    AuditService.log_action(
+        actor_id=session.get("user_id"), action="WORKER_DELETED",
+        entity_type="worker", entity_id=worker_id, details={"shop_id": shop_id, "name": worker["full_name"]}
+    )
+    return jsonify({"success": True, "message": "Worker deleted successfully."}), 200
+
+
+@vendor_bp.get("/workers/attendance")
+@role_required(["vendor", "admin"])
+def get_worker_attendance():
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    date_value = request.args.get("date") or __import__("datetime").date.today().isoformat()
+    rows = DB.query(
+        """
+        SELECT w.id AS worker_id, w.employee_code, w.full_name, w.role_title,
+               COALESCE(a.status, 'absent') AS attendance_status,
+               a.check_in, a.check_out, a.notes
+        FROM workers w
+        LEFT JOIN worker_attendance a
+          ON a.worker_id = w.id AND a.attendance_date = %s
+        WHERE w.shop_id=%s AND w.status='active'
+        ORDER BY w.full_name
+        """,
+        (date_value, shop_id),
+    )
+    return jsonify({"success": True, "date": date_value, "attendance": rows}), 200
+
+
+@vendor_bp.post("/workers/attendance")
+@role_required(["vendor", "admin"])
+def save_worker_attendance():
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    try:
+        worker_id = int(data.get("worker_id"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Worker is required."}), 400
+    worker = DB.get_one("SELECT id FROM workers WHERE id=%s AND shop_id=%s", (worker_id, shop_id))
+    if not worker:
+        return jsonify({"success": False, "message": "Worker not found."}), 404
+
+    status = str(data.get("status") or "present").lower()
+    if status not in {"present", "absent", "half_day", "leave"}:
+        return jsonify({"success": False, "message": "Invalid attendance status."}), 400
+    date_value = str(data.get("attendance_date") or __import__("datetime").date.today().isoformat())
+    check_in = str(data.get("check_in") or "").strip() or None
+    check_out = str(data.get("check_out") or "").strip() or None
+    notes = str(data.get("notes") or "").strip()[:255] or None
+
+    existing = DB.get_one("SELECT id FROM worker_attendance WHERE worker_id=%s AND attendance_date=%s", (worker_id, date_value))
+    if existing:
+        DB.execute(
+            "UPDATE worker_attendance SET status=%s, check_in=%s, check_out=%s, notes=%s WHERE id=%s",
+            (status, check_in, check_out, notes, existing["id"]),
+        )
+    else:
+        DB.execute(
+            "INSERT INTO worker_attendance (worker_id, attendance_date, status, check_in, check_out, notes) VALUES (%s,%s,%s,%s,%s,%s)",
+            (worker_id, date_value, status, check_in, check_out, notes),
+        )
+    return jsonify({"success": True, "message": "Attendance saved."}), 200
+
+
+@vendor_bp.get("/workers/salary")
+@role_required(["vendor", "admin"])
+def get_worker_salary():
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    month = str(request.args.get("month") or __import__("datetime").date.today().replace(day=1).isoformat())
+    rows = DB.query(
+        """
+        SELECT w.id AS worker_id, w.employee_code, w.full_name, w.role_title,
+               w.salary_type, w.salary_amount,
+               COALESCE(SUM(CASE WHEN a.status='present' THEN 1 WHEN a.status='half_day' THEN 0.5 ELSE 0 END),0) AS attendance_days,
+               COALESCE(sp.status,'pending') AS salary_status,
+               COALESCE(sp.paid_amount,0) AS paid_amount,
+               sp.paid_on
+        FROM workers w
+        LEFT JOIN worker_attendance a
+          ON a.worker_id=w.id
+         AND a.attendance_date >= %s
+         AND a.attendance_date < DATE_ADD(%s, INTERVAL 1 MONTH)
+        LEFT JOIN worker_salary_payments sp
+          ON sp.worker_id=w.id AND sp.salary_month=%s
+        WHERE w.shop_id=%s
+        GROUP BY w.id, sp.status, sp.paid_amount, sp.paid_on
+        ORDER BY w.full_name
+        """,
+        (month, month, month, shop_id),
+    )
+    for row in rows:
+        row["salary_amount"] = float(row.get("salary_amount") or 0)
+        row["attendance_days"] = float(row.get("attendance_days") or 0)
+        row["paid_amount"] = float(row.get("paid_amount") or 0)
+    return jsonify({"success": True, "month": month, "salary": rows}), 200
+
+
+@vendor_bp.post("/workers/<int:worker_id>/salary")
+@role_required(["vendor", "admin"])
+def save_worker_salary(worker_id):
+    shop_id, error = _worker_shop_or_forbidden()
+    if error:
+        return error
+    worker = DB.get_one("SELECT id, salary_type, salary_amount FROM workers WHERE id=%s AND shop_id=%s", (worker_id, shop_id))
+    if not worker:
+        return jsonify({"success": False, "message": "Worker not found."}), 404
+    data = request.get_json(silent=True) or {}
+    month = str(data.get("salary_month") or __import__("datetime").date.today().replace(day=1).isoformat())
+    try:
+        paid_amount = Decimal(str(data.get("paid_amount") if data.get("paid_amount") is not None else worker["salary_amount"])).quantize(Decimal("0.01"))
+        if paid_amount < 0 or paid_amount > Decimal("1000000"):
+            raise InvalidOperation
+    except (InvalidOperation, ValueError, TypeError):
+        return jsonify({"success": False, "message": "Invalid paid amount."}), 400
+    status = str(data.get("status") or "paid").lower()
+    if status not in {"pending", "paid"}:
+        return jsonify({"success": False, "message": "Salary status must be pending or paid."}), 400
+    paid_on = str(data.get("paid_on") or "") or None
+
+    existing = DB.get_one("SELECT id FROM worker_salary_payments WHERE worker_id=%s AND salary_month=%s", (worker_id, month))
+    if existing:
+        DB.execute(
+            "UPDATE worker_salary_payments SET base_salary=%s, paid_amount=%s, status=%s, paid_on=%s, notes=%s WHERE id=%s",
+            (worker["salary_amount"], paid_amount, status, paid_on, str(data.get("notes") or "")[:255] or None, existing["id"]),
+        )
+    else:
+        DB.execute(
+            """
+            INSERT INTO worker_salary_payments
+                (worker_id, salary_month, base_salary, attendance_days, paid_amount, status, paid_on, notes)
+            SELECT %s, %s, salary_amount,
+                   COALESCE((SELECT SUM(CASE WHEN a.status='present' THEN 1 WHEN a.status='half_day' THEN 0.5 ELSE 0 END)
+                             FROM worker_attendance a
+                             WHERE a.worker_id=%s AND a.attendance_date >= %s AND a.attendance_date < DATE_ADD(%s, INTERVAL 1 MONTH)),0),
+                   %s, %s, %s, %s
+            FROM workers WHERE id=%s
+            """,
+            (worker_id, month, worker_id, month, month, paid_amount, status, paid_on, str(data.get("notes") or "")[:255] or None, worker_id),
+        )
+    return jsonify({"success": True, "message": "Salary record saved."}), 200
