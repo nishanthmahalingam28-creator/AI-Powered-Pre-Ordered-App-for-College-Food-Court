@@ -795,3 +795,96 @@ def update_morning_survey():
     except Exception as e:
         logger.exception("Failed to update morning survey for user %s: %s", user_id, e)
         return jsonify({"success": False, "message": "Failed to update morning survey."}), 500
+
+
+@customer_bp.get("/morning-poll/today")
+@login_required
+@role_required(["customer"])
+def get_today_morning_poll():
+    """Return vendor-published morning surveys and choices for student voting."""
+    user_id = session.get("user_id")
+    today = datetime.now().strftime("%Y-%m-%d")
+    surveys = DB.query("""
+        SELECT v.id AS survey_id, v.shop_id, s.name AS shop_name, v.survey_date
+        FROM vendor_daily_surveys v
+        INNER JOIN shops s ON s.id = v.shop_id
+        WHERE v.survey_date = %s AND v.is_serving_today = 1
+        ORDER BY s.name
+    """, (today,))
+    result = []
+    for survey in surveys:
+        options = DB.query("""
+            SELECT id, menu_item_id, meal_period, item_name, price, quantity, is_available
+            FROM vendor_daily_menu_items
+            WHERE survey_id = %s AND is_available = 1
+            ORDER BY FIELD(meal_period,'breakfast','lunch','dinner'), item_name
+        """, (survey["survey_id"],))
+        voted = DB.get_one(
+            "SELECT menu_item_id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s LIMIT 1",
+            (survey["survey_id"], user_id),
+        )
+        result.append({
+            "survey_id": survey["survey_id"],
+            "shop_id": survey["shop_id"],
+            "shop_name": survey["shop_name"],
+            "date": str(survey["survey_date"]),
+            "voted": bool(voted),
+            "voted_menu_item_id": voted["menu_item_id"] if voted else None,
+            "options": [{
+                "id": row["id"],
+                "menu_item_id": row["menu_item_id"],
+                "meal_period": row["meal_period"],
+                "item_name": row["item_name"],
+                "price": float(row["price"]),
+                "quantity": int(row["quantity"] or 0),
+            } for row in options]
+        })
+    return jsonify({"success": True, "date": today, "surveys": result}), 200
+
+
+@customer_bp.post("/morning-poll/vote")
+@login_required
+@role_required(["customer"])
+def vote_morning_poll():
+    """Allow one student vote per vendor morning survey."""
+    user_id = session.get("user_id")
+    data = request.get_json(silent=True) or {}
+    try:
+        survey_id = int(data.get("survey_id"))
+        menu_item_id = int(data.get("menu_item_id"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Survey and food choice are required."}), 400
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    survey = DB.get_one(
+        "SELECT id, shop_id FROM vendor_daily_surveys WHERE id=%s AND survey_date=%s AND is_serving_today=1 LIMIT 1",
+        (survey_id, today),
+    )
+    if not survey:
+        return jsonify({"success": False, "message": "This morning survey is not available today."}), 404
+
+    option = DB.get_one(
+        "SELECT id FROM vendor_daily_menu_items WHERE id=%s AND survey_id=%s AND is_available=1 LIMIT 1",
+        (menu_item_id, survey_id),
+    )
+    if not option:
+        return jsonify({"success": False, "message": "That food option is not part of this morning survey."}), 400
+
+    existing = DB.get_one(
+        "SELECT id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s LIMIT 1",
+        (survey_id, user_id),
+    )
+    if existing:
+        return jsonify({"success": False, "message": "You have already voted in this morning survey."}), 409
+
+    try:
+        vote_id = DB.execute(
+            "INSERT INTO morning_survey_votes (survey_id, menu_item_id, student_user_id) VALUES (%s,%s,%s)",
+            (survey_id, menu_item_id, user_id),
+        )
+        return jsonify({"success": True, "message": "Your morning survey vote has been recorded.", "vote_id": vote_id}), 201
+    except Exception as e:
+        if "UNIQUE" in str(e).upper() or "uq_msv_student_survey" in str(e).lower():
+            return jsonify({"success": False, "message": "You have already voted in this morning survey."}), 409
+        logger.exception("Failed to save morning survey vote for user %s", user_id)
+        return jsonify({"success": False, "message": "Unable to record your vote."}), 500
