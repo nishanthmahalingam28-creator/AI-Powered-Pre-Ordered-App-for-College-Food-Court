@@ -58,8 +58,22 @@ def role_required(allowed_roles):
             if not session.get("user_id"):
                 return jsonify({"success": False, "message": "Authentication required."}), 401
             user_role = session.get("role")
+
+            # The database is authoritative for authorization. If a stale session
+            # contains an old role (for example after switching customer/vendor
+            # portals in the same browser), refresh the role from the authenticated
+            # user record before denying access.
             if user_role not in allowed_roles:
-                return jsonify({"success": False, "message": "Forbidden: Insufficient privileges."}), 403
+                canonical_user = DB.get_one(
+                    "SELECT role, is_active FROM users WHERE id = %s LIMIT 1",
+                    (session.get("user_id"),),
+                )
+                if canonical_user and canonical_user.get("is_active") and canonical_user.get("role") in allowed_roles:
+                    user_role = canonical_user["role"]
+                    session["role"] = user_role
+                else:
+                    return jsonify({"success": False, "message": "Forbidden: Insufficient privileges."}), 403
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
