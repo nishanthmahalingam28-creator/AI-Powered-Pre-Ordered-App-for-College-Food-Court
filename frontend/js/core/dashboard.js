@@ -207,7 +207,7 @@ async function loadAnalytics() {
     }
 }
 
-// Render Menu Items with Live API
+// Render Menu Items grouped by Breakfast, Lunch and Dinner
 async function renderMenuItems() {
     const container = document.getElementById('menu-items-list');
     if (!container) return;
@@ -215,64 +215,106 @@ async function renderMenuItems() {
     try {
         const res = await fetch(`${API_BASE_URL}/menu?shop_id=${currentShopId}`);
         const data = await res.json();
-        container.innerHTML = '';
 
         if (!data.success || !data.items || data.items.length === 0) {
             container.innerHTML = '<p class="text-xs text-slate-400 p-4 text-center">No menu items found. Click "+ Add Item" above.</p>';
             return;
         }
 
-        data.items.forEach(item => {
-            const itemEl = document.createElement('div');
-            itemEl.className = 'bg-slate-50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between gap-2';
+        const periods = [
+            { key: 'breakfast', title: 'Breakfast', icon: 'fa-sun', tone: 'amber' },
+            { key: 'lunch', title: 'Lunch', icon: 'fa-bowl-food', tone: 'emerald' },
+            { key: 'dinner', title: 'Dinner', icon: 'fa-moon', tone: 'indigo' }
+        ];
 
-            const isOutOfStock = item.quantity <= 0 || !item.is_available;
+        container.innerHTML = periods.map(period => {
+            const items = data.items.filter(item => (item.meal_period || 'lunch').toLowerCase() === period.key);
 
-            itemEl.innerHTML = `
-                <div class="flex-grow">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-slate-800">${item.name}</span>
-                        <span class="text-xs font-semibold text-blue-600">(₹${parseFloat(item.price).toFixed(2)})</span>
+            const itemHtml = items.length ? items.map(item => {
+                const isOutOfStock = item.quantity <= 0 || !item.is_available;
+                return `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 flex items-center gap-2 shadow-sm">
+                        <div class="flex-grow min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-slate-800 truncate">${item.name}</span>
+                                <span class="text-xs font-semibold text-blue-600 shrink-0">₹${parseFloat(item.price).toFixed(2)}</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[10px] text-slate-400 font-medium">${item.category}</span>
+                                ${isOutOfStock ? '<span class="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-md">Out of Stock</span>' : '<span class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-md">In Stock</span>'}
+                            </div>
+                        </div>
+
+                        <select onchange="changeItemMealPeriod(${item.id}, this.value)" title="Meal period"
+                            class="w-24 px-1.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500">
+                            <option value="breakfast" ${period.key === 'breakfast' ? 'selected' : ''}>Breakfast</option>
+                            <option value="lunch" ${period.key === 'lunch' ? 'selected' : ''}>Lunch</option>
+                            <option value="dinner" ${period.key === 'dinner' ? 'selected' : ''}>Dinner</option>
+                        </select>
+
+                        <div class="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-xl border border-slate-200">
+                            <button onclick="updateQuantity(${item.id}, ${item.quantity}, -1)" class="w-5 h-5 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold">-</button>
+                            <span class="text-xs font-extrabold w-6 text-center ${item.quantity < 5 ? 'text-amber-600' : 'text-slate-800'}">${item.quantity}</span>
+                            <button onclick="updateQuantity(${item.id}, ${item.quantity}, 1)" class="w-5 h-5 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold">+</button>
+                        </div>
+
+                        <button onclick="editItemPrice(${item.id}, ${item.price}, '${item.name.replace(/'/g, "\\'")}')" title="Edit Price" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-500 rounded-lg text-xs">
+                            <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                        </button>
+
+                        <button onclick="deleteItem(${item.id}, '${item.name.replace(/'/g, "\\'")}')" title="Delete Item" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg text-xs">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                        </button>
+
+                        <label class="relative inline-flex items-center cursor-pointer ml-1">
+                            <input type="checkbox" class="sr-only peer" ${item.is_available && item.quantity > 0 ? 'checked' : ''} onchange="toggleItemAvailability(${item.id}, ${item.is_available ? 'true' : 'false'})">
+                            <div class="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
                     </div>
-                    <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-[10px] text-slate-400 font-medium">${item.category}</span>
-                        ${isOutOfStock ? '<span class="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-md">Out of Stock</span>' : '<span class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-md">In Stock</span>'}
+                `;
+            }).join('') : '<p class="text-[11px] text-slate-400 bg-white/70 border border-dashed border-slate-200 rounded-xl p-3 text-center">No dishes in this section.</p>';
+
+            return `
+                <section class="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50">
+                    <div class="px-4 py-3 flex items-center justify-between bg-${period.tone}-50 border-b border-${period.tone}-100">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-${period.tone}-600">
+                                <i class="fa-solid ${period.icon}"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-slate-800">${period.title}</h4>
+                                <p class="text-[10px] text-slate-400">${items.length} dish${items.length === 1 ? '' : 'es'}</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Quantity Controls -->
-                <div class="flex items-center gap-1.5 bg-white px-2 py-1 rounded-xl border border-slate-200">
-                    <button onclick="updateQuantity(${item.id}, ${item.quantity}, -1)" class="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold transition-colors">
-                        -
-                    </button>
-                    <span class="text-xs font-extrabold w-6 text-center ${item.quantity < 5 ? 'text-amber-600' : 'text-slate-800'}">
-                        ${item.quantity}
-                    </span>
-                    <button onclick="updateQuantity(${item.id}, ${item.quantity}, 1)" class="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold transition-colors">
-                        +
-                    </button>
-                </div>
-
-                <!-- Edit Price Button -->
-                <button onclick="editItemPrice(${item.id}, ${item.price}, '${item.name.replace(/'/g, "\\'")}')" title="Edit Price" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-500 rounded-lg text-xs transition-colors">
-                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
-                </button>
-
-                <!-- Delete Item Button -->
-                <button onclick="deleteItem(${item.id}, '${item.name.replace(/'/g, "\\'")}')" title="Delete Item" class="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg text-xs transition-colors">
-                    <i class="fa-solid fa-trash text-[10px]"></i>
-                </button>
-
-                <!-- Availability Toggle Switch -->
-                <label class="relative inline-flex items-center cursor-pointer ml-1">
-                    <input type="checkbox" class="sr-only peer" ${item.is_available && item.quantity > 0 ? 'checked' : ''} onchange="toggleItemAvailability(${item.id}, ${item.is_available ? 'true' : 'false'})">
-                    <div class="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
+                    <div class="p-3 space-y-2">${itemHtml}</div>
+                </section>
             `;
-            container.appendChild(itemEl);
-        });
+        }).join('');
     } catch (e) {
         container.innerHTML = '<p class="text-xs text-red-500 p-2">Failed to load menu items.</p>';
+    }
+}
+
+// Change a dish between Breakfast, Lunch and Dinner
+async function changeItemMealPeriod(itemId, mealPeriod) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/menu/item/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ meal_period: mealPeriod })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await renderMenuItems();
+        } else {
+            alert(data.message || 'Failed to change meal period.');
+            await renderMenuItems();
+        }
+    } catch (e) {
+        alert('Failed to connect to the server.');
+        await renderMenuItems();
     }
 }
 
@@ -522,6 +564,7 @@ async function handleAddItem(event) {
     const price = parseFloat(document.getElementById('item-price').value);
     const quantity = parseInt(document.getElementById('item-quantity').value) || 0;
     const category = document.getElementById('item-category').value;
+    const mealPeriod = document.getElementById('item-meal-period').value;
     const available = document.getElementById('item-available').checked;
 
     if (!name || isNaN(price)) return;
@@ -536,6 +579,7 @@ async function handleAddItem(event) {
                 price,
                 quantity,
                 category,
+                meal_period: mealPeriod,
                 available
             })
         });
