@@ -100,37 +100,24 @@ def _get_mysql_pool():
 
 
 def get_pooled_mysql_connection():
-    """Gets a healthy reusable MySQL connection, creating one when the pool is empty."""
+    """Gets a reusable MySQL connection without an extra ping round-trip."""
     pool = _get_mysql_pool()
     try:
-        conn = pool.get_nowait()
-        try:
-            conn.ping(reconnect=True)
-            conn.autocommit(True)
-            return conn
-        except Exception:
-            try:
-                conn.close()
-            except Exception:
-                pass
+        return pool.get_nowait()
     except queue.Empty:
-        pass
-    return get_mysql_connection()
+        return get_mysql_connection()
 
 
-def release_mysql_connection(conn, discard=False):
-    """Returns a healthy connection to the pool or closes it when it is unusable."""
+def release_mysql_connection(conn, reset_transaction=False):
+    """Returns a MySQL connection to the pool."""
     if conn is None:
         return
-    if discard:
-        try:
-            conn.close()
-        except Exception:
-            pass
-        return
     try:
-        conn.rollback()
-        conn.autocommit(True)
+        # Individual DB.query/execute calls already run with autocommit=True.
+        # Only transaction contexts need the autocommit reset before reuse.
+        if reset_transaction:
+            conn.rollback()
+            conn.autocommit(True)
         _get_mysql_pool().put_nowait(conn)
     except Exception:
         try:
@@ -281,7 +268,7 @@ class DB:
             raise
         finally:
             if db_type == "mysql":
-                release_mysql_connection(conn)
+                release_mysql_connection(conn, reset_transaction=True)
             else:
                 try:
                     conn.close()
