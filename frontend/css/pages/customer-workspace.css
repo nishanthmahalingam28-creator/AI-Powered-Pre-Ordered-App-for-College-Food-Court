@@ -111,7 +111,7 @@ body.customer-workspace-page .customer-workspace-main code { max-width: 100%; ov
   .mobile-workspace-panel a{display:block;padding:12px 13px;border-radius:9px;color:#fff;text-decoration:none;font-size:12px;font-weight:800}
   .mobile-workspace-panel a:hover,.mobile-workspace-panel a:active{background:rgba(45,212,191,.14);color:#5eead4}
 }
-@media (min-width:481px){
+@media screen and (min-width:641px){
   .mobile-workspace-menu,.mobile-workspace-panel{display:none!important}
 }
 
@@ -160,7 +160,7 @@ body.customer-workspace-page .customer-workspace-main code { max-width: 100%; ov
 }
 
 /* GUARANTEED mobile Student Dashboard menu */
-@media screen and (max-width:480px){
+@media screen and (max-width:640px){
   body.customer-workspace-page .customer-workspace-header{
     overflow:visible!important;
   }
