@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Update Menu | KPRIET Food Court</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="../../css/pages/dashboard.css">
+<script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased text-slate-800">
+<div id="navbar-container"></div>
+<main class="flex-grow max-w-7xl mx-auto w-full px-4 py-8 md:px-8">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div>
+      <div class="flex items-center gap-3">
+        <a href="dashboard.html" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-blue-600"><i class="fa-solid fa-arrow-left"></i></a>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-blue-600">Vendor Management</p>
+          <h1 class="text-2xl md:text-3xl font-black text-slate-900">Update Menu</h1>
+        </div>
+      </div>
+      <p class="text-sm text-slate-500 mt-2 ml-12">Manage your permanent menu separately for Breakfast, Lunch and Dinner.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="menu-shop-name" class="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 text-xs font-black">Loading shop...</span>
+      <button onclick="openAddMenuModal()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-blue-600/20"><i class="fa-solid fa-plus"></i>Add Dish</button>
+    </div>
+  </div>
+
+  <div id="menu-page-message" class="hidden mb-5 p-3 rounded-xl text-xs font-bold"></div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <section class="rounded-3xl bg-amber-50/70 border border-amber-100 overflow-hidden">
+      <header class="px-5 py-4 bg-amber-100/60 border-b border-amber-200 flex items-center justify-between">
+        <div><h2 class="font-black text-slate-900"><i class="fa-solid fa-sun text-amber-500 mr-2"></i>Breakfast</h2><p class="text-[10px] text-slate-500 mt-1">Morning menu</p></div>
+        <span id="breakfast-count" class="text-[10px] font-black px-2 py-1 rounded-full bg-white text-amber-700">0</span>
+      </header>
+      <div id="breakfast-list" class="p-4 space-y-3 min-h-48"></div>
+    </section>
+    <section class="rounded-3xl bg-emerald-50/70 border border-emerald-100 overflow-hidden">
+      <header class="px-5 py-4 bg-emerald-100/60 border-b border-emerald-200 flex items-center justify-between">
+        <div><h2 class="font-black text-slate-900"><i class="fa-solid fa-bowl-food text-emerald-600 mr-2"></i>Lunch</h2><p class="text-[10px] text-slate-500 mt-1">Afternoon menu</p></div>
+        <span id="lunch-count" class="text-[10px] font-black px-2 py-1 rounded-full bg-white text-emerald-700">0</span>
+      </header>
+      <div id="lunch-list" class="p-4 space-y-3 min-h-48"></div>
+    </section>
+    <section class="rounded-3xl bg-indigo-50/70 border border-indigo-100 overflow-hidden">
+      <header class="px-5 py-4 bg-indigo-100/60 border-b border-indigo-200 flex items-center justify-between">
+        <div><h2 class="font-black text-slate-900"><i class="fa-solid fa-moon text-indigo-600 mr-2"></i>Dinner</h2><p class="text-[10px] text-slate-500 mt-1">Evening menu</p></div>
+        <span id="dinner-count" class="text-[10px] font-black px-2 py-1 rounded-full bg-white text-indigo-700">0</span>
+      </header>
+      <div id="dinner-list" class="p-4 space-y-3 min-h-48"></div>
+    </section>
+  </div>
+</main>
+
+<div id="add-menu-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+  <div class="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl">
+    <div class="flex items-center justify-between mb-5"><div><h3 class="text-lg font-black">Add New Dish</h3><p class="text-xs text-slate-400 mt-1">Add it to a permanent meal section.</p></div><button onclick="closeAddMenuModal()" class="w-9 h-9 rounded-xl bg-slate-100 text-slate-500"><i class="fa-solid fa-xmark"></i></button></div>
+    <form id="add-menu-form" onsubmit="addMenuItem(event)" class="space-y-4">
+      <input id="menu-name" required placeholder="Dish name" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm">
+      <textarea id="menu-description" placeholder="Description (optional)" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm"></textarea>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="menu-price" type="number" min="1" step="0.5" required placeholder="Price ₹" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm">
+        <input id="menu-quantity" type="number" min="0" required placeholder="Initial quantity" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <select id="menu-category" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm"><option>Main Course</option><option>Snacks</option><option>Beverages</option><option>Fast Food</option><option>Desserts</option></select>
+        <select id="menu-meal-period" required class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold"><option value="breakfast">Breakfast</option><option value="lunch" selected>Lunch</option><option value="dinner">Dinner</option></select>
+      </div>
+      <label class="flex items-center gap-2 text-xs font-bold"><input id="menu-available" type="checkbox" checked class="w-4 h-4 accent-blue-600"> Available immediately</label>
+      <button class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase">Add Dish</button>
+    </form>
+  </div>
+</div>
+<div id="footer-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/vendor/update-menu.js"></script>
+</body>
+</html>
