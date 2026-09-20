@@ -1,5 +1,5 @@
 /* Student dashboard workspace layout — scoped to customer dashboard only */
-.student-sidebar{position:fixed;left:0;top:0;bottom:0;width:270px;background:#0b2b6f;border-right:1px solid #08245d;z-index:40;display:flex;flex-direction:column}
+.student-sidebar{position:fixed;left:0;top:0;bottom:0;width:270px;background:linear-gradient(180deg,#102f70 0%,#0b2864 100%);border-right:1px solid rgba(255,255,255,.10);z-index:40;display:flex;flex-direction:column;overflow:hidden}
 .student-brand{height:82px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:12px}
 .student-brand-mark{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.12);color:#35d6c8;display:flex;align-items:center;justify-content:center;font-size:18px}
 .student-brand strong{display:block;font-size:15px;color:#fff;letter-spacing:-.02em}
@@ -14,14 +14,14 @@
 .student-sidebar-user strong{display:block;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .student-sidebar-user span{display:block;font-size:10px;color:#b8c9e8;margin-top:2px}
 .student-sidebar-user button{margin-left:auto;border:0;background:transparent;color:#b8c9e8;cursor:pointer;padding:8px}
-.student-topbar{position:fixed;left:270px;right:0;top:0;height:82px;background:linear-gradient(90deg,#0b2b6f,#12387f);backdrop-filter:blur(12px);border-bottom:2px solid #19c7b8;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:0 30px}
+.student-topbar{position:fixed;left:270px;right:0;top:0;height:82px;background:linear-gradient(90deg,#102f70 0%,#12377d 100%);border-top:3px solid #19c7b8;border-bottom:2px solid rgba(25,199,184,.75);z-index:30;display:flex;align-items:center;justify-content:space-between;padding:0 30px;box-shadow:0 5px 18px rgba(6,30,75,.16)}
 .student-topbar-label{font-size:11px;color:#a9bee0;font-weight:700}
 .student-topbar h2{font-size:21px;line-height:1;margin:5px 0 0;color:#fff;font-weight:900}
 .student-topbar-actions{display:flex;align-items:center;gap:14px}
 .student-notification-btn{position:relative;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.10);color:#fff;cursor:pointer}
 .student-notification-btn .notification-badge{position:absolute;right:-2px;top:-2px;background:#ef4444;color:#fff;width:16px;height:16px;border-radius:50%;font-size:8px;display:flex;align-items:center;justify-content:center}
 .student-role-pill{background:rgba(255,255,255,.12);color:#dffcf9;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 12px;font-size:11px;font-weight:900}
-.student-dashboard-main{margin-left:270px;padding-top:110px!important;max-width:none!important;width:auto!important}
+.student-dashboard-main{box-sizing:border-box;margin-left:270px;padding-top:110px!important;padding-left:28px!important;padding-right:28px!important;padding-bottom:36px!important;max-width:none!important;width:calc(100vw - 270px)!important;min-width:0;overflow-x:hidden}
 .student-welcome-card{background:linear-gradient(135deg,#ffffff,#f8fbff);border:1px solid #e3eaf2;border-radius:22px;padding:26px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:25px;box-shadow:0 8px 28px rgba(15,23,42,.05)}
 .student-eyebrow{color:#0f766e;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.11em;margin-bottom:8px}
 .student-welcome-card h1{font-size:28px;line-height:1.15;color:#0f172a;font-weight:900;margin:0}
@@ -34,20 +34,29 @@
 .student-welcome-actions .primary-action{background:#0f9488;color:#fff;box-shadow:0 8px 18px rgba(15,148,136,.2)}
 .student-welcome-actions .secondary-action{background:#fff;color:#475569;border:1px solid #e2e8f0}
 .student-dashboard-main section:not(.student-welcome-card){border-radius:20px}
-.student-dashboard-main .bg-white{box-shadow:0 5px 18px rgba(15,23,42,.035)}
+.student-dashboard-main .bg-white{box-shadow:0 5px 18px rgba(15,23,42,.035);min-width:0}
+.student-dashboard-main > *{max-width:100%;min-width:0}
+.student-dashboard-main img{max-width:100%;height:auto}
+.student-dashboard-main .grid{min-width:0}
+.student-dashboard-main [class*="overflow-x-auto"]{max-width:100%;overflow-x:auto}
+@media(max-width:1100px){
+ .student-dashboard-main{padding-left:20px!important;padding-right:20px!important}
+ .student-welcome-card{padding:22px}
+}
+
 @media(max-width:900px){
  .student-sidebar{width:76px}
  .student-brand{justify-content:center;padding:16px 8px}
  .student-brand>div:last-child,.student-nav a span,.student-sidebar-user>div:nth-child(2),.student-sidebar-user button{display:none}
  .student-nav a{justify-content:center;padding:13px}
  .student-topbar{left:76px;padding:0 18px}
- .student-dashboard-main{margin-left:76px}
+ .student-dashboard-main{margin-left:76px;width:calc(100vw - 76px)!important;padding-left:18px!important;padding-right:18px!important}
  .student-welcome-card{align-items:flex-start;flex-direction:column}
 }
 @media(max-width:640px){
  .student-sidebar{display:none}
  .student-topbar{left:0;height:70px}
- .student-dashboard-main{margin-left:0;padding-top:88px!important}
+ .student-dashboard-main{margin-left:0;width:100vw!important;padding-top:88px!important;padding-left:14px!important;padding-right:14px!important}
  .student-topbar-label{display:none}
  .student-welcome-card{padding:20px}
  .student-welcome-card h1{font-size:23px}
