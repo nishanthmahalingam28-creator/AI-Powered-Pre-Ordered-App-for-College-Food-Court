@@ -3,6 +3,8 @@ import re
 import sqlite3
 import logging
 import urllib.parse
+import queue
+import threading
 from contextlib import contextmanager
 import pymysql
 from pymysql.cursors import DictCursor
@@ -13,6 +15,13 @@ load_dotenv()
 logger = logging.getLogger("food_court.db")
 
 SQLITE_PATH = os.path.join(os.path.dirname(__file__), "food_court_local.db")
+
+# Reuse a small number of MySQL connections instead of creating a new TCP/TLS
+# connection for every query. This is especially important when Render and
+# Aiven are in different network locations.
+MYSQL_POOL_SIZE = max(1, min(int(os.getenv("DB_POOL_SIZE", "5")), 10))
+_mysql_pool = None
+_mysql_pool_lock = threading.Lock()
 
 
 class DatabaseConnectionError(Exception):
@@ -66,7 +75,7 @@ def get_mysql_config():
 
 
 def get_mysql_connection():
-    """Creates a direct MySQL connection using configured parameters."""
+    """Creates a new MySQL connection. Prefer pooled_mysql_connection() for queries."""
     config = get_mysql_config()
     return pymysql.connect(
         host=config["host"],
@@ -79,6 +88,55 @@ def get_mysql_connection():
         charset="utf8mb4",
         connect_timeout=config["connect_timeout"],
     )
+
+
+def _get_mysql_pool():
+    global _mysql_pool
+    if _mysql_pool is None:
+        with _mysql_pool_lock:
+            if _mysql_pool is None:
+                _mysql_pool = queue.LifoQueue(maxsize=MYSQL_POOL_SIZE)
+    return _mysql_pool
+
+
+def get_pooled_mysql_connection():
+    """Gets a healthy reusable MySQL connection, creating one when the pool is empty."""
+    pool = _get_mysql_pool()
+    try:
+        conn = pool.get_nowait()
+        try:
+            conn.ping(reconnect=True)
+            conn.autocommit(True)
+            return conn
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    except queue.Empty:
+        pass
+    return get_mysql_connection()
+
+
+def release_mysql_connection(conn, discard=False):
+    """Returns a healthy connection to the pool or closes it when it is unusable."""
+    if conn is None:
+        return
+    if discard:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return
+    try:
+        conn.rollback()
+        conn.autocommit(True)
+        _get_mysql_pool().put_nowait(conn)
+    except Exception:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def get_sqlite_connection():
@@ -110,7 +168,7 @@ def get_db_connection():
             logger.critical("PRODUCTION DATABASE FAILURE: Missing required DB_HOST or DB_NAME.")
             raise DatabaseConnectionError("Production database service unavailable: Missing database configuration.")
         try:
-            return ("mysql", get_mysql_connection())
+            return ("mysql", get_pooled_mysql_connection())
         except Exception as e:
             logger.critical(
                 "PRODUCTION DATABASE FAILURE: Unable to connect to MySQL at %s:%s/%s "
@@ -222,10 +280,13 @@ class DB:
                 logger.error("Transaction rollback failed: %s", type(rb_err).__name__)
             raise
         finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            if db_type == "mysql":
+                release_mysql_connection(conn)
+            else:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @staticmethod
     def query(sql, params=()):
@@ -245,7 +306,10 @@ class DB:
                 finally:
                     cur.close()
         finally:
-            conn.close()
+            if db_type == "mysql":
+                release_mysql_connection(conn)
+            else:
+                conn.close()
 
     @staticmethod
     def get_one(sql, params=()):
@@ -274,7 +338,10 @@ class DB:
                 finally:
                     cur.close()
         finally:
-            conn.close()
+            if db_type == "mysql":
+                release_mysql_connection(conn)
+            else:
+                conn.close()
 
     @staticmethod
     def execute_update(sql, params=()):
@@ -294,7 +361,10 @@ class DB:
                 finally:
                     cur.close()
         finally:
-            conn.close()
+            if db_type == "mysql":
+                release_mysql_connection(conn)
+            else:
+                conn.close()
 
     @staticmethod
     def execute_script(script, db_type=None):
@@ -313,4 +383,7 @@ class DB:
                 conn.executescript(script)
                 conn.commit()
         finally:
-            conn.close()
+            if db_type == "mysql":
+                release_mysql_connection(conn)
+            else:
+                conn.close()
