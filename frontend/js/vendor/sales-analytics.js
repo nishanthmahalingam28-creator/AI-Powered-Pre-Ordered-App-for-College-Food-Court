@@ -10,6 +10,8 @@ function escapeHtml(value) {
     return div.innerHTML;
 }
 
+let latestSalesData = null;
+
 async function loadSalesAnalytics() {
     const refreshBtn = document.getElementById('refresh-btn');
     const errorBox = document.getElementById('error-box');
@@ -39,6 +41,8 @@ async function loadSalesAnalytics() {
         }
 
         const sales = data.analytics.today_sales;
+        latestSalesData = sales;
+        populateHourFilter(sales.hourly_sales || []);
         document.getElementById('report-date').textContent = sales.date;
         document.getElementById('total-food').textContent = sales.total_food_sold;
         document.getElementById('total-orders').textContent = sales.total_orders;
@@ -114,3 +118,108 @@ function formatHour(hour) {
 }
 
 document.addEventListener('DOMContentLoaded', loadSalesAnalytics);
+
+
+function populateHourFilter(rows) {
+    const select = document.getElementById('hour-filter');
+    if (!select) return;
+    select.innerHTML = '<option value="all">All hours</option>' +
+        rows.map(row => '<option value="' + Number(row.hour) + '">' + formatHour(row.hour) + '</option>').join('');
+}
+
+function applyHourFilter() {
+    if (!latestSalesData) return;
+    const value = document.getElementById('hour-filter').value;
+    const summary = document.getElementById('filter-summary');
+    if (value === 'all') {
+        renderFilteredSummary(latestSalesData);
+        return;
+    }
+    const row = (latestSalesData.hourly_sales || []).find(x => String(x.hour) === String(value));
+    if (!row) return;
+    if (summary) {
+        summary.textContent = formatHour(row.hour) + ': ' + row.food_sold + ' food units sold · ' +
+            row.total_orders + ' orders · ' + money(row.revenue) + ' revenue.';
+    }
+    const hourly = document.getElementById('hourly-sales');
+    if (hourly) {
+        hourly.innerHTML = '<div class="rounded-xl bg-indigo-50 border border-indigo-100 p-4">' +
+            '<div class="text-sm font-black text-slate-800">' + formatHour(row.hour) + '</div>' +
+            '<div class="grid grid-cols-3 gap-3 mt-3 text-center">' +
+            '<div><div class="text-xl font-black">' + row.food_sold + '</div><div class="text-[10px] text-slate-400 uppercase">Food Sold</div></div>' +
+            '<div><div class="text-xl font-black">' + row.total_orders + '</div><div class="text-[10px] text-slate-400 uppercase">Orders</div></div>' +
+            '<div><div class="text-xl font-black text-emerald-700">' + money(row.revenue) + '</div><div class="text-[10px] text-slate-400 uppercase">Revenue</div></div>' +
+            '</div></div>';
+    }
+}
+
+function renderFilteredSummary(sales) {
+    const summary = document.getElementById('filter-summary');
+    if (summary) summary.textContent = 'Showing all completed sales for today.';
+    const hourly = document.getElementById('hourly-sales');
+    if (!hourly) return;
+    if (!sales.hourly_sales || !sales.hourly_sales.length) {
+        hourly.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">No completed sales today.</p>';
+        return;
+    }
+    const maxFood = Math.max(...sales.hourly_sales.map(x => Number(x.food_sold || 0)), 1);
+    hourly.innerHTML = sales.hourly_sales.map(row =>
+        '<div class="flex items-center gap-3 text-xs">' +
+        '<span class="w-14 font-bold text-slate-500">' + formatHour(row.hour) + '</span>' +
+        '<div class="flex-grow h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:' +
+        Math.min(100, Number(row.food_sold || 0) / maxFood * 100) + '%"></div></div>' +
+        '<span class="w-24 text-right font-bold">' + row.food_sold + ' · ' + money(row.revenue) + '</span></div>'
+    ).join('');
+}
+
+function downloadSalesReport(format) {
+    if (!latestSalesData) {
+        alert('Sales data is still loading. Please try again.');
+        return;
+    }
+    const sales = latestSalesData;
+    const shop = document.getElementById('shop-name').textContent || 'Shop';
+    const filter = document.getElementById('hour-filter')?.value || 'all';
+    const rows = filter === 'all'
+        ? (sales.hourly_sales || [])
+        : (sales.hourly_sales || []).filter(x => String(x.hour) === String(filter));
+
+    if (format === 'csv') {
+        const lines = [
+            ['Sales Report', shop],
+            ['Date', sales.date],
+            ['Timezone', sales.timezone],
+            [],
+            ['Meal Period','Food Sold','Orders','Revenue'],
+            ...(sales.meal_periods || []).map(x => [x.meal_period,x.food_sold,x.total_orders,Number(x.revenue||0).toFixed(2)]),
+            [],
+            ['Total Food Sold',sales.total_food_sold],
+            ['Total Orders',sales.total_orders],
+            ['Total Revenue',Number(sales.total_revenue||0).toFixed(2)],
+            ['Average Order Value',Number(sales.average_order_value||0).toFixed(2)],
+            ['Cancelled Orders',sales.cancelled_orders],
+            [],
+            ['Hour','Food Sold','Orders','Revenue'],
+            ...rows.map(x => [formatHour(x.hour),x.food_sold,x.total_orders,Number(x.revenue||0).toFixed(2)])
+        ];
+        const csv = lines.map(row => row.map(v => '"' + String(v ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
+        triggerDownload(csv,'text/csv;charset=utf-8', 'sales-report-' + sales.date + '.csv');
+    } else {
+        const reportRows=(sales.meal_periods||[]).map(x => '<tr><td>'+escapeHtml(x.meal_period)+'</td><td>'+x.food_sold+'</td><td>'+x.total_orders+'</td><td>₹'+Number(x.revenue||0).toFixed(2)+'</td></tr>').join('');
+        const hourlyRows=rows.map(x => '<tr><td>'+formatHour(x.hour)+'</td><td>'+x.food_sold+'</td><td>'+x.total_orders+'</td><td>₹'+Number(x.revenue||0).toFixed(2)+'</td></tr>').join('');
+        const html='<html><head><meta charset="UTF-8"><title>Sales Report</title><style>body{font-family:Arial;padding:32px;color:#1e293b}h1{margin-bottom:4px}table{border-collapse:collapse;width:100%;margin-top:18px}th,td{border:1px solid #ddd;padding:9px;text-align:left}th{background:#f1f5f9}</style></head><body><h1>Sales Report - '+escapeHtml(shop)+'</h1><p>Date: '+sales.date+' | Timezone: '+sales.timezone+'</p><h2>Summary</h2><p>Food Sold: '+sales.total_food_sold+' | Orders: '+sales.total_orders+' | Revenue: ₹'+Number(sales.total_revenue||0).toFixed(2)+' | Average Order: ₹'+Number(sales.average_order_value||0).toFixed(2)+'</p><h2>Meal Period</h2><table><tr><th>Meal Period</th><th>Food Sold</th><th>Orders</th><th>Revenue</th></tr>'+reportRows+'</table><h2>Hourly Sales</h2><table><tr><th>Hour</th><th>Food Sold</th><th>Orders</th><th>Revenue</th></tr>'+hourlyRows+'</table></body></html>';
+        triggerDownload(html,'text/html;charset=utf-8','sales-report-'+sales.date+'.html');
+    }
+}
+
+function triggerDownload(content,mime,filename) {
+    const blob=new Blob([content],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
