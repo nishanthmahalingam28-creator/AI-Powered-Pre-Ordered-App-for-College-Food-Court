@@ -526,6 +526,32 @@ def init_mysql():
                 cur.execute("ALTER TABLE morning_surveys ADD COLUMN plans_to_eat TINYINT(1) NOT NULL DEFAULT 1")
                 print("MySQL migration: added morning_surveys.plans_to_eat.")
 
+            # Expenses migration for databases created before order-linked food expenses.
+            # CREATE TABLE IF NOT EXISTS does not modify an existing expenses table.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'expenses' AND COLUMN_NAME = 'order_id'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE expenses ADD COLUMN order_id INT UNSIGNED NULL AFTER user_id")
+                print("MySQL migration: added expenses.order_id.")
+
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'expenses' AND COLUMN_NAME = 'updated_at'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE expenses ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+                print("MySQL migration: added expenses.updated_at.")
+
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'expenses' AND INDEX_NAME = 'uq_expense_order'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE expenses ADD UNIQUE KEY uq_expense_order (order_id)")
+                print("MySQL migration: added expenses.uq_expense_order.")
+
             # Vendor worker management, attendance, and salary tables.
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS workers (
