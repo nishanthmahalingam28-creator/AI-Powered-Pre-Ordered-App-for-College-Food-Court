@@ -330,8 +330,24 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         (user_id,)
     )
     total_budget_limit = 0.0
-    total_budget_spent = 0.0
     budgets_data = []
+
+    # Food Spent on the student dashboard must represent actual completed
+    # food-order expenses, even when the student has not created a Food budget
+    # row. Previously this value was only accumulated inside the budget loop,
+    # which made Food Spent incorrectly show ₹0.00 when no matching budget
+    # category existed.
+    food_spent_row = DB.get_one(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS food_spent
+        FROM expenses
+        WHERE user_id = %s
+          AND LOWER(category) = 'food'
+        """,
+        (user_id,)
+    ) or {}
+    total_budget_spent = float(food_spent_row.get("food_spent") or 0.0)
+
     for b in budget_rows:
         limit_val = float(b.get("amount_limit") or 0.0)
         total_budget_limit += limit_val
@@ -341,7 +357,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             (user_id, cat_name)
         )
         cat_spent = float(spent_row.get("cat_spent") or 0.0) if spent_row else 0.0
-        total_budget_spent += cat_spent
         pct_spent = round((cat_spent / limit_val * 100), 1) if limit_val > 0 else 0.0
         if pct_spent > 100:
             status = "exceeded"
