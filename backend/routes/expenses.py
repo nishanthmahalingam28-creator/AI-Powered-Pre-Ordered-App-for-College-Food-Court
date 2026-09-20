@@ -165,21 +165,39 @@ def get_expenses():
     user_id = session.get("user_id")
 
     try:
-        # Existing manually-created and completed-order expense records.
-        expense_rows = DB.get_all(
-            """
-            SELECT id, user_id, order_id, amount, category, description,
-                   expense_date, created_at, updated_at
-            FROM expenses
-            WHERE user_id = %s
-            """,
-            (user_id,)
-        )
+        # Read the expense ledger. Production databases created before
+        # order-linked expenses may not yet have order_id/updated_at, so
+        # keep a compatibility fallback instead of turning the whole page into 500.
+        try:
+            expense_rows = DB.get_all(
+                """
+                SELECT id, user_id, order_id, amount, category, description,
+                       expense_date, created_at, updated_at
+                FROM expenses
+                WHERE user_id = %s
+                """,
+                (user_id,)
+            )
+            schema_has_order_link = True
+        except Exception as schema_error:
+            logger.warning(
+                "Using legacy expenses schema for user %s: %s",
+                user_id,
+                schema_error
+            )
+            expense_rows = DB.get_all(
+                """
+                SELECT id, user_id, amount, category, description,
+                       expense_date, created_at
+                FROM expenses
+                WHERE user_id = %s
+                """,
+                (user_id,)
+            )
+            schema_has_order_link = False
 
-        # Older completed orders are only a display fallback. If this
-        # compatibility query fails because of an older production schema,
-        # the real expense rows must still be returned instead of failing
-        # the entire Expenses page.
+        # Completed food orders without a persisted expense are shown as a
+        # compatibility fallback. This query is intentionally best-effort.
         try:
             order_rows = DB.get_all(
                 """
@@ -217,7 +235,7 @@ def get_expenses():
             expenses.append({
                 "id": r["id"],
                 "user_id": r["user_id"],
-                "order_id": r.get("order_id"),
+                "order_id": r.get("order_id") if schema_has_order_link else None,
                 "amount": amount,
                 "category": r["category"],
                 "description": r["description"],
