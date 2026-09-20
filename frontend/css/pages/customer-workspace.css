@@ -1,5 +1,5 @@
 /* Shared customer workspace: header + sidebar + page content */
-.customer-workspace-sidebar{position:fixed;left:0;top:0;bottom:0;width:270px;background:linear-gradient(180deg,#102f70 0%,#0b2864 100%);border-right:1px solid rgba(255,255,255,.10);z-index:1000;display:flex;flex-direction:column;overflow:hidden}
+.customer-workspace-sidebar{visibility:visible!important;display:flex!important;position:fixed;left:0;top:0;bottom:0;width:270px;background:linear-gradient(180deg,#102f70 0%,#0b2864 100%);border-right:1px solid rgba(255,255,255,.10);z-index:1000;display:flex;flex-direction:column;overflow:hidden}
 .customer-workspace-brand{height:82px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:12px}
 .customer-workspace-brand-mark{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.12);color:#35d6c8;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
 .customer-workspace-brand strong{display:block;font-size:15px;color:#fff;letter-spacing:-.02em}
@@ -14,7 +14,7 @@
 .customer-workspace-user strong{display:block;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .customer-workspace-user span{display:block;font-size:10px;color:#b8c9e8;margin-top:2px}
 .customer-workspace-logout{margin-left:auto;border:0;background:transparent;color:#b8c9e8;cursor:pointer;padding:8px}
-.customer-workspace-header{position:fixed;left:270px;right:0;top:0;height:82px;background:linear-gradient(90deg,#102f70 0%,#12377d 100%);border-top:3px solid #19c7b8;border-bottom:2px solid rgba(25,199,184,.75);z-index:900;display:flex;align-items:center;justify-content:space-between;padding:0 30px;box-shadow:0 5px 18px rgba(6,30,75,.16)}
+.customer-workspace-header{visibility:visible!important;display:flex!important;position:fixed;left:270px;right:0;top:0;height:82px;background:linear-gradient(90deg,#102f70 0%,#12377d 100%);border-top:3px solid #19c7b8;border-bottom:2px solid rgba(25,199,184,.75);z-index:900;display:flex;align-items:center;justify-content:space-between;padding:0 30px;box-shadow:0 5px 18px rgba(6,30,75,.16)}
 .customer-workspace-header-label{font-size:11px;color:#a9bee0;font-weight:700}
 .customer-workspace-header h2{font-size:21px;line-height:1;margin:5px 0 0;color:#fff;font-weight:900}
 .customer-workspace-actions{display:flex;align-items:center;gap:14px}
@@ -39,7 +39,7 @@ body.customer-workspace-page .customer-workspace-main [class*="overflow-x-auto"]
  body.customer-workspace-page .customer-workspace-main{margin-left:76px!important;width:calc(100% - 76px)!important;padding-left:18px!important;padding-right:18px!important}
 }
 @media(max-width:640px){
- .customer-workspace-sidebar{display:none}
+ .customer-workspace-sidebar{display:none!important;visibility:hidden!important}
  .customer-workspace-header{left:0;height:70px}
  body.customer-workspace-page .customer-workspace-main{margin-left:0!important;width:100%!important;padding-top:88px!important;padding-left:14px!important;padding-right:14px!important}
  .customer-workspace-header-label{display:none}
