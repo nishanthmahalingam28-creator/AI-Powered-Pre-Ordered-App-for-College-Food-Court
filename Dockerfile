@@ -17,7 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir "Flask-SocketIO>=5.3.0,<6.0.0" "simple-websocket>=1.0.0" && \
+    python -c "import flask_socketio; print('Flask-SocketIO installed:', flask_socketio.__version__ if hasattr(flask_socketio, '__version__') else 'ok')"
 
 # Copy application files
 COPY backend/ /app/backend/
