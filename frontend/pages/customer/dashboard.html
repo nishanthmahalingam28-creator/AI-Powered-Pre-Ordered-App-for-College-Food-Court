@@ -38,17 +38,20 @@
   <div>
   <span class="customer-workspace-header-label">Student workspace</span>
   <h2 id="customer-workspace-page-title">Customer Workspace</h2>
-  <select id="mobile-workspace-menu" class="mobile-workspace-menu" aria-label="Dashboard navigation">
-    <option value="dashboard.html" selected>Dashboard</option>
-    <option value="menu.html">Order Food</option>
-    <option value="preorder.html">My Cart</option>
-    <option value="orders.html">My Orders</option>
-    <option value="morning-survey.html">Morning Survey</option>
-    <option value="expenses.html">Expenses</option>
-    <option value="budgets.html">Food Budget</option>
-    <option value="assistant.html">AI Assistant</option>
-    <option value="profile.html">Profile</option>
-  </select>
+  <button type="button" id="mobile-workspace-menu" class="mobile-workspace-menu" aria-label="Open dashboard menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <nav id="mobile-workspace-panel" class="mobile-workspace-panel" aria-label="Mobile dashboard navigation">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="menu.html">Order Food</a>
+    <a href="preorder.html">My Cart</a>
+    <a href="orders.html">My Orders</a>
+    <a href="morning-survey.html">Morning Survey</a>
+    <a href="expenses.html">Expenses</a>
+    <a href="budgets.html">Food Budget</a>
+    <a href="assistant.html">AI Assistant</a>
+    <a href="profile.html">Profile</a>
+  </nav>
 </div>
   <div class="customer-workspace-actions"><button class="customer-workspace-notification notification-bell-trigger" title="Notifications"><i class="fa-regular fa-bell"></i><span class="notification-badge hidden">0</span></button><span class="customer-workspace-role" id="topbar-customer-type">Student</span><div class="customer-workspace-top-avatar" id="topbar-avatar">S</div></div>
 </header>
