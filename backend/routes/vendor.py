@@ -675,6 +675,101 @@ def get_vendor_daily_survey():
     }), 200
 
 
+
+@vendor_bp.get("/daily-survey/user-results")
+@role_required(["vendor"])
+def get_vendor_user_survey_results():
+    """Returns privacy-conscious aggregate customer morning-survey results for today."""
+    shop_id = _get_active_shop_id()
+    if not shop_id:
+        return jsonify({"success": False, "message": "No active stall is assigned to this vendor."}), 403
+
+    today = _today_str()
+
+    summary = DB.get_one(
+        """
+        SELECT
+            COUNT(*) AS total_responses,
+            SUM(CASE WHEN plans_to_eat = 1 THEN 1 ELSE 0 END) AS planning_to_eat,
+            SUM(CASE WHEN plans_to_eat = 0 THEN 1 ELSE 0 END) AS not_planning_to_eat
+        FROM morning_surveys
+        WHERE survey_date = %s
+        """,
+        (today,),
+    ) or {}
+
+    meal_rows = DB.query(
+        """
+        SELECT meal_type, COUNT(*) AS response_count
+        FROM morning_surveys
+        WHERE survey_date = %s AND plans_to_eat = 1
+        GROUP BY meal_type
+        ORDER BY response_count DESC
+        """,
+        (today,),
+    )
+
+    preference_rows = DB.query(
+        """
+        SELECT meal_preference, COUNT(*) AS response_count
+        FROM morning_surveys
+        WHERE survey_date = %s AND plans_to_eat = 1
+        GROUP BY meal_preference
+        ORDER BY response_count DESC, meal_preference ASC
+        LIMIT 20
+        """,
+        (today,),
+    )
+
+    dietary_rows = DB.query(
+        """
+        SELECT dietary_preference, COUNT(*) AS response_count
+        FROM morning_surveys
+        WHERE survey_date = %s AND plans_to_eat = 1
+        GROUP BY dietary_preference
+        ORDER BY response_count DESC
+        """,
+        (today,),
+    )
+
+    hunger_rows = DB.query(
+        """
+        SELECT hunger_level, COUNT(*) AS response_count
+        FROM morning_surveys
+        WHERE survey_date = %s AND plans_to_eat = 1
+        GROUP BY hunger_level
+        ORDER BY response_count DESC
+        """,
+        (today,),
+    )
+
+    return jsonify({
+        "success": True,
+        "date": today,
+        "shop": {"id": shop_id},
+        "summary": {
+            "total_responses": int(summary.get("total_responses") or 0),
+            "planning_to_eat": int(summary.get("planning_to_eat") or 0),
+            "not_planning_to_eat": int(summary.get("not_planning_to_eat") or 0),
+        },
+        "meal_periods": [
+            {"meal_type": str(r.get("meal_type") or "unknown"), "response_count": int(r.get("response_count") or 0)}
+            for r in meal_rows
+        ],
+        "food_preferences": [
+            {"meal_preference": str(r.get("meal_preference") or "Not specified"), "response_count": int(r.get("response_count") or 0)}
+            for r in preference_rows
+        ],
+        "dietary_preferences": [
+            {"dietary_preference": str(r.get("dietary_preference") or "any"), "response_count": int(r.get("response_count") or 0)}
+            for r in dietary_rows
+        ],
+        "hunger_levels": [
+            {"hunger_level": str(r.get("hunger_level") or "unknown"), "response_count": int(r.get("response_count") or 0)}
+            for r in hunger_rows
+        ],
+    }), 200
+
 @vendor_bp.post("/daily-survey")
 @role_required(["vendor"])
 def save_vendor_daily_survey():
