@@ -348,7 +348,60 @@ CREATE TABLE IF NOT EXISTS morning_surveys (
 
 
 
--- 18. Vendor Daily Menu Surveys
+-- 18. Vendor Workers
+CREATE TABLE IF NOT EXISTS workers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    shop_id INT UNSIGNED NOT NULL,
+    employee_code VARCHAR(50) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20) NULL,
+    role_title VARCHAR(100) NOT NULL DEFAULT 'Kitchen Staff',
+    salary_type ENUM('monthly','daily') NOT NULL DEFAULT 'monthly',
+    salary_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    joining_date DATE NULL,
+    status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_worker_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_worker_shop_code (shop_id, employee_code),
+    INDEX idx_worker_shop_status (shop_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 19. Worker Attendance
+CREATE TABLE IF NOT EXISTS worker_attendance (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT UNSIGNED NOT NULL,
+    attendance_date DATE NOT NULL,
+    status ENUM('present','absent','half_day','leave') NOT NULL DEFAULT 'present',
+    check_in TIME NULL,
+    check_out TIME NULL,
+    notes VARCHAR(255) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_attendance_worker FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_worker_attendance_date (worker_id, attendance_date),
+    INDEX idx_attendance_date (attendance_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 20. Worker Salary Payments
+CREATE TABLE IF NOT EXISTS worker_salary_payments (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT UNSIGNED NOT NULL,
+    salary_month DATE NOT NULL,
+    base_salary DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    attendance_days DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+    paid_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    status ENUM('pending','paid') NOT NULL DEFAULT 'pending',
+    paid_on DATE NULL,
+    notes VARCHAR(255) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_salary_worker FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_worker_salary_month (worker_id, salary_month),
+    INDEX idx_salary_month (salary_month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 21. Vendor Daily Menu Surveys
 CREATE TABLE IF NOT EXISTS vendor_daily_surveys (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     vendor_user_id INT UNSIGNED NOT NULL,
