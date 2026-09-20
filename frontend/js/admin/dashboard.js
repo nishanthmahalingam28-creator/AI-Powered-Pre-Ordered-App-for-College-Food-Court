@@ -141,6 +141,7 @@ async function loadShops() {
                         <button onclick="toggleShopStatus(${shop.id})" class="px-3 py-1 rounded-lg text-xs font-bold ${shop.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'} transition-colors">
                             ${shop.is_active ? 'Deactivate' : 'Activate'}
                         </button>
+                        <button onclick="deleteShop(${shop.id}, '${shop.name.replace(/'/g,"\\'")}')" class="ml-1 px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors">Delete</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -149,6 +150,19 @@ async function loadShops() {
     } catch (e) {
         console.error('Shops fetch error:', e);
     }
+}
+
+async function deleteShop(shopId, shopName) {
+    if (!confirm(`Delete stall "${shopName}" permanently? Stalls with order history cannot be deleted.`)) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/shops/${shopId}`, { method: 'DELETE', credentials: 'include' });
+        const data = await res.json();
+        if (data.success) {
+            await loadShops();
+            await loadVendors();
+            await loadOverview();
+        } else alert(data.message || 'Failed to delete stall.');
+    } catch (e) { alert('Failed to connect to server while deleting stall.'); }
 }
 
 async function setOperationalStatus(shopId, status) {
@@ -229,6 +243,7 @@ async function loadVendors() {
                         <button onclick="openAssignModal(${v.id}, '${v.email}', ${v.assigned_shop_id || 'null'})" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs px-3 py-1 rounded-lg transition-colors">
                             Assign Stall
                         </button>
+                        <button onclick="deleteVendor(${v.id}, '${v.email}')" class="ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1 rounded-lg transition-colors">Delete</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -237,6 +252,19 @@ async function loadVendors() {
     } catch (e) {
         console.error('Vendors fetch error:', e);
     }
+}
+
+async function deleteVendor(vendorId, vendorEmail) {
+    if (!confirm(`Delete vendor account "${vendorEmail}" permanently? Any assigned stall will become unassigned.`)) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/vendors/${vendorId}`, { method: 'DELETE', credentials: 'include' });
+        const data = await res.json();
+        if (data.success) {
+            await loadVendors();
+            await loadShops();
+            await loadOverview();
+        } else alert(data.message || 'Failed to delete vendor.');
+    } catch (e) { alert('Failed to connect to server while deleting vendor.'); }
 }
 
 function openAssignModal(vendorId, vendorEmail, currentShopId) {
