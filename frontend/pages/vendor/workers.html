@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workers | KPRIET Food Court</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+<div id="navbar-container"></div>
+<main class="max-w-7xl mx-auto px-4 py-8">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div>
+      <a href="dashboard.html" class="text-xs font-bold text-blue-600 hover:underline"><i class="fa-solid fa-arrow-left mr-1"></i>Back to Vendor Dashboard</a>
+      <h1 class="text-3xl font-black text-slate-900 mt-2"><span id="shop-name">Shop</span> — Worker Management</h1>
+      <p class="text-sm text-slate-500 mt-1">Add workers, manage salary details, delete workers, and record daily attendance.</p>
+    </div>
+    <button onclick="openWorkerModal()" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-lg shadow-blue-600/20"><i class="fa-solid fa-user-plus mr-2"></i>Add Worker</button>
+  </div>
+
+  <div id="message" class="hidden mb-5 px-4 py-3 rounded-xl text-sm font-bold"></div>
+
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-blue-50 rounded-2xl border border-blue-100 p-5"><p class="text-xs font-bold text-slate-500 uppercase">Total Workers</p><p id="total-workers" class="text-3xl font-black mt-2">0</p></div>
+    <div class="bg-emerald-50 rounded-2xl border border-emerald-100 p-5"><p class="text-xs font-bold text-slate-500 uppercase">Active Workers</p><p id="active-workers" class="text-3xl font-black text-emerald-700 mt-2">0</p></div>
+    <div class="bg-violet-50 rounded-2xl border border-violet-100 p-5"><p class="text-xs font-bold text-slate-500 uppercase">Present Today</p><p id="present-workers" class="text-3xl font-black text-violet-700 mt-2">0</p></div>
+    <div class="bg-amber-50 rounded-2xl border border-amber-100 p-5"><p class="text-xs font-bold text-slate-500 uppercase">Monthly Salary</p><p id="monthly-salary" class="text-3xl font-black text-amber-700 mt-2">₹0</p></div>
+  </section>
+
+  <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div><h2 class="font-black text-slate-900">Workers</h2><p class="text-xs text-slate-400 mt-1">Only workers assigned to your stall are shown.</p></div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr>
+          <th class="text-left px-5 py-3">Worker</th><th class="text-left px-5 py-3">Role</th><th class="text-left px-5 py-3">Salary</th><th class="text-left px-5 py-3">Attendance</th><th class="text-right px-5 py-3">Actions</th>
+        </tr></thead>
+        <tbody id="workers-table"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid lg:grid-cols-2 gap-6">
+    <div class="bg-cyan-50 rounded-2xl border border-cyan-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-cyan-100 flex items-center justify-between">
+        <div><h2 class="font-black">Daily Attendance</h2><p class="text-xs text-slate-500 mt-1">Mark present, absent, half-day or leave.</p></div>
+        <input id="attendance-date" type="date" onchange="loadAttendance()" class="bg-white border border-cyan-200 rounded-xl px-3 py-2 text-xs font-bold">
+      </div>
+      <div id="attendance-list" class="p-5 space-y-3"></div>
+    </div>
+
+    <div class="bg-amber-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-amber-100 flex items-center justify-between">
+        <div><h2 class="font-black">Worker Salary</h2><p class="text-xs text-slate-500 mt-1">Track monthly salary and payment status.</p></div>
+        <input id="salary-month" type="month" onchange="loadSalary()" class="bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold">
+      </div>
+      <div id="salary-list" class="p-5 space-y-3"></div>
+    </div>
+  </section>
+</main>
+
+<div id="worker-modal" class="hidden fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm items-center justify-center p-4">
+  <div class="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl">
+    <div class="flex items-center justify-between mb-5"><h2 id="modal-title" class="text-xl font-black">Add Worker</h2><button onclick="closeWorkerModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+    <form id="worker-form" onsubmit="saveWorker(event)" class="space-y-4">
+      <input id="worker-id" type="hidden">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-bold">Employee ID</label><input id="employee-code" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" placeholder="WK-001"></div>
+        <div><label class="text-xs font-bold">Worker Name</label><input id="full-name" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" placeholder="Worker name"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-bold">Phone</label><input id="phone" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" placeholder="9876543210"></div>
+        <div><label class="text-xs font-bold">Role</label><input id="role-title" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" value="Kitchen Staff"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-bold">Salary Type</label><select id="salary-type" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="monthly">Monthly</option><option value="daily">Daily</option></select></div>
+        <div><label class="text-xs font-bold">Salary Amount (₹)</label><input id="salary-amount" type="number" min="0" step="0.01" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" value="0"></div>
+      </div>
+      <div><label class="text-xs font-bold">Joining Date</label><input id="joining-date" type="date" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"></div>
+      <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeWorkerModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Cancel</button><button class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black">Save Worker</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="footer-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/vendor/workers.js"></script>
+</body>
+</html>
