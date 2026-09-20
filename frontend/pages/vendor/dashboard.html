@@ -64,98 +64,21 @@
             </div>
         </div>
 
-        <!-- DAILY MORNING MENU SURVEY -->
-        <section class="w-full px-4 md:px-12">
-            <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold">
-                            <i class="fa-solid fa-sun"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-lg">Today's Morning Menu Survey</h3>
-                            <p class="text-xs text-slate-500">Publish today's food separately for breakfast, lunch and dinner.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span id="daily-survey-status" class="text-[10px] font-black uppercase px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">Not Submitted</span>
-                        <label class="flex items-center gap-2 text-xs font-bold text-slate-700">
-                            <input id="daily-serving-today" type="checkbox" checked class="accent-emerald-600 w-4 h-4">
-                            Serving food today
-                        </label>
-                    </div>
-                </div>
-
-                <div id="daily-survey-message" class="hidden mt-4 p-3 rounded-xl text-xs font-bold"></div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-5">
-                    <div class="border border-amber-100 bg-amber-50/40 rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-black text-sm text-slate-800"><i class="fa-solid fa-sun text-amber-500 mr-1"></i> Breakfast</h4>
-                            <span class="text-[10px] text-slate-400">Select today's items</span>
-                        </div>
-                        <div id="daily-breakfast-items" class="space-y-2 max-h-72 overflow-y-auto"></div>
-                    </div>
-
-                    <div class="border border-emerald-100 bg-emerald-50/40 rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-black text-sm text-slate-800"><i class="fa-solid fa-bowl-food text-emerald-500 mr-1"></i> Lunch</h4>
-                            <span class="text-[10px] text-slate-400">Select today's items</span>
-                        </div>
-                        <div id="daily-lunch-items" class="space-y-2 max-h-72 overflow-y-auto"></div>
-                    </div>
-
-                    <div class="border border-indigo-100 bg-indigo-50/40 rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-black text-sm text-slate-800"><i class="fa-solid fa-moon text-indigo-500 mr-1"></i> Dinner</h4>
-                            <span class="text-[10px] text-slate-400">Select today's items</span>
-                        </div>
-                        <div id="daily-dinner-items" class="space-y-2 max-h-72 overflow-y-auto"></div>
-                    </div>
-                </div>
-
-                <div class="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                    <p class="text-[11px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>You can update this same survey during the day; only one daily record is kept.</p>
-                    <button onclick="saveVendorDailySurvey()" id="save-daily-survey-btn" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg transition-all">
-                        <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Publish Today's Menu
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- 4 MAIN UTILITY CARDS GRID -->
+        <!-- VENDOR WORKSPACE -->
+        <!-- Orders, menu and morning survey are managed on dedicated pages. -->
+        <!-- 3 MAIN UTILITY CARDS GRID -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-4 md:px-12">
 
-            <!-- 1. MANAGE ORDERS & OTP VERIFICATION CARD -->
+            <!-- 1. MANAGE ORDERS CARD -->
             <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white flex flex-col gap-4">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl font-bold">
-                            <i class="fa-solid fa-list-check"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-lg">Manage Orders</h3>
-                            <p class="text-xs text-slate-500">Live kitchen tickets</p>
-                        </div>
-                    </div>
-                    <span id="active-orders-count" class="bg-blue-100 text-blue-700 text-xs font-extrabold px-3 py-1 rounded-full">0 Active</span>
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-list-check"></i></div>
+                    <div><h3 class="font-bold text-slate-800 text-lg">Manage Orders</h3><p class="text-xs text-slate-500">View and process customer orders.</p></div>
                 </div>
-
-                <!-- OTP Verification Bar -->
-                <div class="bg-blue-50/80 p-3 rounded-2xl border border-blue-100 flex flex-col gap-2">
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="verify-otp-input" placeholder="Customer 6-Digit Pickup OTP" maxlength="6"
-                            class="bg-white px-3 py-2 rounded-xl border border-blue-200 text-xs font-bold text-slate-800 flex-grow focus:outline-none focus:border-blue-600">
-                        <button onclick="handleVerifyOtp()"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all whitespace-nowrap flex items-center gap-1.5">
-                            <i class="fa-solid fa-qrcode"></i> Verify & Complete
-                        </button>
-                    </div>
-                    <div id="otp-alert" class="hidden text-xs font-bold px-3 py-1.5 rounded-xl"></div>
-                </div>
-
-                <div id="orders-list" class="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
-                    <!-- Orders dynamically rendered via dashboard.js -->
+                <div class="rounded-2xl bg-blue-50/60 border border-blue-100 p-5 text-center">
+                    <p class="text-xs font-bold text-slate-700">Order management is on a separate page.</p>
+                    <p class="text-[11px] text-slate-400 mt-1 mb-4">Process pending, preparing and ready orders, and verify pickup OTPs.</p>
+                    <a href="manage-orders.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-black text-white shadow-lg shadow-blue-600/20">Open Manage Orders <i class="fa-solid fa-arrow-right"></i></a>
                 </div>
             </div>
 
@@ -186,7 +109,20 @@
                 </div>
             </div>
 
-            <!-- 3. MANAGE INVENTORY CARD -->
+            <!-- 3. MORNING MENU SURVEY CARD -->
+            <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white flex flex-col gap-4">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-sun"></i></div>
+                    <div><h3 class="font-bold text-slate-800 text-lg">Morning Menu Survey</h3><p class="text-xs text-slate-500">Publish and review today's Breakfast, Lunch and Dinner menu.</p></div>
+                </div>
+                <div class="rounded-2xl bg-amber-50/60 border border-amber-100 p-5 text-center">
+                    <p class="text-xs font-bold text-slate-700">Morning survey is on a separate page.</p>
+                    <p class="text-[11px] text-slate-400 mt-1 mb-4">Select today's menu items and view today's survey result.</p>
+                    <a href="morning-survey.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-xs font-black text-white shadow-lg shadow-amber-500/20">Open Morning Survey <i class="fa-solid fa-arrow-right"></i></a>
+                </div>
+            </div>
+
+            <!-- 4. MANAGE INVENTORY CARD -->
             <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white flex flex-col gap-4">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div class="flex items-center gap-3">
