@@ -565,3 +565,230 @@ def delete_menu_item(item_id):
             "success": True,
             "message": f"'{item['name']}' removed from menu."
         }), 200
+
+
+# ============================================================================
+# DAILY MORNING MENU SURVEY
+# ============================================================================
+
+DAILY_MEAL_PERIODS = ("breakfast", "lunch", "dinner")
+
+
+def _today_str():
+    from datetime import datetime
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+@vendor_bp.get("/daily-survey/today")
+@role_required(["vendor"])
+def get_vendor_daily_survey():
+    """Returns today's vendor survey plus the shop's menu grouped by meal period."""
+    shop_id = _get_active_shop_id()
+    vendor_id = session.get("user_id")
+    if not shop_id or not vendor_id:
+        return jsonify({"success": False, "message": "No active stall is assigned to this vendor."}), 403
+
+    today = _today_str()
+    survey = DB.get_one(
+        """
+        SELECT id, vendor_user_id, shop_id, survey_date, is_serving_today,
+               submitted_at, updated_at
+        FROM vendor_daily_surveys
+        WHERE vendor_user_id = %s AND shop_id = %s AND survey_date = %s
+        LIMIT 1
+        """,
+        (vendor_id, shop_id, today),
+    )
+
+    menu_items = DB.query(
+        """
+        SELECT id, name, description, price, category, quantity, is_available
+        FROM menu_items
+        WHERE shop_id = %s
+        ORDER BY category ASC, name ASC
+        """,
+        (shop_id,),
+    )
+
+    daily_rows = []
+    if survey:
+        daily_rows = DB.query(
+            """
+            SELECT id, menu_item_id, meal_period, item_name, price, quantity, is_available
+            FROM vendor_daily_menu_items
+            WHERE survey_id = %s
+            ORDER BY FIELD(meal_period, 'breakfast', 'lunch', 'dinner'), item_name ASC
+            """,
+            (survey["id"],),
+        )
+
+    selected = {}
+    for row in daily_rows:
+        selected.setdefault(row["meal_period"], []).append({
+            "id": row["id"],
+            "menu_item_id": row["menu_item_id"],
+            "item_name": row["item_name"],
+            "price": float(row["price"]),
+            "quantity": int(row["quantity"]),
+            "is_available": bool(row["is_available"]),
+        })
+
+    catalog = []
+    for item in menu_items:
+        catalog.append({
+            "id": item["id"],
+            "name": item["name"],
+            "description": item.get("description") or "",
+            "price": float(item["price"]),
+            "category": item.get("category") or "Food",
+            "stock_quantity": int(item.get("quantity") or 0),
+            "is_available": bool(item.get("is_available")),
+        })
+
+    return jsonify({
+        "success": True,
+        "date": today,
+        "shop": {"id": shop_id},
+        "survey": {
+            "id": survey["id"] if survey else None,
+            "is_serving_today": bool(survey["is_serving_today"]) if survey else True,
+            "submitted": bool(survey),
+            "submitted_at": str(survey["submitted_at"]) if survey else None,
+            "updated_at": str(survey["updated_at"]) if survey else None,
+        },
+        "meal_periods": DAILY_MEAL_PERIODS,
+        "menu_catalog": catalog,
+        "selected": selected,
+    }), 200
+
+
+@vendor_bp.post("/daily-survey")
+@role_required(["vendor"])
+def save_vendor_daily_survey():
+    """
+    Saves exactly one daily menu survey per vendor/shop/date.
+    Re-submitting updates the same survey and replaces today's meal selections.
+    """
+    shop_id = _get_active_shop_id()
+    vendor_id = session.get("user_id")
+    if not shop_id or not vendor_id:
+        return jsonify({"success": False, "message": "No active stall is assigned to this vendor."}), 403
+
+    data = request.get_json(silent=True) or {}
+    today = _today_str()
+    is_serving_today = bool(data.get("is_serving_today", True))
+    meals = data.get("meals") or {}
+
+    if not isinstance(meals, dict):
+        return jsonify({"success": False, "message": "Invalid meal menu data."}), 400
+
+    normalized = {}
+    for period in DAILY_MEAL_PERIODS:
+        rows = meals.get(period, [])
+        if not isinstance(rows, list):
+            return jsonify({"success": False, "message": f"Invalid {period} menu list."}), 400
+        normalized[period] = rows
+
+    try:
+        with DB.transaction() as tx:
+            survey = tx.get_one(
+                """
+                SELECT id
+                FROM vendor_daily_surveys
+                WHERE vendor_user_id = %s AND shop_id = %s AND survey_date = %s
+                LIMIT 1
+                """,
+                (vendor_id, shop_id, today),
+            )
+
+            if survey:
+                survey_id = survey["id"]
+                tx.execute(
+                    """
+                    UPDATE vendor_daily_surveys
+                    SET is_serving_today = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (1 if is_serving_today else 0, survey_id),
+                )
+                tx.execute("DELETE FROM vendor_daily_menu_items WHERE survey_id = %s", (survey_id,))
+            else:
+                survey_id = tx.execute(
+                    """
+                    INSERT INTO vendor_daily_surveys
+                        (vendor_user_id, shop_id, survey_date, is_serving_today)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (vendor_id, shop_id, today, 1 if is_serving_today else 0),
+                )
+
+            if is_serving_today:
+                all_ids = []
+                for period in DAILY_MEAL_PERIODS:
+                    for row in normalized[period]:
+                        try:
+                            item_id = int(row.get("menu_item_id"))
+                            quantity = int(row.get("quantity", 0))
+                        except (TypeError, ValueError):
+                            return jsonify({"success": False, "message": f"Invalid item or quantity in {period} menu."}), 400
+
+                        if quantity < 0 or quantity > 100000:
+                            return jsonify({"success": False, "message": "Menu quantity must be between 0 and 100000."}), 400
+                        all_ids.append(item_id)
+
+                        item = tx.get_one(
+                            """
+                            SELECT id, name, price, shop_id, is_available
+                            FROM menu_items
+                            WHERE id = %s AND shop_id = %s
+                            LIMIT 1
+                            """,
+                            (item_id, shop_id),
+                        )
+                        if not item:
+                            return jsonify({"success": False, "message": "One or more selected dishes do not belong to your assigned stall."}), 403
+
+                        tx.execute(
+                            """
+                            INSERT INTO vendor_daily_menu_items
+                                (survey_id, shop_id, menu_item_id, meal_period, item_name, price, quantity, is_available)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (
+                                survey_id,
+                                shop_id,
+                                item_id,
+                                period,
+                                item["name"],
+                                item["price"],
+                                quantity,
+                                1 if quantity > 0 and item.get("is_available") else 0,
+                            ),
+                        )
+
+            AuditService.log_action(
+                actor_id=vendor_id,
+                action="VENDOR_DAILY_MENU_SURVEY_SAVED",
+                entity_type="vendor_daily_survey",
+                entity_id=survey_id,
+                details={
+                    "shop_id": shop_id,
+                    "survey_date": today,
+                    "is_serving_today": is_serving_today,
+                    "breakfast_items": len(normalized["breakfast"]),
+                    "lunch_items": len(normalized["lunch"]),
+                    "dinner_items": len(normalized["dinner"]),
+                },
+                tx=tx,
+            )
+
+        return jsonify({
+            "success": True,
+            "message": "Today's menu survey saved successfully.",
+            "survey_id": survey_id,
+            "date": today,
+            "is_serving_today": is_serving_today,
+        }), 200
+    except Exception as e:
+        logger.exception("Failed to save vendor daily survey: %s", e)
+        return jsonify({"success": False, "message": "Unable to save today's menu survey."}), 500
