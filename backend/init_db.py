@@ -433,6 +433,16 @@ def init_mysql():
             else:
                 print("MySQL migration: shops.created_by_admin already exists.")
 
+            # Menu meal-period migration for Breakfast/Lunch/Dinner sections.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'menu_items' AND COLUMN_NAME = 'meal_period'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE menu_items ADD COLUMN meal_period ENUM('breakfast','lunch','dinner') NOT NULL DEFAULT 'lunch'")
+                print("MySQL migration: added menu_items.meal_period.")
+            cur.execute("UPDATE menu_items SET meal_period = 'breakfast' WHERE LOWER(category) = 'breakfast'")
+
             # Customer morning survey migration
             cur.execute("""
                 SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
