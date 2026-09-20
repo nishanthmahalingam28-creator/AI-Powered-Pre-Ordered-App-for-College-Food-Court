@@ -1,9 +1,19 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const mobileWorkspaceMenu = document.getElementById('mobile-workspace-menu');
-    if (mobileWorkspaceMenu) {
-        mobileWorkspaceMenu.addEventListener('change', (event) => {
-            const target = event.target.value;
-            if (target) window.location.href = target;
+    const mobileWorkspacePanel = document.getElementById('mobile-workspace-panel');
+    if (mobileWorkspaceMenu && mobileWorkspacePanel) {
+        mobileWorkspaceMenu.addEventListener('click', () => {
+            const open = mobileWorkspacePanel.classList.toggle('open');
+            mobileWorkspaceMenu.setAttribute('aria-expanded', String(open));
+        });
+        mobileWorkspacePanel.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => mobileWorkspacePanel.classList.remove('open'));
+        });
+        document.addEventListener('click', (event) => {
+            if (!mobileWorkspaceMenu.contains(event.target) && !mobileWorkspacePanel.contains(event.target)) {
+                mobileWorkspacePanel.classList.remove('open');
+                mobileWorkspaceMenu.setAttribute('aria-expanded', 'false');
+            }
         });
     }
     const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
