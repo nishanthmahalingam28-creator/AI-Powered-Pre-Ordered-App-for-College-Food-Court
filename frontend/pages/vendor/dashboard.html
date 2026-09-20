@@ -171,13 +171,18 @@
                             <p class="text-xs text-slate-500">Manage Breakfast, Lunch & Dinner menus, prices, availability and stock.</p>
                         </div>
                     </div>
-                    <button onclick="toggleModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-600/30">
-                        <i class="fa-solid fa-plus"></i> Add Item
-                    </button>
+                    <a href="update-menu.html" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-600/30">
+                        <i class="fa-solid fa-pen-to-square"></i> Open Update Menu
+                    </a>
                 </div>
 
-                <div id="menu-items-list" class="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
-                    <!-- Menu items dynamically rendered via dashboard.js -->
+                <div class="rounded-2xl bg-slate-50 border border-slate-100 p-5 text-center">
+                    <i class="fa-solid fa-utensils text-blue-500 text-2xl mb-2"></i>
+                    <p class="text-xs font-bold text-slate-700">Menu management is on a separate page.</p>
+                    <p class="text-[11px] text-slate-400 mt-1 mb-3">Manage Breakfast, Lunch and Dinner dishes, prices, stock and availability.</p>
+                    <a href="update-menu.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-blue-300 text-xs font-black text-blue-700">
+                        Open Update Menu <i class="fa-solid fa-arrow-right"></i>
+                    </a>
                 </div>
             </div>
 
