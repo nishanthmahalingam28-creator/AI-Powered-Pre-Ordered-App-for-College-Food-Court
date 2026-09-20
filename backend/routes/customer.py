@@ -538,7 +538,7 @@ def get_today_morning_survey():
     today_str = datetime.now().strftime("%Y-%m-%d")
     survey = DB.get_one(
         """
-        SELECT id, user_id, survey_date, meal_preference, hunger_level,
+        SELECT id, user_id, survey_date, plans_to_eat, meal_preference, hunger_level,
                dietary_preference, meal_type, mood_energy, food_restrictions,
                notes, created_at, updated_at
         FROM morning_surveys
@@ -558,6 +558,7 @@ def get_today_morning_survey():
         "id": survey["id"],
         "user_id": survey["user_id"],
         "survey_date": str(survey["survey_date"]),
+        "plans_to_eat": bool(survey.get("plans_to_eat", 1)),
         "meal_preference": survey["meal_preference"],
         "hunger_level": survey["hunger_level"],
         "dietary_preference": survey["dietary_preference"],
@@ -598,6 +599,8 @@ def submit_morning_survey():
             "message": "You have already completed today's morning survey. Each student may submit once per day.",
             "survey_id": existing["id"]
         }), 409
+    plans_to_eat = bool(data.get("plans_to_eat", True))
+    plans_to_eat = bool(data.get("plans_to_eat", True))
     meal_preference = str(data.get("meal_preference") or "").strip()
     if not meal_preference:
         return jsonify({"success": False, "message": "Meal preference is required."}), 400
@@ -625,14 +628,15 @@ def submit_morning_survey():
         survey_id = DB.execute(
             """
             INSERT INTO morning_surveys (
-                user_id, survey_date, meal_preference, hunger_level,
+                user_id, survey_date, plans_to_eat, meal_preference, hunger_level,
                 dietary_preference, meal_type, mood_energy, food_restrictions, notes
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 user_id,
                 today_str,
+                1 if plans_to_eat else 0,
                 meal_preference,
                 hunger_level,
                 dietary_preference,
@@ -651,6 +655,7 @@ def submit_morning_survey():
                 "id": survey_id,
                 "user_id": user_id,
                 "survey_date": today_str,
+                "plans_to_eat": plans_to_eat,
                 "meal_preference": meal_preference,
                 "hunger_level": hunger_level,
                 "dietary_preference": dietary_preference,
@@ -681,7 +686,7 @@ def get_survey_history():
     limit = request.args.get("limit", 14, type=int)
     surveys = DB.get_all(
         """
-        SELECT id, survey_date, meal_preference, hunger_level, dietary_preference,
+        SELECT id, survey_date, plans_to_eat, meal_preference, hunger_level, dietary_preference,
                meal_type, mood_energy, food_restrictions, created_at
         FROM morning_surveys
         WHERE user_id = %s
@@ -695,6 +700,7 @@ def get_survey_history():
         clean_surveys.append({
             "id": s["id"],
             "survey_date": str(s["survey_date"]),
+            "plans_to_eat": bool(s.get("plans_to_eat", 1)),
             "meal_preference": s["meal_preference"],
             "hunger_level": s["hunger_level"],
             "dietary_preference": s["dietary_preference"],
@@ -751,11 +757,12 @@ def update_morning_survey():
         DB.execute(
             """
             UPDATE morning_surveys
-            SET meal_preference = %s, hunger_level = %s, dietary_preference = %s,
+            SET plans_to_eat = %s, meal_preference = %s, hunger_level = %s, dietary_preference = %s,
                 meal_type = %s, mood_energy = %s, food_restrictions = %s, notes = %s
             WHERE id = %s AND user_id = %s
             """,
             (
+                1 if plans_to_eat else 0,
                 meal_preference,
                 hunger_level,
                 dietary_preference,
@@ -775,6 +782,7 @@ def update_morning_survey():
                 "id": existing["id"],
                 "user_id": user_id,
                 "survey_date": today_str,
+                "plans_to_eat": plans_to_eat,
                 "meal_preference": meal_preference,
                 "hunger_level": hunger_level,
                 "dietary_preference": dietary_preference,
