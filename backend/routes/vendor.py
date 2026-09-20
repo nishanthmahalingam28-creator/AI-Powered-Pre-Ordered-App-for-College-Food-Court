@@ -723,18 +723,16 @@ def save_vendor_daily_survey():
                 )
 
             if is_serving_today:
-                all_ids = []
-                for period in DAILY_MEAL_PERIODS:
+                        for period in DAILY_MEAL_PERIODS:
                     for row in normalized[period]:
                         try:
                             item_id = int(row.get("menu_item_id"))
                             quantity = int(row.get("quantity", 0))
                         except (TypeError, ValueError):
-                            return jsonify({"success": False, "message": f"Invalid item or quantity in {period} menu."}), 400
+                            raise ValueError(f"Invalid item or quantity in {period} menu.")
 
                         if quantity < 0 or quantity > 100000:
-                            return jsonify({"success": False, "message": "Menu quantity must be between 0 and 100000."}), 400
-                        all_ids.append(item_id)
+                            raise ValueError("Menu quantity must be between 0 and 100000.")
 
                         item = tx.get_one(
                             """
@@ -746,7 +744,7 @@ def save_vendor_daily_survey():
                             (item_id, shop_id),
                         )
                         if not item:
-                            return jsonify({"success": False, "message": "One or more selected dishes do not belong to your assigned stall."}), 403
+                            raise PermissionError("One or more selected dishes do not belong to your assigned stall.")
 
                         tx.execute(
                             """
@@ -789,6 +787,12 @@ def save_vendor_daily_survey():
             "date": today,
             "is_serving_today": is_serving_today,
         }), 200
+    except PermissionError as e:
+        logger.warning("Vendor daily survey ownership validation failed: %s", e)
+        return jsonify({"success": False, "message": str(e)}), 403
+    except ValueError as e:
+        logger.warning("Vendor daily survey validation failed: %s", e)
+        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
         logger.exception("Failed to save vendor daily survey: %s", e)
         return jsonify({"success": False, "message": "Unable to save today's menu survey."}), 500
