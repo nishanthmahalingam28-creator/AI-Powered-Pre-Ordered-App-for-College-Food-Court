@@ -213,6 +213,33 @@ document.getElementById('payment-close-modal-btn')?.addEventListener('click', ()
     hideProcessingModal();
 });
 
+async function loadGeneratedBill(orderId) {
+    const itemsEl = document.getElementById('generated-bill-items');
+    const totalEl = document.getElementById('bill-total');
+    if (!itemsEl) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/orders/${orderId}/bill`, { credentials: 'include' });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Unable to generate bill.');
+        const bill = data.bill || data.order || data;
+        const items = bill.items || [];
+        itemsEl.innerHTML = items.length ? items.map(item => `
+            <div class="px-4 py-3 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="text-xs font-black text-slate-800 truncate">${escapeHtml(item.name || item.item_name || 'Food item')}</p>
+                    <p class="text-[11px] text-slate-400">${Number(item.quantity || 1)} × ${formatCurrency(item.unit_price || item.price || 0)}</p>
+                </div>
+                <strong class="text-xs font-black text-slate-800">${formatCurrency(item.subtotal || 0)}</strong>
+            </div>`).join('') : '<p class="p-4 text-xs text-slate-400">No bill items found.</p>';
+        const total = Number(bill.total_amount || order.total_amount || 0);
+        if (totalEl) totalEl.textContent = formatCurrency(total);
+    } catch (e) {
+        console.error('Bill generation error:', e);
+        itemsEl.innerHTML = '<p class="p-4 text-xs text-rose-600">Unable to load the bill. You can view it again from My Orders.</p>';
+        if (totalEl) totalEl.textContent = formatCurrency(order.total_amount || 0);
+    }
+}
+
 async function verifyPaymentWithBackend(order, razorpayResponse) {
     try {
         const res = await fetch(`${API_BASE_URL}/orders/${order.order_id}/verify-payment`, {
@@ -334,7 +361,7 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Placing Order...';
 
-    const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'Campus Wallet';
+    const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'Pay at Counter';
 
     try {
         const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -354,6 +381,7 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             activePendingOrder = order;
 
             document.getElementById('order-reference').textContent = order.order_reference;
+            document.getElementById('bill-total').textContent = formatCurrency(order.total_amount || 0);
             document.getElementById('pickup-otp').textContent = order.pickup_otp;
             const shopEl = document.getElementById('order-shop');
             if (shopEl) shopEl.textContent = order.shop_name;
@@ -363,6 +391,8 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             const confirmationSec = document.getElementById('confirmation');
             confirmationSec.classList.remove('hidden');
             confirmationSec.scrollIntoView({ behavior: 'smooth' });
+
+            await loadGeneratedBill(order.order_id);
 
             // Refresh cart from server (which was automatically cleared upon order placement)
             await fetchCartAndRender();
