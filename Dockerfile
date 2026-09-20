@@ -37,4 +37,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://127.0.0.1:5000/api/ready || exit 1
 
 # Launch production WSGI server
-CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "--chdir", "/app/backend", "app:app"]
+CMD ["sh", "-c", "python /app/backend/init_db.py && exec gunicorn -c /app/gunicorn.conf.py --chdir /app/backend app:app"]
