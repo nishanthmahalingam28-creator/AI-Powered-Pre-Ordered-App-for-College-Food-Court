@@ -73,9 +73,10 @@ def _validate_budget_payload(data: dict, is_update: bool = False):
         period_str = str(period).strip()
         if not period_str:
             period_str = "monthly"
-        if len(period_str) > 50:
-            return None, "Period must not exceed 50 characters."
-        cleaned["period"] = period_str
+        allowed_periods = {"weekly", "monthly", "yearly"}
+        if period_str.lower() not in allowed_periods:
+            return None, "Food budget period must be weekly, monthly, or yearly."
+        cleaned["period"] = period_str.lower()
 
     # Optional start_date and end_date
     for field in ["start_date", "end_date"]:
