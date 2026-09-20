@@ -55,6 +55,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const nameEl = document.getElementById('customer-name');
         if (nameEl && user.full_name) nameEl.textContent = user.full_name;
 
+        // Student workspace identity
+        const displayName = user.full_name || 'Student';
+        const sidebarName = document.getElementById('sidebar-user-name');
+        const sidebarType = document.getElementById('sidebar-user-type');
+        const sidebarAvatar = document.getElementById('sidebar-avatar');
+        const topbarAvatar = document.getElementById('topbar-avatar');
+        const topbarType = document.getElementById('topbar-customer-type');
+        if (sidebarName) sidebarName.textContent = displayName;
+        if (sidebarType) sidebarType.textContent = (user.customer_type || 'Student').toUpperCase();
+        if (sidebarAvatar) sidebarAvatar.textContent = displayName.charAt(0).toUpperCase();
+        if (topbarAvatar) topbarAvatar.textContent = displayName.charAt(0).toUpperCase();
+        if (topbarType) topbarType.textContent = (user.customer_type || 'Student').replace(/_/g, ' ');
+
+
         const badgeEl = document.getElementById('customer-type-badge');
         if (badgeEl && user.customer_type) {
             badgeEl.textContent = user.customer_type.toUpperCase();
