@@ -8,7 +8,7 @@ let currentOperationalStatus = 'OPEN';
 document.addEventListener('DOMContentLoaded', async () => {
     const authed = await initShopProfile();
     if (authed) {
-        await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications()]);
+        await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications(), loadVendorDailySurvey()]);
     }
 });
 
@@ -679,4 +679,72 @@ async function markAllVendorNotifsRead() {
     } catch (e) {
         console.error('Failed to mark all vendor notifications read:', e);
     }
+}
+// ============================================================================
+// VENDOR DAILY MORNING MENU SURVEY
+// ============================================================================
+
+let vendorDailyMenuCatalog = [];
+
+async function loadVendorDailySurvey() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/daily-survey/today`, { credentials: 'include' });
+        const data = await res.json();
+        if (!res.ok || !data.success) { showDailySurveyMessage(data.message || 'Unable to load today\'s menu survey.', false); return; }
+        vendorDailyMenuCatalog = data.menu_catalog || [];
+        const servingToggle = document.getElementById('daily-serving-today');
+        if (servingToggle) servingToggle.checked = data.survey ? data.survey.is_serving_today !== false : true;
+        renderDailyMealOptions('breakfast', data.selected && data.selected.breakfast ? data.selected.breakfast : []);
+        renderDailyMealOptions('lunch', data.selected && data.selected.lunch ? data.selected.lunch : []);
+        renderDailyMealOptions('dinner', data.selected && data.selected.dinner ? data.selected.dinner : []);
+        const status = document.getElementById('daily-survey-status');
+        if (status) {
+            status.textContent = data.survey && data.survey.submitted ? 'Submitted Today' : 'Not Submitted';
+            status.className = data.survey && data.survey.submitted ? 'text-[10px] font-black uppercase px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700' : 'text-[10px] font-black uppercase px-3 py-1.5 rounded-full bg-slate-100 text-slate-600';
+        }
+    } catch (e) { console.error('Daily survey load error:', e); showDailySurveyMessage('Unable to load today\'s menu survey.', false); }
+}
+
+function renderDailyMealOptions(period, selectedRows) {
+    const container = document.getElementById(`daily-${period}-items`);
+    if (!container) return;
+    const selectedMap = {};
+    selectedRows.forEach(row => { selectedMap[String(row.menu_item_id)] = row; });
+    if (!vendorDailyMenuCatalog.length) { container.innerHTML = '<p class="text-[11px] text-slate-400">No permanent menu items yet. Add dishes below in Update Menu first.</p>'; return; }
+    container.innerHTML = vendorDailyMenuCatalog.map(item => {
+        const selected = selectedMap[String(item.id)];
+        const qty = selected ? selected.quantity : item.stock_quantity;
+        return '<label class="block bg-white rounded-xl border border-slate-100 p-2.5 cursor-pointer hover:border-amber-300 transition-colors">' +
+            '<div class="flex items-center gap-2"><input type="checkbox" class="daily-menu-check accent-amber-600 w-4 h-4" data-period="' + period + '" data-item-id="' + item.id + '" ' + (selected ? 'checked' : '') + '>' +
+            '<span class="text-xs font-bold text-slate-800 truncate flex-grow">' + item.name + '</span><span class="text-[10px] font-bold text-slate-500">₹' + Number(item.price).toFixed(2) + '</span></div>' +
+            '<div class="flex items-center justify-between gap-2 mt-2 ml-6"><span class="text-[10px] text-slate-400">' + item.category + '</span>' +
+            '<input type="number" min="0" max="100000" value="' + Math.max(0, qty) + '" data-qty-period="' + period + '" data-qty-item-id="' + item.id + '" class="w-20 px-2 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-right focus:outline-none focus:border-amber-400"></div></label>';
+    }).join('');
+}
+
+function showDailySurveyMessage(message, success) {
+    const el = document.getElementById('daily-survey-message');
+    if (!el) return;
+    el.className = 'mt-4 p-3 rounded-xl text-xs font-bold ' + (success ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-rose-50 border border-rose-200 text-rose-800');
+    el.textContent = message; el.classList.remove('hidden');
+}
+
+async function saveVendorDailySurvey() {
+    const button = document.getElementById('save-daily-survey-btn');
+    const serving = document.getElementById('daily-serving-today');
+    const meals = { breakfast: [], lunch: [], dinner: [] };
+    document.querySelectorAll('.daily-menu-check:checked').forEach(check => {
+        const period = check.dataset.period; const itemId = Number(check.dataset.itemId);
+        const qtyInput = document.querySelector('[data-qty-period="' + period + '"][data-qty-item-id="' + itemId + '"]');
+        const quantity = qtyInput ? Math.max(0, Number.parseInt(qtyInput.value || '0', 10)) : 0;
+        if (meals[period]) meals[period].push({ menu_item_id: itemId, quantity });
+    });
+    if (button) { button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Publishing...'; }
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/daily-survey`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ is_serving_today: serving ? serving.checked : true, meals }) });
+        const data = await res.json();
+        if (data.success) { showDailySurveyMessage('✓ Today\'s breakfast, lunch and dinner menu has been published.', true); await loadVendorDailySurvey(); }
+        else showDailySurveyMessage(data.message || 'Unable to save today\'s menu survey.', false);
+    } catch (e) { console.error('Daily survey save error:', e); showDailySurveyMessage('Connection error while publishing today\'s menu.', false); }
+    finally { if (button) { button.disabled = false; button.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Publish Today\'s Menu'; } }
 }
