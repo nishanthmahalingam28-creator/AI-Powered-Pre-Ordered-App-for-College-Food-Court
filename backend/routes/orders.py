@@ -8,6 +8,7 @@ from routes.auth import login_required, role_required
 from services.payment import PaymentService
 from services.audit import AuditService
 from services.notification import NotificationService
+from realtime import emit_order_created, emit_order_status, emit_order_cancelled
 
 logger = logging.getLogger("food_court.orders")
 orders_bp = Blueprint("orders", __name__)
@@ -203,6 +204,25 @@ def place_order():
             )
     except Exception as ne:
         logger.warning("Notification dispatch failed in place_order (non-fatal): %s", ne)
+
+    # Push the committed order to the vendor/customer browsers immediately.
+    # This is deliberately after the DB transaction succeeds, so clients never
+    # receive a real-time order that was rolled back.
+    try:
+        emit_order_created({
+            "id": order_id,
+            "order_reference": order_ref,
+            "customer_id": customer_id,
+            "shop_id": shop_id,
+            "shop_name": shop_name,
+            "total_amount": total_amount,
+            "order_status": "pending",
+            "payment_status": payment_result.get("status"),
+            "items_count": sum(i["quantity"] for i in validated_items),
+            "created_at": created_at,
+        })
+    except Exception as re:
+        logger.warning("Realtime order-created dispatch failed (non-fatal): %s", re)
 
     return jsonify({
         "success": True,
@@ -425,6 +445,11 @@ def cancel_order(order_id):
             )
         except Exception as ne:
             logger.warning("Notification dispatch error in cancel_order (non-fatal): %s", ne)
+
+        try:
+            emit_order_cancelled(order)
+        except Exception as re:
+            logger.warning("Realtime customer-cancel dispatch failed (non-fatal): %s", re)
 
         return jsonify({
             "success": True,
@@ -771,6 +796,11 @@ def verify_pickup_otp():
     except Exception as ne:
         logger.warning("Notification dispatch error in verify_pickup_otp (non-fatal): %s", ne)
 
+    try:
+        emit_order_status(order, "completed", now_str)
+    except Exception as re:
+        logger.warning("Realtime order-completed dispatch failed (non-fatal): %s", re)
+
     return jsonify({
         "success": True,
         "message": f"OTP Verified! Order #{order['order_reference']} successfully completed.",
@@ -896,6 +926,10 @@ def update_order_status(order_id):
             )
         except Exception as ne:
             logger.warning("Notification dispatch error in kitchen cancel (non-fatal): %s", ne)
+        try:
+            emit_order_cancelled(order)
+        except Exception as re:
+            logger.warning("Realtime vendor-cancel dispatch failed (non-fatal): %s", re)
         return jsonify({"success": True, "message": "Order cancelled and stock restored.", "status": "cancelled"}), 200
 
     # Timestamp update per lifecycle state
@@ -945,6 +979,11 @@ def update_order_status(order_id):
             )
     except Exception as ne:
         logger.warning("Notification dispatch error in status change (non-fatal): %s", ne)
+
+    try:
+        emit_order_status(order, new_status, now_str)
+    except Exception as re:
+        logger.warning("Realtime order-status dispatch failed (non-fatal): %s", re)
 
     return jsonify({
         "success": True,
