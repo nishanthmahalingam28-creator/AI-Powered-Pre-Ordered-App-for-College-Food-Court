@@ -2,11 +2,12 @@ const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 
 
 let cachedShops = [];
 let cachedCustomers = [];
+const loadedAdminTabs = new Set(['shops']);
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await verifyAdmin();
-    await loadOverview();
-    await loadShops();
+    const isAdmin = await verifyAdmin();
+    if (!isAdmin) return;
+    await Promise.all([loadOverview(), loadShops()]);
 });
 
 async function verifyAdmin() {
@@ -14,14 +15,18 @@ async function verifyAdmin() {
         const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
         if (!res.ok) {
             window.location.href = 'login.html';
-            return;
+            return false;
         }
         const data = await res.json();
         if (!data.authenticated || data.user.role !== 'admin') {
             window.location.href = 'login.html';
+            return false;
         }
+        return true;
     } catch (e) {
         console.warn('Session verification error:', e);
+        window.location.href = 'login.html';
+        return false;
     }
 }
 
@@ -39,12 +44,15 @@ function switchTab(tabId) {
         }
     });
 
-    if (tabId === 'shops') loadShops();
-    else if (tabId === 'vendors') loadVendors();
-    else if (tabId === 'customers') loadCustomers();
-    else if (tabId === 'orders') loadGlobalOrders();
-    else if (tabId === 'payments') loadPayments();
-    else if (tabId === 'audit') loadAuditLogs();
+    if (!loadedAdminTabs.has(tabId)) {
+        loadedAdminTabs.add(tabId);
+        if (tabId === 'shops') loadShops();
+        else if (tabId === 'vendors') loadVendors();
+        else if (tabId === 'customers') loadCustomers();
+        else if (tabId === 'orders') loadGlobalOrders();
+        else if (tabId === 'payments') loadPayments();
+        else if (tabId === 'audit') loadAuditLogs();
+    }
 }
 
 async function loadOverview() {
@@ -98,6 +106,7 @@ async function loadShops() {
 
         if (data.success && data.shops) {
             cachedShops = data.shops;
+            loadedAdminTabs.add('shops');
             if (countEl) countEl.innerText = `${data.shops.length} Stalls Listed`;
             tbody.innerHTML = '';
 
@@ -159,8 +168,6 @@ async function deleteShop(shopId, shopName) {
         const data = await res.json();
         if (data.success) {
             await loadShops();
-            await loadVendors();
-            await loadOverview();
         } else alert(data.message || 'Failed to delete stall.');
     } catch (e) { alert('Failed to connect to server while deleting stall.'); }
 }
@@ -177,7 +184,6 @@ async function setOperationalStatus(shopId, status) {
         const data = await res.json();
         if (data.success) {
             await loadShops();
-            await loadOverview();
         } else {
             alert(data.message || 'Failed to update operational status.');
         }
@@ -196,7 +202,6 @@ async function toggleShopStatus(shopId) {
         const data = await res.json();
         if (data.success) {
             await loadShops();
-            await loadOverview();
         }
     } catch (e) {
         alert('Failed to update shop status.');
@@ -216,6 +221,7 @@ async function loadVendors() {
         const data = await res.json();
 
         if (data.success && data.vendors) {
+            loadedAdminTabs.add('vendors');
             tbody.innerHTML = '';
             data.vendors.forEach(v => {
                 const tr = document.createElement('tr');
@@ -261,8 +267,6 @@ async function deleteVendor(vendorId, vendorEmail) {
         const data = await res.json();
         if (data.success) {
             await loadVendors();
-            await loadShops();
-            await loadOverview();
         } else alert(data.message || 'Failed to delete vendor.');
     } catch (e) { alert('Failed to connect to server while deleting vendor.'); }
 }
@@ -315,9 +319,7 @@ async function handleAssignVendor(event) {
         const data = await res.json();
         if (data.success) {
             toggleAssignModal(false);
-            await loadVendors();
-            await loadShops();
-            await loadOverview();
+            await Promise.all([loadVendors(), loadShops()]);
         } else {
             alert(data.message || 'Failed to assign vendor.');
         }
@@ -339,6 +341,7 @@ async function loadCustomers() {
         const data = await res.json();
 
         if (data.success && data.customers) {
+            loadedAdminTabs.add('customers');
             cachedCustomers = data.customers;
             renderCustomers(cachedCustomers);
         }
@@ -415,7 +418,6 @@ async function toggleCustomerStatus(userId) {
         const data = await res.json();
         if (data.success) {
             await loadCustomers();
-            await loadOverview();
         } else {
             alert(data.message || 'Failed to update customer status.');
         }
@@ -625,7 +627,6 @@ async function handleAddShop(event) {
         if (data.success) {
             toggleShopModal(false);
             await loadShops();
-            await loadOverview();
         } else {
             alert(data.message || 'Failed to add stall.');
         }
@@ -678,8 +679,7 @@ async function handleCreateVendor(event) {
         if (data.success) {
             toggleVendorModal(false);
             await loadVendors();
-            await loadShops();
-            await loadOverview();
+            loadShops();
         } else {
             alert(data.message || 'Failed to create vendor account.');
         }
