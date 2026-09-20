@@ -15,6 +15,13 @@ def get_shops():
         FROM shops s
         LEFT JOIN menu_items m ON m.shop_id = s.id AND m.is_available = 1
         WHERE s.is_active = 1
+          AND EXISTS (
+              SELECT 1
+              FROM audit_logs al
+              WHERE al.entity_type = 'shop'
+                AND al.action = 'SHOP_CREATED'
+                AND al.entity_id = CAST(s.id AS CHAR)
+          )
         GROUP BY s.id
         ORDER BY s.id ASC
         """
