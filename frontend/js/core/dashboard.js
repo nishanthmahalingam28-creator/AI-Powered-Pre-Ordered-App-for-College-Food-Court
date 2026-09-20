@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authed = await initShopProfile();
     if (authed) {
         await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications(), loadVendorDailySurvey(), loadMorningFoodVotes()]);
+        // Keep the vendor dashboard in sync while students submit votes.
+        // This updates only the vote cards; it does not reload the dashboard.
+        if (document.getElementById('dashboard-vote-results')) {
+            setInterval(loadMorningFoodVotes, 5000);
+        }
     }
 });
 
