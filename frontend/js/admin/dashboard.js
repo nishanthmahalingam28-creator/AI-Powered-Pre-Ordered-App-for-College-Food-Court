@@ -2,6 +2,7 @@ const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 
 
 let cachedShops = [];
 let cachedCustomers = [];
+let cachedVendors = [];
 const loadedAdminTabs = new Set(['shops']);
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,6 +56,30 @@ function switchTab(tabId) {
     }
 }
 
+function updateAdminCardsFromCache() {
+    const activeShops = cachedShops.filter(s => Number(s.is_active) === 1);
+    const openShops = activeShops.filter(s => String(s.operational_status || '').toUpperCase() === 'OPEN');
+    const closedShops = activeShops.filter(s => String(s.operational_status || '').toUpperCase() === 'CLOSED');
+    const unavailableShops = activeShops.filter(s => String(s.operational_status || '').toUpperCase() === 'TEMPORARILY_UNAVAILABLE');
+
+    const shopEl = document.getElementById('stat-shops');
+    if (shopEl) shopEl.innerText = `${activeShops.length} Active Stalls`;
+    const shopOp = document.getElementById('stat-shops-op');
+    if (shopOp) shopOp.innerText = `${openShops.length} Open · ${closedShops.length} Closed · ${unavailableShops.length} Unavail`;
+
+    const vendorCount = document.querySelectorAll('#vendors-table-body tr[data-vendor-id]').length || null;
+    if (vendorCount !== null) {
+        const usersEl = document.getElementById('stat-users-breakdown');
+        if (usersEl) {
+            const customerCount = cachedCustomers.length;
+            const adminMatch = (usersEl.innerText.match(/(\\d+) Admins/) || [null, 0])[1];
+            usersEl.innerText = `${customerCount} Cust · ${vendorCount} Vendors · ${adminMatch || 0} Admins`;
+        }
+    }
+    const vendorsEl = document.getElementById('stat-vendors');
+    if (vendorsEl) vendorsEl.innerText = vendorCount === null ? vendorsEl.innerText : vendorCount;
+}
+
 async function loadOverview() {
     try {
         const res = await fetch(`${API_BASE_URL}/admin/overview`, { credentials: 'include' });
@@ -97,68 +122,47 @@ async function loadOverview() {
 
 async function loadShops() {
     const tbody = document.getElementById('shops-table-body');
-    const countEl = document.getElementById('shops-count');
     if (!tbody) return;
-
     try {
         const res = await fetch(`${API_BASE_URL}/admin/shops`, { credentials: 'include' });
         const data = await res.json();
-
         if (data.success && data.shops) {
             cachedShops = data.shops;
             loadedAdminTabs.add('shops');
-            if (countEl) countEl.innerText = `${data.shops.length} Stalls Listed`;
-            tbody.innerHTML = '';
-
-            data.shops.forEach(shop => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition-colors';
-
-                let opBadgeClass = 'bg-emerald-100 text-emerald-800';
-                if (shop.operational_status === 'CLOSED') opBadgeClass = 'bg-rose-100 text-rose-800';
-                else if (shop.operational_status === 'TEMPORARILY_UNAVAILABLE') opBadgeClass = 'bg-amber-100 text-amber-800';
-
-                tr.innerHTML = `
-                    <td class="p-3">
-                        <span class="font-bold text-slate-800 block">${shop.name}</span>
-                        <span class="text-[10px] text-slate-400 font-mono">${shop.slug}</span>
-                    </td>
-                    <td class="p-3 text-slate-500">${shop.category || 'General'}</td>
-                    <td class="p-3 font-medium text-slate-700">
-                        ${shop.owner_email ? `<span class="text-blue-700 font-semibold">${shop.owner_email}</span>` : '<span class="text-slate-400 italic">Unassigned</span>'}
-                    </td>
-                    <td class="p-3 font-semibold text-slate-700">${shop.total_items} Dishes</td>
-                    <td class="p-3">
-                        <div class="flex items-center gap-1.5">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${opBadgeClass} uppercase">
-                                ${shop.operational_status.replace('_', ' ')}
-                            </span>
-                            <select onchange="setOperationalStatus(${shop.id}, this.value)" class="text-[10px] border border-slate-200 rounded-lg p-0.5 bg-white text-slate-700 font-medium">
-                                <option value="">Change...</option>
-                                <option value="OPEN" ${shop.operational_status === 'OPEN' ? 'disabled' : ''}>OPEN</option>
-                                <option value="TEMPORARILY_UNAVAILABLE" ${shop.operational_status === 'TEMPORARILY_UNAVAILABLE' ? 'disabled' : ''}>TEMPORARILY_UNAVAILABLE</option>
-                                <option value="CLOSED" ${shop.operational_status === 'CLOSED' ? 'disabled' : ''}>CLOSED</option>
-                            </select>
-                        </div>
-                    </td>
-                    <td class="p-3">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${shop.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}">
-                            ${shop.is_active ? 'Active' : 'Deactivated'}
-                        </span>
-                    </td>
-                    <td class="p-3 text-right">
-                        <button onclick="toggleShopStatus(${shop.id})" class="px-3 py-1 rounded-lg text-xs font-bold ${shop.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'} transition-colors">
-                            ${shop.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button onclick="deleteShop(${shop.id}, '${shop.name.replace(/'/g,"\\'")}')" class="ml-1 px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+            renderShops(cachedShops);
+            updateAdminCardsFromCache();
         }
     } catch (e) {
         console.error('Shops fetch error:', e);
     }
+}
+
+function renderShops(shops) {
+    const tbody = document.getElementById('shops-table-body');
+    const countEl = document.getElementById('shops-count');
+    if (!tbody) return;
+    if (countEl) countEl.innerText = `${shops.length} Stalls Listed`;
+    tbody.innerHTML = '';
+
+    shops.forEach(shop => {
+        const tr = document.createElement('tr');
+        tr.dataset.shopId = shop.id;
+        tr.className = 'hover:bg-slate-50 transition-colors';
+        let opBadgeClass = 'bg-emerald-100 text-emerald-800';
+        if (shop.operational_status === 'CLOSED') opBadgeClass = 'bg-rose-100 text-rose-800';
+        else if (shop.operational_status === 'TEMPORARILY_UNAVAILABLE') opBadgeClass = 'bg-amber-100 text-amber-800';
+
+        tr.innerHTML = `
+            <td class="p-3"><span class="font-bold text-slate-800 block">${shop.name}</span><span class="text-[10px] text-slate-400 font-mono">${shop.slug}</span></td>
+            <td class="p-3 text-slate-500">${shop.category || 'General'}</td>
+            <td class="p-3 font-medium text-slate-700">${shop.owner_email ? `<span class="text-blue-700 font-semibold">${shop.owner_email}</span>` : '<span class="text-slate-400 italic">Unassigned</span>'}</td>
+            <td class="p-3 font-semibold text-slate-700">${shop.total_items || 0} Dishes</td>
+            <td class="p-3"><div class="flex items-center gap-1.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${opBadgeClass} uppercase">${String(shop.operational_status || 'OPEN').replace('_', ' ')}</span><select onchange="setOperationalStatus(${shop.id}, this.value)" class="text-[10px] border border-slate-200 rounded-lg p-0.5 bg-white text-slate-700 font-medium"><option value="">Change...</option><option value="OPEN" ${shop.operational_status === 'OPEN' ? 'disabled' : ''}>OPEN</option><option value="TEMPORARILY_UNAVAILABLE" ${shop.operational_status === 'TEMPORARILY_UNAVAILABLE' ? 'disabled' : ''}>TEMPORARILY_UNAVAILABLE</option><option value="CLOSED" ${shop.operational_status === 'CLOSED' ? 'disabled' : ''}>CLOSED</option></select></div></td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${Number(shop.is_active) ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}">${Number(shop.is_active) ? 'Active' : 'Deactivated'}</span></td>
+            <td class="p-3 text-right"><button onclick="toggleShopStatus(${shop.id})" class="px-3 py-1 rounded-lg text-xs font-bold ${Number(shop.is_active) ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'} transition-colors">${Number(shop.is_active) ? 'Deactivate' : 'Activate'}</button><button onclick="deleteShop(${shop.id}, '${String(shop.name).replace(/'/g,"\\'")}')" class="ml-1 px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors">Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 async function deleteShop(shopId, shopName) {
@@ -167,7 +171,9 @@ async function deleteShop(shopId, shopName) {
         const res = await fetch(`${API_BASE_URL}/admin/shops/${shopId}`, { method: 'DELETE', credentials: 'include' });
         const data = await res.json();
         if (data.success) {
-            await loadShops();
+            cachedShops = cachedShops.filter(s => Number(s.id) !== Number(shopId));
+            renderShops(cachedShops);
+            updateAdminCardsFromCache();
         } else alert(data.message || 'Failed to delete stall.');
     } catch (e) { alert('Failed to connect to server while deleting stall.'); }
 }
@@ -175,38 +181,32 @@ async function deleteShop(shopId, shopName) {
 async function setOperationalStatus(shopId, status) {
     if (!status) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/admin/shops/${shopId}/operational-status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ operational_status: status })
-        });
+        const res = await fetch(`${API_BASE_URL}/admin/shops/${shopId}/operational-status`, { method: 'PUT', headers: {'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({operational_status:status}) });
         const data = await res.json();
         if (data.success) {
-            await loadShops();
-        } else {
-            alert(data.message || 'Failed to update operational status.');
-        }
-    } catch (e) {
-        alert('Failed to connect to server.');
-    }
+            const shop = cachedShops.find(s => Number(s.id) === Number(shopId));
+            if (shop) shop.operational_status = data.operational_status || status;
+            renderShops(cachedShops);
+            updateAdminCardsFromCache();
+        } else alert(data.message || 'Failed to update operational status.');
+    } catch (e) { alert('Failed to connect to server.'); }
 }
 
 async function toggleShopStatus(shopId) {
     try {
-        const res = await fetch(`${API_BASE_URL}/admin/shops/${shopId}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
+        const res = await fetch(`${API_BASE_URL}/admin/shops/${shopId}/status`, {method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include'});
         const data = await res.json();
         if (data.success) {
-            await loadShops();
+            const shop = cachedShops.find(s => Number(s.id) === Number(shopId));
+            if (shop) shop.is_active = Number(data.is_active);
+            renderShops(cachedShops);
+            updateAdminCardsFromCache();
         }
-    } catch (e) {
-        alert('Failed to update shop status.');
-    }
+    } catch (e) { alert('Failed to update shop status.'); }
 }
+
+// ============================================================================
+// VENDOR MANAGEMENT & ASSIGNMENTS
 
 // ============================================================================
 // VENDOR MANAGEMENT & ASSIGNMENTS
@@ -215,58 +215,52 @@ async function toggleShopStatus(shopId) {
 async function loadVendors() {
     const tbody = document.getElementById('vendors-table-body');
     if (!tbody) return;
-
     try {
         const res = await fetch(`${API_BASE_URL}/admin/vendors`, { credentials: 'include' });
         const data = await res.json();
-
         if (data.success && data.vendors) {
             loadedAdminTabs.add('vendors');
-            tbody.innerHTML = '';
-            data.vendors.forEach(v => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition-colors';
-
-                tr.innerHTML = `
-                    <td class="p-3 font-bold text-slate-800">${v.email}</td>
-                    <td class="p-3 font-semibold ${v.assigned_shop_name ? 'text-purple-700' : 'text-slate-400 italic'}">
-                        ${v.assigned_shop_name || 'Not Assigned'}
-                    </td>
-                    <td class="p-3">
-                        ${v.assigned_shop_status ? `
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${v.assigned_shop_status === 'OPEN' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                ${v.assigned_shop_status}
-                            </span>
-                        ` : '<span class="text-slate-400 text-[10px]">—</span>'}
-                    </td>
-                    <td class="p-3">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${v.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}">
-                            ${v.is_active ? 'Active' : 'Suspended'}
-                        </span>
-                    </td>
-                    <td class="p-3 text-slate-400">${v.created_at ? v.created_at.split(' ')[0] : '—'}</td>
-                    <td class="p-3 text-right">
-                        <button onclick="openAssignModal(${v.id}, '${v.email}', ${v.assigned_shop_id || 'null'})" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs px-3 py-1 rounded-lg transition-colors">
-                            Assign Stall
-                        </button>
-                        <button onclick="deleteVendor(${v.id}, '${v.email}')" class="ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1 rounded-lg transition-colors">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+            cachedVendors = data.vendors;
+            renderVendors(cachedVendors);
+            updateAdminCardsFromCache();
         }
-    } catch (e) {
-        console.error('Vendors fetch error:', e);
-    }
+    } catch (e) { console.error('Vendors fetch error:', e); }
+}
+
+function renderVendors(vendors) {
+    const tbody = document.getElementById('vendors-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    vendors.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.dataset.vendorId = v.id;
+        tr.className = 'hover:bg-slate-50 transition-colors';
+        tr.innerHTML = `
+            <td class="p-3 font-bold text-slate-800">${v.email}</td>
+            <td class="p-3 font-semibold ${v.assigned_shop_name ? 'text-purple-700' : 'text-slate-400 italic'}">${v.assigned_shop_name || 'Not Assigned'}</td>
+            <td class="p-3">${v.assigned_shop_status ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${v.assigned_shop_status === 'OPEN' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.assigned_shop_status}</span>` : '<span class="text-slate-400 text-[10px]">—</span>'}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${v.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}">${v.is_active ? 'Active' : 'Suspended'}</span></td>
+            <td class="p-3 text-slate-400">${v.created_at ? v.created_at.split(' ')[0] : '—'}</td>
+            <td class="p-3 text-right"><button onclick="openAssignModal(${v.id}, '${v.email}', ${v.assigned_shop_id || 'null'})" class="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs px-3 py-1 rounded-lg transition-colors">Assign Stall</button><button onclick="deleteVendor(${v.id}, '${v.email}')" class="ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1 rounded-lg transition-colors">Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 async function deleteVendor(vendorId, vendorEmail) {
     if (!confirm(`Delete vendor account "${vendorEmail}" permanently? Any assigned stall will become unassigned.`)) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/admin/vendors/${vendorId}`, { method: 'DELETE', credentials: 'include' });
+        const res = await fetch(`${API_BASE_URL}/admin/vendors/${vendorId}`, {method:'DELETE',credentials:'include'});
         const data = await res.json();
         if (data.success) {
-            await loadVendors();
+            cachedVendors = cachedVendors.filter(v => Number(v.id) !== Number(vendorId));
+            if (data.unassigned_shop_id) {
+                const shop = cachedShops.find(s => Number(s.id) === Number(data.unassigned_shop_id));
+                if (shop) { shop.owner_user_id = null; shop.owner_email = null; }
+                renderShops(cachedShops);
+            }
+            renderVendors(cachedVendors);
+            updateAdminCardsFromCache();
         } else alert(data.message || 'Failed to delete vendor.');
     } catch (e) { alert('Failed to connect to server while deleting vendor.'); }
 }
@@ -276,57 +270,55 @@ function openAssignModal(vendorId, vendorEmail, currentShopId) {
     const idInput = document.getElementById('assign-vendor-id');
     const emailEl = document.getElementById('assign-vendor-email');
     const select = document.getElementById('assign-shop-select');
-
     if (!modal || !select) return;
-
     idInput.value = vendorId;
     emailEl.innerText = vendorEmail;
-
     select.innerHTML = '<option value="">-- Unassign from all stalls --</option>';
     cachedShops.forEach(s => {
-        if (s.is_active) {
+        if (Number(s.is_active)) {
             const opt = document.createElement('option');
             opt.value = s.id;
             opt.innerText = `${s.name} (${s.category || 'Food'})`;
-            if (currentShopId && s.id === currentShopId) opt.selected = true;
+            if (currentShopId && Number(s.id) === Number(currentShopId)) opt.selected = true;
             select.appendChild(opt);
         }
     });
-
     toggleAssignModal(true);
 }
 
 function toggleAssignModal(show) {
     const modal = document.getElementById('assign-vendor-modal');
-    if (modal) {
-        if (show) modal.classList.remove('hidden');
-        else modal.classList.add('hidden');
-    }
+    if (modal) show ? modal.classList.remove('hidden') : modal.classList.add('hidden');
 }
 
 async function handleAssignVendor(event) {
     event.preventDefault();
     const vendorId = document.getElementById('assign-vendor-id').value;
     const shopId = document.getElementById('assign-shop-select').value || null;
-
     try {
-        const res = await fetch(`${API_BASE_URL}/admin/vendors/${vendorId}/shop`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ shop_id: shopId })
-        });
+        const res = await fetch(`${API_BASE_URL}/admin/vendors/${vendorId}/shop`, {method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({shop_id:shopId})});
         const data = await res.json();
         if (data.success) {
             toggleAssignModal(false);
-            await Promise.all([loadVendors(), loadShops()]);
-        } else {
-            alert(data.message || 'Failed to assign vendor.');
-        }
-    } catch (e) {
-        alert('Failed to connect to server.');
-    }
+            const vendor = cachedVendors.find(v => Number(v.id) === Number(vendorId));
+            if (vendor) {
+                vendor.assigned_shop_id = data.shop_id;
+                vendor.assigned_shop_name = data.shop_name || null;
+                vendor.assigned_shop_status = data.assigned_shop_status || null;
+            }
+            cachedShops.forEach(s => { if (Number(s.owner_user_id) === Number(vendorId)) { s.owner_user_id = null; s.owner_email = null; } });
+            if (data.shop_id) {
+                const shop = cachedShops.find(s => Number(s.id) === Number(data.shop_id));
+                if (shop) { shop.owner_user_id = Number(vendorId); shop.owner_email = vendor?.email || ''; }
+            }
+            renderVendors(cachedVendors);
+            renderShops(cachedShops);
+        } else alert(data.message || 'Failed to assign vendor.');
+    } catch (e) { alert('Failed to connect to server.'); }
 }
+
+// ============================================================================
+// CUSTOMER MANAGEMENT
 
 // ============================================================================
 // CUSTOMER MANAGEMENT
@@ -626,7 +618,9 @@ async function handleAddShop(event) {
         const data = await res.json();
         if (data.success) {
             toggleShopModal(false);
-            await loadShops();
+            cachedShops.push(data.shop || {id:data.shop_id,name,slug:name.toLowerCase().replace(/\s+/g,'-'),category,description,is_active:1,operational_status:operational_status,total_items:0});
+            renderShops(cachedShops);
+            updateAdminCardsFromCache();
         } else {
             alert(data.message || 'Failed to add stall.');
         }
@@ -678,8 +672,14 @@ async function handleCreateVendor(event) {
         const data = await res.json();
         if (data.success) {
             toggleVendorModal(false);
-            await loadVendors();
-            loadShops();
+            cachedVendors.unshift(data.vendor || {id:data.user_id,email,role:'vendor',is_active:1,assigned_shop_id:shop_id,assigned_shop_name:data.assigned_shop_name});
+            if (shop_id) {
+                const shop = cachedShops.find(s => Number(s.id) === Number(shop_id));
+                if (shop) { shop.owner_user_id = Number(data.user_id); shop.owner_email = email; }
+            }
+            renderVendors(cachedVendors);
+            renderShops(cachedShops);
+            updateAdminCardsFromCache();
         } else {
             alert(data.message || 'Failed to create vendor account.');
         }
