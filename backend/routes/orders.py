@@ -104,7 +104,7 @@ def place_order():
     shop_id = detected_shop_id
     order_ref = f"KPR-{secrets.randbelow(900000) + 100000}"
     pickup_otp = str(secrets.randbelow(900000) + 100000)
-    raw_method = str(data.get("payment_method") or "Campus Wallet")
+    raw_method = str(data.get("payment_method") or "Pay at Counter")
     _, payment_method_label = PaymentService.normalize_method(raw_method)
     created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
