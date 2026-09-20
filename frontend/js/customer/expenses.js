@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch(getApiUrl("/expenses"), {
                 method: "GET",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Accept": "application/json" },
                 credentials: "include"
             });
 
