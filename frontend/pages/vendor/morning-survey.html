@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Menu Survey | KPRIET Food Court</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="../../css/pages/dashboard.css">
+<script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased text-slate-800">
+<div id="navbar-container"></div>
+<main class="flex-grow max-w-7xl mx-auto w-full px-4 py-8 md:px-8">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3"><a href="dashboard.html" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-amber-600"><i class="fa-solid fa-arrow-left"></i></a><div><p class="text-[10px] font-black uppercase tracking-widest text-amber-600">Vendor Management</p><h1 class="text-2xl md:text-3xl font-black text-slate-900">Morning Menu Survey</h1><p id="survey-shop-name" class="text-sm text-slate-500 mt-1">Loading shop...</p></div></div>
+    <span id="survey-date" class="px-4 py-2 rounded-xl bg-amber-50 text-amber-700 text-xs font-black"></span>
+  </div>
+  <div id="survey-message" class="hidden mb-5 p-3 rounded-xl text-xs font-bold"></div>
+
+  <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mb-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div><h2 class="font-black text-slate-800">Today's Menu Survey</h2><p class="text-[11px] text-slate-400 mt-1">Publish exactly what this shop will serve today.</p></div>
+      <label class="flex items-center gap-2 text-xs font-black"><input id="serving-today" type="checkbox" checked class="w-4 h-4 accent-emerald-600"> Serving food today</label>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <section class="rounded-3xl bg-amber-50/70 border border-amber-100 overflow-hidden"><header class="px-5 py-4 bg-amber-100/60 border-b border-amber-200"><h2 class="font-black"><i class="fa-solid fa-sun text-amber-500 mr-2"></i>Breakfast</h2><p class="text-[10px] text-slate-500 mt-1">Select today's breakfast dishes.</p></header><div id="breakfast-items" class="p-4 space-y-2 min-h-48"></div></section>
+    <section class="rounded-3xl bg-emerald-50/70 border border-emerald-100 overflow-hidden"><header class="px-5 py-4 bg-emerald-100/60 border-b border-emerald-200"><h2 class="font-black"><i class="fa-solid fa-bowl-food text-emerald-600 mr-2"></i>Lunch</h2><p class="text-[10px] text-slate-500 mt-1">Select today's lunch dishes.</p></header><div id="lunch-items" class="p-4 space-y-2 min-h-48"></div></section>
+    <section class="rounded-3xl bg-indigo-50/70 border border-indigo-100 overflow-hidden"><header class="px-5 py-4 bg-indigo-100/60 border-b border-indigo-200"><h2 class="font-black"><i class="fa-solid fa-moon text-indigo-600 mr-2"></i>Dinner</h2><p class="text-[10px] text-slate-500 mt-1">Select today's dinner dishes.</p></header><div id="dinner-items" class="p-4 space-y-2 min-h-48"></div></section>
+  </div>
+
+  <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mt-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="font-black text-slate-800">Today's Survey Result</h2><p class="text-[11px] text-slate-400 mt-1">This is the menu publication result saved for your shop today.</p></div><span id="survey-status" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase">Not Submitted</span></div>
+    <div id="result-summary" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4"></div>
+  </section>
+
+  <div class="mt-5 flex justify-end"><button id="publish-btn" onclick="saveSurvey()" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-lg shadow-amber-500/20"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Publish Today's Menu</button></div>
+</main>
+<div id="footer-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/vendor/morning-survey.js"></script>
+</body>
+</html>
