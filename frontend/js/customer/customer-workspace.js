@@ -4,6 +4,7 @@
 var links=[
   ['dashboard.html','Dashboard','fa-solid fa-grid-2'],
   ['menu.html','Order Food','fa-solid fa-utensils'],
+  ['preorder.html','My Cart','fa-solid fa-basket-shopping'],
   ['orders.html','My Orders','fa-solid fa-receipt'],
   ['morning-survey.html','Morning Survey','fa-solid fa-sun'],
   ['expenses.html','Expenses','fa-solid fa-wallet'],
@@ -15,7 +16,7 @@ var links=[
 ];
 
 var titles={
- 'dashboard.html':'Dashboard','menu.html':'Order Food','orders.html':'My Orders',
+ 'dashboard.html':'Dashboard','menu.html':'Order Food','preorder.html':'My Cart','orders.html':'My Orders',
  'morning-survey.html':'Morning Survey','expenses.html':'Expenses','income.html':'Income',
  'budgets.html':'Budgets & Goals','analytics.html':'Analytics','assistant.html':'AI Assistant',
  'profile.html':'Profile'
@@ -65,7 +66,7 @@ function build(){
  var main=document.querySelector('main');
  if(main) main.classList.add('customer-workspace-main');
 
- document.querySelectorAll('a[href="dashboard.html"],a[href="menu.html"],a[href="orders.html"],a[href="morning-survey.html"],a[href="expenses.html"],a[href="income.html"],a[href="budgets.html"],a[href="analytics.html"],a[href="assistant.html"],a[href="profile.html"]').forEach(function(a){
+ document.querySelectorAll('a[href="dashboard.html"],a[href="menu.html"],a[href="orders.html"],a[href="preorder.html"],a[href="morning-survey.html"],a[href="expenses.html"],a[href="income.html"],a[href="budgets.html"],a[href="analytics.html"],a[href="assistant.html"],a[href="profile.html"]').forEach(function(a){
    a.addEventListener('click',function(){document.body.classList.add('customer-workspace-navigating');});
  });
 }
