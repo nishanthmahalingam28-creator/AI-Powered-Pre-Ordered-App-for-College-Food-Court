@@ -289,9 +289,6 @@ class PaymentService:
             (now_str, order_id),
         )
 
-        # Automatically add the paid food order to the student's Expenses.
-        cls._record_food_expense(order_id, executor)
-
         try:
             from services.notification import NotificationService
             NotificationService.notify_customer(
