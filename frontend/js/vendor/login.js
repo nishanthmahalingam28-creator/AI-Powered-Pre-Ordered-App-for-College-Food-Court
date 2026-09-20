@@ -1,5 +1,34 @@
 const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
+async function loadAdminCreatedShops() {
+    const select = document.getElementById('vendorShop');
+    if (!select) return;
+    select.disabled = true;
+    select.innerHTML = '<option value="" selected>Loading available shops...</option>';
+    try {
+        const response = await fetch(API_BASE_URL + '/shops', { credentials: 'include' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load shops.');
+        const shops = Array.isArray(result.shops) ? result.shops : [];
+        select.innerHTML = '<option value="" disabled selected>Select Your Stall / Shop</option>';
+        shops.forEach(shop => {
+            const option = document.createElement('option');
+            option.value = String(shop.name || '');
+            option.textContent = String(shop.name || '');
+            option.dataset.shopId = String(shop.id || '');
+            select.appendChild(option);
+        });
+        if (!shops.length) select.innerHTML = '<option value="" disabled selected>No shops created by Admin yet</option>';
+    } catch (error) {
+        console.error('Vendor shop list error:', error);
+        select.innerHTML = '<option value="" disabled selected>Unable to load Admin-created shops</option>';
+    } finally {
+        select.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadAdminCreatedShops);
+
 document.getElementById('shopOwnerLoginForm').addEventListener('submit', async function (event) {
     event.preventDefault();
 
