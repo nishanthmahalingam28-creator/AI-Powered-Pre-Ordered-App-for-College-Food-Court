@@ -15,7 +15,7 @@
             <div>
                 <a href="dashboard.html" class="text-xs font-bold text-blue-600 hover:underline"><i class="fa-solid fa-arrow-left mr-1"></i>Back to Vendor Dashboard</a>
                 <h1 class="text-3xl font-black text-slate-900 mt-2"><span id="shop-name">Shop</span> — Sales Analytics</h1>
-                <p class="text-sm text-slate-500 mt-1">Completed and paid sales for <span id="report-date">today</span> (India time).</p>
+                <p class="text-sm text-slate-500 mt-1">Completed and paid sales for <span id="period-label">Today</span>: <span id="report-date">today</span> (India time).</p>
             </div>
             <button onclick="loadSalesAnalytics()" id="refresh-btn" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-lg shadow-blue-600/20">
                 <i class="fa-solid fa-rotate mr-1.5"></i> Refresh
@@ -64,9 +64,38 @@
         </section>
 
         <section class="mt-6 bg-indigo-50/60 rounded-2xl border border-indigo-100 p-5">
-            <div class="flex flex-col lg:flex-row lg:items-end gap-4">
-                <div class="flex-1">
-                    <label class="block text-xs font-black text-slate-600 mb-1.5">Filter Sales by Hour</label>
+            <div class="mb-4">
+                <h2 class="font-black text-slate-900">Sales Period Filter</h2>
+                <p class="text-xs text-slate-500 mt-1">View completed and paid sales by day, week, month, year, or your own date range.</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                <button onclick="applySalesPeriod('daily')" class="px-4 py-3 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-black hover:bg-indigo-100">Daily</button>
+                <button onclick="applySalesPeriod('weekly')" class="px-4 py-3 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-black hover:bg-indigo-100">Weekly</button>
+                <button onclick="applySalesPeriod('monthly')" class="px-4 py-3 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-black hover:bg-indigo-100">Monthly</button>
+                <button onclick="applySalesPeriod('yearly')" class="px-4 py-3 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-black hover:bg-indigo-100">Yearly</button>
+                <button onclick="applySalesPeriod('custom')" class="px-4 py-3 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-black hover:bg-indigo-100">Custom Range</button>
+            </div>
+
+            <div id="custom-range-box" class="hidden grid md:grid-cols-3 gap-3 mb-4">
+                <div>
+                    <label class="block text-xs font-black text-slate-600 mb-1.5">Start Date</label>
+                    <input id="custom-start" type="date" onchange="updatePeriodUI()" class="w-full bg-white border border-indigo-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-slate-600 mb-1.5">End Date</label>
+                    <input id="custom-end" type="date" onchange="updatePeriodUI()" class="w-full bg-white border border-indigo-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700">
+                </div>
+                <div class="flex items-end">
+                    <button id="apply-custom-btn" onclick="applyCustomDateRange()" class="w-full px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black disabled:opacity-50">
+                        <i class="fa-solid fa-calendar-check mr-1.5"></i> Apply Date Range
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-[1fr_auto] gap-3 items-end">
+                <div>
+                    <label class="block text-xs font-black text-slate-600 mb-1.5">Filter Selected Period by Hour</label>
                     <select id="hour-filter" onchange="applyHourFilter()" class="w-full bg-white border border-indigo-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200">
                         <option value="all">All hours</option>
                     </select>
