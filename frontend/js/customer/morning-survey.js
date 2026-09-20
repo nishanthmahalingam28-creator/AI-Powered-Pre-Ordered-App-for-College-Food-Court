@@ -64,7 +64,7 @@ function renderSurvey(survey) {
                                     type="radio"
                                     name="food-choice-${survey.survey_id}"
                                     value="${option.id}"
-                                    class="food-vote-radio sr-only"
+                                    class="food-vote-radio w-5 h-5 accent-teal-600 flex-none cursor-pointer"
                                     ${selected ? 'checked' : ''}
                                     ${survey.voted ? 'disabled' : ''}
                                 >
@@ -111,44 +111,26 @@ function renderSurvey(survey) {
 }
 
 function attachFoodChoiceHandlers() {
-    document.querySelectorAll('.food-vote-option').forEach(label => {
-        label.addEventListener('click', function () {
-            const radio = this.querySelector('.food-vote-radio');
-            if (!radio || radio.disabled) return;
-
-            radio.checked = true;
-
-            const surveyName = radio.name;
-            document.querySelectorAll(`input[name="${surveyName}"]`).forEach(input => {
+    document.querySelectorAll('.food-vote-radio').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const name = this.name;
+            document.querySelectorAll('input[name="' + name + '"]').forEach(input => {
                 const card = input.closest('.food-vote-option');
-                const check = card ? card.querySelector('.food-vote-check') : null;
-
-                if (card) {
-                    card.classList.remove('border-teal-500', 'bg-teal-50', 'ring-2', 'ring-teal-100');
-                    card.classList.add('border-slate-200', 'bg-white');
-                }
-                if (check) {
-                    check.classList.remove('border-teal-600', 'bg-teal-600', 'text-white');
-                    check.classList.add('border-slate-300', 'bg-white', 'text-transparent');
-                }
+                if (!card) return;
+                card.classList.toggle('border-teal-500', input.checked);
+                card.classList.toggle('bg-teal-50', input.checked);
+                card.classList.toggle('border-slate-200', !input.checked);
+                card.classList.toggle('bg-white', !input.checked);
             });
-
-            this.classList.remove('border-slate-200', 'bg-white');
-            this.classList.add('border-teal-500', 'bg-teal-50', 'ring-2', 'ring-teal-100');
-
-            const selectedCheck = this.querySelector('.food-vote-check');
-            if (selectedCheck) {
-                selectedCheck.classList.remove('border-slate-300', 'bg-white', 'text-transparent');
-                selectedCheck.classList.add('border-teal-600', 'bg-teal-600', 'text-white');
-            }
         });
     });
 
     document.querySelectorAll('[data-submit-food-vote]').forEach(button => {
-        button.addEventListener('click', () => submitFoodVote(Number(button.dataset.submitFoodVote)));
+        button.addEventListener('click', function () {
+            submitFoodVote(Number(this.dataset.submitFoodVote));
+        });
     });
 }
-
 async function submitFoodVote(surveyId) {
     const selected = document.querySelector(`input[name="food-choice-${surveyId}"]:checked`);
 
