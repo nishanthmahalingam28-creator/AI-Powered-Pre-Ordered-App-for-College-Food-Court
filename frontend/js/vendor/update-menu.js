@@ -42,7 +42,7 @@ function renderMealSection(period) {
       </div>
       <div class="flex items-center justify-between mt-3">
         <div class="flex items-center gap-2"><button onclick="changeQty(${item.id},-1)" class="w-8 h-8 rounded-lg bg-slate-100 font-black">−</button><span class="text-xs font-black w-8 text-center">${item.quantity}</span><button onclick="changeQty(${item.id},1)" class="w-8 h-8 rounded-lg bg-slate-100 font-black">+</button></div>
-        <div class="flex items-center gap-2"><span class="text-[10px] font-bold ${item.is_available ? 'text-emerald-600':'text-rose-600'}">${item.is_available ? 'AVAILABLE':'UNAVAILABLE'}</span><button onclick="toggleAvailable(${item.id},${!!item.is_available})" class="w-8 h-8 rounded-lg bg-slate-100"><i class="fa-solid fa-power-off text-[10px]"></i></button><button onclick="removeItem(${item.id},'PLACEHOLDER')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600"><i class="fa-solid fa-trash text-[10px]"></i></button></div>
+        <div class="flex items-center gap-2"><span class="text-[10px] font-bold ${item.is_available ? 'text-emerald-600':'text-rose-600'}">${item.is_available ? 'AVAILABLE':'UNAVAILABLE'}</span><button onclick="toggleAvailable(${item.id},${!!item.is_available})" class="w-8 h-8 rounded-lg bg-slate-100"><i class="fa-solid fa-power-off text-[10px]"></i></button><button onclick="removeItem(${item.id}, encodeURIComponent(item.name))" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600"><i class="fa-solid fa-trash text-[10px]"></i></button></div>
       </div>
     </article>`).join('') : '<div class="p-6 text-center text-xs text-slate-400 bg-white/60 rounded-2xl border border-dashed border-slate-200">No dishes in this section.</div>';
 }
