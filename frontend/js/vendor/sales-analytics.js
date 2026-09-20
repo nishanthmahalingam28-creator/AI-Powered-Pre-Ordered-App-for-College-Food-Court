@@ -63,7 +63,7 @@ async function applyCustomDateRange() {
     await loadSalesAnalytics('custom', start, end);
 }
 
-async function loadSalesAnalytics(period = selectedPeriod, customStart = '', customEnd = '') {
+async function loadSalesAnalytics(period = selectedPeriod, customStart = getDateInput('custom-start'), customEnd = getDateInput('custom-end')) {
     const refreshBtn = document.getElementById('refresh-btn');
     const errorBox = document.getElementById('error-box');
     if (refreshBtn) refreshBtn.disabled = true;
@@ -111,6 +111,14 @@ async function loadSalesAnalytics(period = selectedPeriod, customStart = '', cus
         document.getElementById('total-revenue').textContent = money(sales.total_revenue);
         document.getElementById('average-order').textContent = money(sales.average_order_value);
         document.getElementById('cancelled-orders').textContent = sales.cancelled_orders;
+        const periodText = periodLabel(sales.period);
+        const reportDateText = sales.range_label || sales.date;
+        const filterSummary = document.getElementById('filter-summary');
+        if (filterSummary) filterSummary.textContent = `Showing all completed sales for ${periodText.toLowerCase()} (${reportDateText}).`;
+        const topPeriod = document.getElementById('top-items-period');
+        if (topPeriod) topPeriod.textContent = `${periodText} completed sales.`;
+        const hourlyPeriod = document.getElementById('hourly-period');
+        if (hourlyPeriod) hourlyPeriod.textContent = `${periodText} sales, grouped by hour.`;
 
         renderMealPeriods(sales);
         renderTopItems(sales);
@@ -189,45 +197,9 @@ function formatHour(hour) {
     return `${display}:00 ${suffix}`;
 }
 
-function populateHourFilter(rows) {
-    const select = document.getElementById('hour-filter');
-    if (!select) return;
-    const current = select.value || 'all';
-    select.innerHTML = '<option value="all">All hours</option>' +
-        rows.map(row => '<option value="' + Number(row.hour) + '">' + formatHour(row.hour) + '</option>').join('');
-    if ([...select.options].some(o => o.value === current)) select.value = current;
-}
-
-function applyHourFilter() {
-    if (!latestSalesData) return;
-    const value = document.getElementById('hour-filter')?.value || 'all';
-    if (value === 'all') {
-        renderFilteredSummary(latestSalesData);
-        return;
-    }
-    const row = (latestSalesData.hourly_sales || []).find(x => String(x.hour) === String(value));
-    if (!row) return;
-    const summary = document.getElementById('filter-summary');
-    if (summary) {
-        summary.textContent = `${formatHour(row.hour)}: ${row.food_sold} food units sold · ${row.total_orders} orders · ${money(row.revenue)} revenue within ${latestSalesData.range_label || 'selected period'}.`;
-    }
-    const hourly = document.getElementById('hourly-sales');
-    if (hourly) {
-        hourly.innerHTML = `
-            <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-4">
-                <div class="text-sm font-black text-slate-800">${formatHour(row.hour)}</div>
-                <div class="grid grid-cols-3 gap-3 mt-3 text-center">
-                    <div><div class="text-xl font-black">${row.food_sold}</div><div class="text-[10px] text-slate-400 uppercase">Food Sold</div></div>
-                    <div><div class="text-xl font-black">${row.total_orders}</div><div class="text-[10px] text-slate-400 uppercase">Orders</div></div>
-                    <div><div class="text-xl font-black text-emerald-700">${money(row.revenue)}</div><div class="text-[10px] text-slate-400 uppercase">Revenue</div></div>
-                </div>
-            </div>`;
-    }
-}
-
 function renderFilteredSummary(sales) {
     const summary = document.getElementById('filter-summary');
-    if (summary) summary.textContent = `Showing all completed sales for ${sales.range_label || sales.date}.`;
+    if (summary) summary.textContent = `Showing all completed sales for ${periodLabel(sales.period).toLowerCase()} (${sales.range_label || sales.date}).`;
     const hourly = document.getElementById('hourly-sales');
     if (!hourly) return;
     if (!sales.hourly_sales || !sales.hourly_sales.length) {
@@ -251,10 +223,7 @@ function downloadSalesReport(format) {
     }
     const sales = latestSalesData;
     const shop = document.getElementById('shop-name')?.textContent || 'Shop';
-    const filter = document.getElementById('hour-filter')?.value || 'all';
-    const rows = filter === 'all'
-        ? (sales.hourly_sales || [])
-        : (sales.hourly_sales || []).filter(x => String(x.hour) === String(filter));
+    const rows = sales.hourly_sales || [];
     const safePeriod = (sales.period || 'sales') + '-' + (sales.start_date || sales.date).replace(/[^0-9A-Za-z_-]/g, '_');
 
     if (format === 'csv') {
