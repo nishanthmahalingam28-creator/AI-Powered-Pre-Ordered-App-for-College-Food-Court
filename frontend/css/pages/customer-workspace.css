@@ -91,3 +91,29 @@ body.customer-workspace-page .customer-workspace-main code { max-width: 100%; ov
   body.customer-workspace-page .customer-workspace-main { padding-left: 8px!important; padding-right: 8px!important; }
   body.customer-workspace-page .student-welcome-actions { grid-template-columns: 1fr; }
 }
+
+@media(max-width:480px){
+  /* Dashboard only: replace the page title with a compact navigation dropdown on phones. */
+  .customer-workspace-header .mobile-workspace-menu{
+    display:block;
+    width:min(190px,52vw);
+    height:38px;
+    margin-top:5px;
+    padding:0 30px 0 10px;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:10px;
+    background:#0b2864;
+    color:#fff;
+    font-size:12px;
+    font-weight:800;
+    outline:none;
+    box-sizing:border-box;
+  }
+  .customer-workspace-header .mobile-workspace-menu:focus{
+    border-color:#20cbbd;
+    box-shadow:0 0 0 2px rgba(32,203,189,.18);
+  }
+}
+@media(min-width:481px){
+  .customer-workspace-header .mobile-workspace-menu{display:none;}
+}
