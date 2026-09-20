@@ -217,22 +217,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     ₹${(parseFloat(exp.amount) || 0).toFixed(2)}
                 </td>
                 <td class="py-3 px-3 text-center whitespace-nowrap">
-                    <div class="flex items-center justify-center gap-1.5">
-                        <button 
-                            class="edit-expense-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 transition-all flex items-center justify-center cursor-pointer"
-                            data-id="${exp.id}"
-                            title="Edit expense"
-                        >
-                            <i class="fa-solid fa-pencil text-[11px]"></i>
-                        </button>
-                        <button 
-                            class="delete-expense-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 transition-all flex items-center justify-center cursor-pointer"
-                            data-id="${exp.id}"
-                            title="Delete expense"
-                        >
-                            <i class="fa-solid fa-trash-can text-[11px]"></i>
-                        </button>
-                    </div>
+                    ${exp.order_id
+                        ? '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-bold border border-teal-100"><i class="fa-solid fa-link text-[9px]"></i> Order linked</span>'
+                        : `<div class="flex items-center justify-center gap-1.5">
+                            <button class="edit-expense-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 transition-all flex items-center justify-center cursor-pointer" data-id="${exp.id}" title="Edit expense">
+                                <i class="fa-solid fa-pencil text-[11px]"></i>
+                            </button>
+                            <button class="delete-expense-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 transition-all flex items-center justify-center cursor-pointer" data-id="${exp.id}" title="Delete expense">
+                                <i class="fa-solid fa-trash-can text-[11px]"></i>
+                            </button>
+                        </div>`}
                 </td>
             `;
 
