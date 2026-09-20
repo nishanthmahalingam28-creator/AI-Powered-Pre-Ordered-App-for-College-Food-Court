@@ -71,13 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (currentPath.includes("expenses.html")) {
             return "expenses";
-        }
-
-        if (currentPath.includes("income.html")) {
-            return "income";
-        }
-
-        if (currentPath.includes("budgets.html") || currentPath.includes("goals.html")) {
+        }if (currentPath.includes("budgets.html") || currentPath.includes("goals.html")) {
             return "budgets";
         }
 
