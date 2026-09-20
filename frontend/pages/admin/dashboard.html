@@ -102,6 +102,9 @@
             <button onclick="switchTab('customers')" id="tab-btn-customers" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
                 <i class="fa-solid fa-graduation-cap"></i> Customer Management
             </button>
+            <button onclick="switchTab('temporary')" id="tab-btn-temporary" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-clock"></i> Temporary Accounts
+            </button>
             <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-4 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
                 <i class="fa-solid fa-clock-rotate-left"></i> Global Orders
             </button>
@@ -206,6 +209,25 @@
                     <tbody id="customers-table-body" class="divide-y divide-slate-100">
                         <!-- Populated dynamically via dashboard.js -->
                     </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION: TEMPORARY CUSTOMER ACCOUNTS -->
+        <section id="section-temporary" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-clock text-amber-600"></i> Temporary Campus Accounts</h2>
+                    <p class="text-xs text-slate-400">Create time-limited Student, Faculty, or Guest accounts for demos, events, visitors, and temporary access.</p>
+                </div>
+                <button onclick="toggleTemporaryAccountModal(true)" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-xl">+ Create Temporary Account</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 uppercase tracking-wider text-[10px] text-slate-400 border-b border-slate-100">
+                        <tr><th class="p-3">Name</th><th class="p-3">Email</th><th class="p-3">Type</th><th class="p-3">Expires</th><th class="p-3">Status</th><th class="p-3 text-right">Actions</th></tr>
+                    </thead>
+                    <tbody id="temporary-accounts-table-body" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
         </section>
@@ -424,6 +446,23 @@
                     <button type="button" onclick="toggleAssignModal(false)" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
                     <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-700 text-white hover:bg-purple-800">Save Assignment</button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CREATE TEMPORARY ACCOUNT MODAL -->
+    <div id="temporary-account-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-800">Create Temporary Account</h3><button onclick="toggleTemporaryAccountModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+            <form id="temporary-account-form" onsubmit="handleCreateTemporaryAccount(event)" class="flex flex-col gap-3">
+                <div><label class="block text-xs font-bold text-slate-600 mb-1">Account Type</label><select id="temporary-customer-type" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"><option value="student">Student</option><option value="faculty">Faculty</option><option value="guest" selected>Guest</option></select></div>
+                <div><label class="block text-xs font-bold text-slate-600 mb-1">Full Name</label><input id="temporary-full-name" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="Temporary User"></div>
+                <div><label class="block text-xs font-bold text-slate-600 mb-1">Login Email</label><input type="email" id="temporary-email" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="temporary@kpriet.ac.in"></div>
+                <div><label class="block text-xs font-bold text-slate-600 mb-1">Initial Password</label><input type="password" id="temporary-password" minlength="8" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="Minimum 8 characters"></div>
+                <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-slate-600 mb-1">Identifier (Optional)</label><input id="temporary-identifier" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="Roll / Faculty ID"></div><div><label class="block text-xs font-bold text-slate-600 mb-1">Mobile (Optional)</label><input id="temporary-mobile" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="10-digit mobile"></div></div>
+                <div><label class="block text-xs font-bold text-slate-600 mb-1">Access Duration</label><select id="temporary-duration" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"><option value="1">1 hour</option><option value="6">6 hours</option><option value="12">12 hours</option><option value="24" selected>24 hours</option><option value="72">3 days</option><option value="168">7 days</option><option value="720">30 days</option></select></div>
+                <p class="text-[10px] text-slate-400">The account automatically stops accepting login after the selected expiry time.</p>
+                <div class="flex justify-end gap-2 mt-2"><button type="button" onclick="toggleTemporaryAccountModal(false)" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button><button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-white hover:bg-amber-600">Create Account</button></div>
             </form>
         </div>
     </div>
