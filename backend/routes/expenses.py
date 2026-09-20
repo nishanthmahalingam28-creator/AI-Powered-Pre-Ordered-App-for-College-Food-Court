@@ -176,27 +176,37 @@ def get_expenses():
             (user_id,)
         )
 
-        # Older completed orders that were completed before the expense
-        # record was created. They are shown without creating duplicates.
-        order_rows = DB.get_all(
-            """
-            SELECT
-                o.id AS order_id,
-                o.customer_id AS user_id,
-                o.total_amount AS amount,
-                'Food' AS category,
-                CONCAT('Food order #', o.order_reference) AS description,
-                DATE(COALESCE(o.completed_time, o.created_at)) AS expense_date,
-                o.created_at AS created_at,
-                o.updated_at AS updated_at
-            FROM orders o
-            LEFT JOIN expenses e ON e.order_id = o.id
-            WHERE o.customer_id = %s
-              AND o.order_status = 'completed'
-              AND e.id IS NULL
-            """,
-            (user_id,)
-        )
+        # Older completed orders are only a display fallback. If this
+        # compatibility query fails because of an older production schema,
+        # the real expense rows must still be returned instead of failing
+        # the entire Expenses page.
+        try:
+            order_rows = DB.get_all(
+                """
+                SELECT
+                    o.id AS order_id,
+                    o.customer_id AS user_id,
+                    o.total_amount AS amount,
+                    'Food' AS category,
+                    CONCAT('Food order #', o.order_reference) AS description,
+                    DATE(COALESCE(o.completed_time, o.created_at)) AS expense_date,
+                    o.created_at AS created_at,
+                    o.updated_at AS updated_at
+                FROM orders o
+                LEFT JOIN expenses e ON e.order_id = o.id
+                WHERE o.customer_id = %s
+                  AND o.order_status = 'completed'
+                  AND e.id IS NULL
+                """,
+                (user_id,)
+            )
+        except Exception as fallback_error:
+            logger.warning(
+                "Completed-order expense fallback unavailable for user %s: %s",
+                user_id,
+                fallback_error
+            )
+            order_rows = []
 
         expenses = []
         total_amount = 0.0
