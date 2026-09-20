@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Orders | KPRIET Food Court</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="../../css/pages/dashboard.css">
+<script src="../../js/core/public-components.js" defer></script>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased text-slate-800">
+<div id="navbar-container"></div>
+<main class="flex-grow max-w-7xl mx-auto w-full px-4 py-8 md:px-8">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <a href="dashboard.html" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-blue-600"><i class="fa-solid fa-arrow-left"></i></a>
+      <div><p class="text-[10px] font-black uppercase tracking-widest text-blue-600">Vendor Management</p><h1 class="text-2xl md:text-3xl font-black text-slate-900">Manage Orders</h1><p id="order-shop-name" class="text-sm text-slate-500 mt-1">Loading shop...</p></div>
+    </div>
+    <button onclick="loadOrders()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-2"><i class="fa-solid fa-rotate"></i>Refresh</button>
+  </div>
+  <div id="orders-message" class="hidden mb-5 p-3 rounded-xl text-xs font-bold"></div>
+
+  <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mb-5">
+    <div class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
+      <div class="flex flex-wrap gap-2">
+        <button class="order-filter px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-black" data-status="all">All</button>
+        <button class="order-filter px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black" data-status="pending">Pending</button>
+        <button class="order-filter px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black" data-status="preparing">Preparing</button>
+        <button class="order-filter px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black" data-status="ready">Ready</button>
+        <button class="order-filter px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black" data-status="completed">Completed</button>
+        <button class="order-filter px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black" data-status="cancelled">Cancelled</button>
+      </div>
+      <div class="text-xs text-slate-500">Auto-refresh: <span id="refresh-status" class="font-black text-emerald-600">ON</span></div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-3xl border border-blue-100 shadow-sm p-5 mb-5">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div class="flex-1"><h2 class="font-black text-slate-800">Pickup OTP Verification</h2><p class="text-[11px] text-slate-400 mt-1">Enter the customer's 6-digit pickup OTP to complete a ready order.</p></div>
+      <input id="verify-otp-input" maxlength="6" inputmode="numeric" placeholder="6-digit OTP" class="w-full sm:w-40 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-black tracking-widest">
+      <button onclick="verifyPickupOtp()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black"><i class="fa-solid fa-qrcode mr-1"></i>Verify & Complete</button>
+    </div>
+    <div id="otp-message" class="hidden mt-3 p-3 rounded-xl text-xs font-bold"></div>
+  </section>
+
+  <section id="orders-list" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div class="col-span-full p-10 text-center text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Loading orders...</p></div>
+  </section>
+</main>
+<div id="footer-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/vendor/manage-orders.js"></script>
+</body>
+</html>
