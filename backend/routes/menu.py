@@ -182,7 +182,7 @@ def get_menu_item(item_id):
     """Returns details for a single food menu item."""
     item = DB.get_one(
         """
-        SELECT m.id, m.shop_id, m.name, m.description, m.price, m.category,
+        SELECT m.id, m.shop_id, m.name, m.description, m.price, m.category, m.meal_period,
                m.quantity, m.is_available, m.image_url, m.created_at, m.updated_at,
                s.name as shop_name, s.is_active as shop_active
         FROM menu_items m
