@@ -35,6 +35,16 @@
     <div id="result-summary" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4"></div>
   </section>
 
+  <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mt-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div><h2 class="font-black text-slate-800">Student Food Voting Results</h2><p class="text-[11px] text-slate-400 mt-1">Live aggregate demand for today's published food choices.</p></div>
+      <span id="vote-total" class="px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black">0 votes</span>
+    </div>
+    <div id="vote-results" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <p class="text-xs text-slate-400">Loading student votes...</p>
+    </div>
+  </section>
+
   <div class="mt-5 flex flex-col sm:flex-row justify-end gap-3"><a href="morning-survey-results.html" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black text-center"><i class="fa-solid fa-chart-column mr-1.5"></i>View User Survey Results</a><button id="publish-btn" onclick="saveSurvey()" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-lg shadow-amber-500/20"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Publish Today's Menu</button></div>
 </main>
 <div id="footer-container"></div>
