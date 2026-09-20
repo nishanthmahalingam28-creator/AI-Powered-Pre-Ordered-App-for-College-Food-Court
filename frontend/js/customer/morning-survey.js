@@ -85,12 +85,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (completedViewEl) completedViewEl.classList.remove('hidden');
 
         const dateEl = document.getElementById('completed-survey-date');
+        const plansEl = document.getElementById('summary-plans-to-eat');
         const mealPrefEl = document.getElementById('summary-meal-pref');
         const hungerEl = document.getElementById('summary-hunger');
         const dietEl = document.getElementById('summary-diet');
         const mealTypeEl = document.getElementById('summary-meal-type');
 
         if (dateEl) dateEl.textContent = `Recorded on ${survey.survey_date || dateFormatted}`;
+        if (plansEl) plansEl.textContent = survey.plans_to_eat ? 'YES — PLANNING TO EAT' : 'NO — NOT TODAY';
         if (mealPrefEl) mealPrefEl.textContent = survey.meal_preference || 'General Campus Specials';
         if (hungerEl) hungerEl.textContent = (survey.hunger_level || 'Moderate').toUpperCase();
         if (dietEl) dietEl.textContent = (survey.dietary_preference || 'Any').toUpperCase();
@@ -139,6 +141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (formViewEl) formViewEl.classList.remove('hidden');
 
         // Populate form inputs
+        const planRadios = document.querySelectorAll('input[name="plans_to_eat"]');
+        planRadios.forEach(r => { r.checked = String(survey.plans_to_eat !== false) === r.value; });
+
         const mealPrefRadios = document.querySelectorAll('input[name="meal_preference"]');
         mealPrefRadios.forEach(r => {
             if (r.value === survey.meal_preference) r.checked = true;
@@ -216,6 +221,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await checkTodaySurvey();
 
+    // Load vendor-published menus for today and group them by breakfast/lunch/dinner.
+    async function loadTodayMenus() {
+        const container = document.getElementById('today-menu-list');
+        if (!container) return;
+        try {
+            const res = await fetch(`${API_BASE}/menu/today`, { credentials: 'include' });
+            const data = await res.json();
+            if (!data.success || !data.shops || data.shops.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400">No vendors have published today\'s menu yet.</p>';
+                return;
+            }
+            const periods = [['breakfast','Breakfast','fa-sun'],['lunch','Lunch','fa-bowl-food'],['dinner','Dinner','fa-moon']];
+            container.innerHTML = data.shops.map(shop => {
+                const sections = periods.map(p => {
+                    const items = shop[p[0]] || [];
+                    const body = items.length ? items.map(item => `<div class="flex justify-between gap-2 text-[11px] py-1 border-b border-slate-50 last:border-0"><span class="text-slate-600 truncate">${item.name}</span><span class="font-bold text-slate-800 shrink-0">₹${Number(item.price).toFixed(2)}</span></div>`).join('') : '<span class="text-[10px] text-slate-400">Not published</span>';
+                    return `<div class="bg-white rounded-xl border border-slate-100 p-2.5"><div class="flex items-center gap-1.5 mb-1.5 text-xs font-black text-slate-700"><i class="fa-solid ${p[2]} text-teal-500"></i>${p[1]}</div>${body}</div>`;
+                }).join('');
+                return `<div class="border border-slate-100 rounded-2xl p-3 bg-slate-50/60"><div class="flex items-center justify-between mb-2"><span class="text-xs font-black text-slate-800">${shop.shop_name}</span><span class="text-[10px] text-slate-400">Today's published menu</span></div><div class="grid grid-cols-1 md:grid-cols-3 gap-2">${sections}</div></div>`;
+            }).join('');
+        } catch (e) {
+            console.debug('Today menu load error:', e);
+            container.innerHTML = '<p class="text-xs text-rose-500">Could not load today\'s vendor menus.</p>';
+        }
+    }
+
+    await loadTodayMenus();
+
     // 4. Handle Form Submission
     if (surveyForm) {
         surveyForm.addEventListener('submit', async (e) => {
@@ -235,7 +268,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            const planRadio = document.querySelector('input[name="plans_to_eat"]:checked');
             const payload = {
+                plans_to_eat: planRadio ? planRadio.value === 'true' : true,
                 meal_preference: mealPrefRadio.value,
                 hunger_level: hungerRadio ? hungerRadio.value : 'moderate',
                 dietary_preference: dietSelect ? dietSelect.value : 'any',
