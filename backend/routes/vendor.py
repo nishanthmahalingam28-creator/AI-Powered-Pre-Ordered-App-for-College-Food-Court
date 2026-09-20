@@ -1397,7 +1397,7 @@ def get_worker_salary():
         """,
         (month, shop_id),
     )
-    next_month = month[:8] + "02" if month[5:7] == "01" else None
+    from datetime import date as _date
     from datetime import datetime as _dt
     parsed_month = _dt.strptime(month, "%Y-%m-%d").date()
     if parsed_month.month == 12:
