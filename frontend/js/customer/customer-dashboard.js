@@ -229,8 +229,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!res.ok) return;
             const data = await res.json();
             if (!data.success) return;
-            const budget = Number(data.total_budget || 0);
-            const spent = Number(data.total_budget_spent || 0);
+            const summary = data.summary || {};
+            const budget = Number(summary.total_budget || 0);
+            const spent = Number(summary.total_budget_spent || 0);
             const remaining = Math.max(0, budget - spent);
             const money = value => `₹${value.toFixed(2)}`;
             const budgetEl = document.getElementById('dashboard-food-budget');
@@ -243,6 +244,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Food budget snapshot refresh failed:', e);
         }
     }
+
+    // Keep the dashboard financial cards current even if Socket.IO is temporarily unavailable.
+    // The refresh is lightweight and reads only the authenticated customer's summary.
+    setInterval(loadFoodBudgetSnapshot, 2000);
 
     // 3. Fetch Active Orders
     async function loadActiveOrders() {
