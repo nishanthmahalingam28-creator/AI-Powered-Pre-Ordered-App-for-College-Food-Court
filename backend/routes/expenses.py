@@ -158,52 +158,31 @@ def create_expense():
 def get_expenses():
     """
     Retrieves all expenses belonging to the authenticated user.
-    Never exposes other users' records.
+
+    Includes existing expense records and completed food orders that
+    do not yet have an expense row. GET never writes to the database.
     """
     user_id = session.get("user_id")
 
     try:
-        # Sync every existing non-cancelled food order into the student's
-        # expense ledger. This also backfills orders placed before the
-        # expense feature/fix was deployed. The unique order_id constraint
-        # makes this idempotent and prevents duplicate expenses.
-        DB.execute(
-            """
-            INSERT INTO expenses
-                (user_id, order_id, amount, category, description, expense_date)
-            SELECT
-                o.customer_id,
-                o.id,
-                o.total_amount,
-                'Food',
-                CONCAT('Food order #', o.order_reference),
-                DATE(COALESCE(o.completed_time, o.created_at))
-            FROM orders o
-            LEFT JOIN expenses e ON e.order_id = o.id
-            WHERE o.customer_id = %s
-              AND o.order_status <> 'cancelled'
-              AND e.id IS NULL
-            """,
-            (user_id,)
-        )
-
-    try:
-        # Read saved expenses and also include any existing food orders that
-        # do not yet have an expense row. This makes older orders visible
-        # without running a write operation during page loading.
-        rows = DB.get_all(
+        # Existing manually-created and completed-order expense records.
+        expense_rows = DB.get_all(
             """
             SELECT id, user_id, order_id, amount, category, description,
                    expense_date, created_at, updated_at
             FROM expenses
             WHERE user_id = %s
+            """,
+            (user_id,)
+        )
 
-            UNION ALL
-
+        # Older completed orders that were completed before the expense
+        # record was created. They are shown without creating duplicates.
+        order_rows = DB.get_all(
+            """
             SELECT
-                0 AS id,
-                o.customer_id AS user_id,
                 o.id AS order_id,
+                o.customer_id AS user_id,
                 o.total_amount AS amount,
                 'Food' AS category,
                 CONCAT('Food order #', o.order_reference) AS description,
@@ -213,24 +192,23 @@ def get_expenses():
             FROM orders o
             LEFT JOIN expenses e ON e.order_id = o.id
             WHERE o.customer_id = %s
-              AND o.order_status <> 'cancelled'
+              AND o.order_status = 'completed'
               AND e.id IS NULL
-
-            ORDER BY expense_date DESC, order_id DESC
             """,
-            (user_id, user_id)
+            (user_id,)
         )
 
         expenses = []
         total_amount = 0.0
-        for r in rows:
-            amt = float(r.get("amount") or 0.0)
-            total_amount += amt
+
+        for r in expense_rows:
+            amount = float(r.get("amount") or 0.0)
+            total_amount += amount
             expenses.append({
                 "id": r["id"],
                 "user_id": r["user_id"],
                 "order_id": r.get("order_id"),
-                "amount": amt,
+                "amount": amount,
                 "category": r["category"],
                 "description": r["description"],
                 "expense_date": str(r["expense_date"]),
@@ -238,6 +216,30 @@ def get_expenses():
                 "created_at": str(r.get("created_at") or ""),
                 "updated_at": str(r.get("updated_at") or "")
             })
+
+        for r in order_rows:
+            amount = float(r.get("amount") or 0.0)
+            total_amount += amount
+            expenses.append({
+                "id": 0,
+                "user_id": r["user_id"],
+                "order_id": r["order_id"],
+                "amount": amount,
+                "category": r["category"],
+                "description": r["description"],
+                "expense_date": str(r["expense_date"]),
+                "date": str(r["expense_date"]),
+                "created_at": str(r.get("created_at") or ""),
+                "updated_at": str(r.get("updated_at") or "")
+            })
+
+        expenses.sort(
+            key=lambda item: (
+                item.get("expense_date", ""),
+                item.get("order_id") or 0
+            ),
+            reverse=True
+        )
 
         return jsonify({
             "success": True,
@@ -247,8 +249,15 @@ def get_expenses():
         }), 200
 
     except Exception as e:
-        logger.exception("Failed to fetch expenses for user %s: %s", user_id, e)
-        return jsonify({"success": False, "message": "Failed to retrieve expenses."}), 500
+        logger.exception(
+            "Failed to fetch expenses for user %s: %s",
+            user_id,
+            e
+        )
+        return jsonify({
+            "success": False,
+            "message": "Failed to retrieve expenses."
+        }), 500
 
 
 @expenses_bp.get("/<int:expense_id>")
