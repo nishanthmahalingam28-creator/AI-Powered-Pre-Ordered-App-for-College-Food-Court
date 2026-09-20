@@ -71,8 +71,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    let currentTodaySurvey = null;
+    let isEditMode = false;
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedEdit = urlParams.get('edit') === '1' || urlParams.get('edit') === 'true';
+
     // 2. Render Completed Survey State
     function showCompletedSurvey(survey) {
+        currentTodaySurvey = survey;
+        isEditMode = false;
         if (loadingEl) loadingEl.classList.add('hidden');
         if (formViewEl) formViewEl.classList.add('hidden');
         if (completedViewEl) completedViewEl.classList.remove('hidden');
@@ -121,6 +128,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Enter Edit Mode for Existing Survey
+    function enterEditMode(survey) {
+        if (!survey) return;
+        currentTodaySurvey = survey;
+        isEditMode = true;
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (completedViewEl) completedViewEl.classList.add('hidden');
+        if (formViewEl) formViewEl.classList.remove('hidden');
+
+        // Populate form inputs
+        const mealPrefRadios = document.querySelectorAll('input[name="meal_preference"]');
+        mealPrefRadios.forEach(r => {
+            if (r.value === survey.meal_preference) r.checked = true;
+        });
+
+        const hungerRadios = document.querySelectorAll('input[name="hunger_level"]');
+        hungerRadios.forEach(r => {
+            if (r.value === survey.hunger_level) r.checked = true;
+        });
+
+        const dietSelect = document.getElementById('dietary_preference');
+        if (dietSelect && survey.dietary_preference) {
+            dietSelect.value = survey.dietary_preference;
+        }
+
+        const mealTypeSelect = document.getElementById('meal_type');
+        if (mealTypeSelect && survey.meal_type) {
+            mealTypeSelect.value = survey.meal_type;
+        }
+
+        const moodInput = document.getElementById('mood_energy');
+        if (moodInput) moodInput.value = survey.mood_energy || '';
+
+        const restrictionsInput = document.getElementById('food_restrictions');
+        if (restrictionsInput) restrictionsInput.value = survey.food_restrictions || '';
+
+        const notesInput = document.getElementById('notes');
+        if (notesInput) notesInput.value = survey.notes || '';
+
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i> Update Preferences';
+        }
+    }
+
+    const editBtn = document.getElementById('edit-survey-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            if (currentTodaySurvey) {
+                enterEditMode(currentTodaySurvey);
+            }
+        });
+    }
+
     // 3. Check Today's Survey Status from Authoritative Backend
     async function checkTodaySurvey() {
         try {
@@ -132,9 +193,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const data = await res.json();
             if (data.success && data.completed && data.survey) {
-                showCompletedSurvey(data.survey);
+                currentTodaySurvey = data.survey;
+                if (requestedEdit) {
+                    enterEditMode(data.survey);
+                } else {
+                    showCompletedSurvey(data.survey);
+                }
             } else {
                 // Not yet completed: show form
+                isEditMode = false;
                 if (loadingEl) loadingEl.classList.add('hidden');
                 if (completedViewEl) completedViewEl.classList.add('hidden');
                 if (formViewEl) formViewEl.classList.remove('hidden');
@@ -181,12 +248,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Saving Preferences...';
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> ${isEditMode ? 'Updating Preferences...' : 'Saving Preferences...'}`;
             }
 
+            const method = isEditMode ? 'PUT' : 'POST';
             try {
                 const res = await fetch(`${API_BASE}/customer/survey`, {
-                    method: 'POST',
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(payload)
@@ -194,11 +262,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const data = await res.json();
 
-                if (res.status === 201 && data.success && data.survey) {
-                    showAlert('✓ Morning survey saved successfully! Updating recommendations...', 'success');
+                if ((res.status === 200 || res.status === 201) && data.success && data.survey) {
+                    showAlert(isEditMode ? '✓ Morning preferences updated successfully!' : '✓ Morning survey saved successfully! Updating recommendations...', 'success');
                     setTimeout(() => {
                         showCompletedSurvey(data.survey);
-                    }, 800);
+                    }, 600);
                 } else if (res.status === 409) {
                     showAlert('You have already completed today’s survey. Loading your recorded responses...', 'warning');
                     await checkTodaySurvey();

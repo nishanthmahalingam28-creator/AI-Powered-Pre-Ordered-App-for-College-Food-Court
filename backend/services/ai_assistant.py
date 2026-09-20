@@ -16,6 +16,7 @@ import re
 import json
 import logging
 import requests
+from datetime import datetime
 from typing import Dict, Any, Tuple
 
 from db import DB
@@ -162,6 +163,18 @@ class AIAssistantService:
             for r in recent_expenses_rows
         ]
 
+        # 7. Today's Morning Survey
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        survey = DB.get_one(
+            """
+            SELECT meal_preference, hunger_level, dietary_preference, meal_type, mood_energy
+            FROM morning_surveys
+            WHERE user_id = %s AND survey_date = %s
+            LIMIT 1
+            """,
+            (user_id, today_str)
+        )
+
         has_history = (income_count > 0 or expense_count > 0 or len(budgets_data) > 0 or len(goals_data) > 0)
 
         # STRICT GUARANTEE: Never include password_hash, token, session_id, mobile, email
@@ -178,7 +191,8 @@ class AIAssistantService:
             "top_categories": category_breakdown,
             "budgets": budgets_data,
             "goals": goals_data,
-            "recent_expenses": recent_expenses
+            "recent_expenses": recent_expenses,
+            "morning_survey": survey
         }
 
     @classmethod
@@ -309,7 +323,10 @@ class AIAssistantService:
         # Intent B: Food Availability, Pricing & Stall Status
         if any(w in query_lower for w in ("menu", "dish", "food", "available", "price", "stall", "shop", "eat", "biryani", "dosa", "parotta", "burger", "maggi", "juice", "chai", "sandwich", "meals")):
             shops, items = cls.get_food_court_menu_context(query)
+            survey = context.get("morning_survey")
             lines = ["🍽️ **Live Food Court Menu & Availability**\n"]
+            if survey:
+                lines.append(f"🌅 *Note: You noted a morning craving for **{survey['meal_preference']}** (Diet: **{survey['dietary_preference'].upper()}**, Hunger: **{survey['hunger_level']}**).*\n")
             if items:
                 lines.append("Here are real-time options from the campus database:")
                 for itm in items:

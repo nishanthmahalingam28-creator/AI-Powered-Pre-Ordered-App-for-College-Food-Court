@@ -67,6 +67,17 @@ class FoodCourtFeatures:
             }
 
         try:
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_survey = DB.get_one(
+                """
+                SELECT meal_preference, hunger_level, dietary_preference, meal_type, mood_energy, food_restrictions
+                FROM morning_surveys
+                WHERE user_id = %s AND survey_date = %s
+                LIMIT 1
+                """,
+                (customer_id, today_str),
+            )
+
             # Query valid past purchases
             query = """
                 SELECT oi.menu_item_id, m.name as item_name, m.category, o.shop_id,
@@ -87,6 +98,7 @@ class FoodCourtFeatures:
                     "favorite_items": {},
                     "frequent_shops": {},
                     "total_valid_orders": 0,
+                    "today_survey": today_survey or None,
                 }
 
             cat_weights = {}
@@ -127,6 +139,7 @@ class FoodCourtFeatures:
                 "favorite_items": item_weights,
                 "frequent_shops": shop_weights,
                 "total_valid_orders": len(rows),
+                "today_survey": today_survey or None,
             }
         except Exception as e:
             logger.error("Error extracting user affinity profile for customer_id=%s: %s", customer_id, e)
@@ -135,6 +148,7 @@ class FoodCourtFeatures:
                 "favorite_items": {},
                 "frequent_shops": {},
                 "total_valid_orders": 0,
+                "today_survey": None,
             }
 
     @classmethod

@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         bannerSubtitle.textContent = `Hunger: ${data.survey.hunger_level || 'Normal'} • Type: ${data.survey.meal_type || 'Lunch'} • AI recommendations personalized!`;
                     }
                     if (bannerBtn) {
+                        bannerBtn.href = 'morning-survey.html?edit=1';
                         bannerBtn.innerHTML = `<span>Update Survey</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
                         bannerBtn.className = 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl border border-slate-300 transition-all flex items-center gap-2';
                     }
@@ -116,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         bannerSubtitle.textContent = 'Tell us what you are craving today to unlock personalized food court recommendations.';
                     }
                     if (bannerBtn) {
+                        bannerBtn.href = 'morning-survey.html';
                         bannerBtn.innerHTML = `<span>Complete Morning Survey</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
                         bannerBtn.className = 'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl shadow-md transition-all flex items-center gap-2';
                     }
@@ -185,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p class="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">${item.description || item.category}</p>
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-base font-black text-slate-900">₹${item.price.toFixed(2)}</span>
+                            <span class="text-base font-black text-slate-900">₹${Number(item.price || 0).toFixed(2)}</span>
                             <button type="button" class="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
                                 onclick="addQuickCart(${item.id}, '${item.name.replace(/'/g, "\\'")}', '${item.shop_name.replace(/'/g, "\\'")}', ${item.price}, this)">
                                 <i class="fa-solid fa-plus text-[10px]"></i> Add
@@ -240,7 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                             </div>
                             <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                                <span>Total: <strong class="text-slate-800">₹${order.total_amount.toFixed(2)}</strong> (${order.payment_status})</span>
+                                <span>Total: <strong class="text-slate-800">₹${Number(order.total_amount || 0).toFixed(2)}</strong> (${order.payment_status})</span>
                                 <span class="text-[11px] text-slate-400">${order.created_at || 'Today'}</span>
                             </div>
                         `;
@@ -396,10 +398,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const walletEl = document.getElementById('stat-dash-wallet');
             const savingsRateEl = document.getElementById('stat-dash-savings-rate');
 
-            if (incomeEl) incomeEl.textContent = `₹${(summary.total_income || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (expensesEl) expensesEl.textContent = `₹${(summary.total_expenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (incomeEl) incomeEl.textContent = `₹${Number(summary.total_income || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (expensesEl) expensesEl.textContent = `₹${Number(summary.total_expenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (balanceEl) {
-                const bal = summary.net_balance || 0;
+                const bal = Number(summary.net_balance || 0);
                 balanceEl.textContent = `₹${bal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 if (bal < 0) {
                     balanceEl.className = "text-2xl font-black text-rose-600 mt-0.5 block";
@@ -408,13 +410,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             if (walletEl) {
-                const wallet = summary.wallet_balance || 0;
+                const wallet = Number(summary.wallet_balance || 0);
                 walletEl.textContent = `₹${wallet.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
-            if (budgetEl) budgetEl.textContent = `₹${(summary.total_budget || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (budgetEl) budgetEl.textContent = `₹${Number(summary.total_budget || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (budgetConsumedEl) {
                 const pct = summary.budget_percent_spent || 0;
-                const spent = (summary.total_budget_spent || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const spent = Number(summary.total_budget_spent || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 budgetConsumedEl.textContent = `${pct}% allocated spent (₹${spent})`;
             }
             if (savingsRateEl) {
@@ -582,7 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, b.percent_spent)}%"></div>
                             </div>
                             <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                                <span>Spent: <strong class="text-slate-800">₹${b.spent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> of ₹${b.amount_limit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                <span>Spent: <strong class="text-slate-800">₹${Number(b.spent || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> of ₹${Number(b.amount_limit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 <span>${b.percent_spent}%</span>
                             </div>
                         `;
@@ -625,7 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="bg-gradient-to-r from-teal-500 to-emerald-500 h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, g.progress_percent)}%"></div>
                             </div>
                             <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                                <span>Saved: <strong class="text-slate-800">₹${g.current_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> of ₹${g.target_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                <span>Saved: <strong class="text-slate-800">₹${Number(g.current_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> of ₹${Number(g.target_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 <span>${g.progress_percent}%</span>
                             </div>
                         `;

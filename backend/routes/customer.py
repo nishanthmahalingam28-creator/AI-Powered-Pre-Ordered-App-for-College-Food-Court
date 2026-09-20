@@ -2,21 +2,16 @@ import logging
 from datetime import datetime
 from flask import Blueprint, jsonify, request, session
 from security import hash_password, verify_password
-
 from db import DB
 from routes.auth import login_required, role_required, normalize_mobile
-
 logger = logging.getLogger("food_court.customer")
 customer_bp = Blueprint("customer", __name__)
-
-
 @customer_bp.get("/profile")
 @login_required
 @role_required(["customer"])
 def get_profile():
     """Retrieves the authenticated customer's profile details."""
     user_id = session.get("user_id")
-
     profile = DB.get_one(
         """
         SELECT u.id, u.email, u.role, cp.customer_type, cp.full_name, cp.identifier, cp.mobile,
@@ -28,10 +23,8 @@ def get_profile():
         """,
         (user_id,),
     )
-
     if not profile:
         return jsonify({"success": False, "message": "Customer profile not found."}), 404
-
     profile_data = {
         "id": profile["id"],
         "email": profile["email"],
@@ -39,17 +32,15 @@ def get_profile():
         "customer_type": profile.get("customer_type"),
         "full_name": profile.get("full_name") or "",
         "identifier": profile.get("identifier") or "",
+        "roll_number": profile.get("identifier") or "",
         "mobile": profile.get("mobile") or "",
         "created_at": str(profile.get("created_at") or ""),
     }
-
     return jsonify({
         "success": True,
         "profile": profile_data,
         "user": profile_data,
     }), 200
-
-
 @customer_bp.put("/profile")
 @login_required
 @role_required(["customer"])
@@ -62,24 +53,18 @@ def update_profile():
     """
     user_id = session.get("user_id")
     data = request.get_json(silent=True) or {}
-
     new_full_name = str(data.get("full_name") or data.get("name", "")).strip()
     raw_mobile = data.get("mobile")
-
     current_profile = DB.get_one(
         "SELECT id, full_name, mobile FROM customer_profiles WHERE user_id = %s LIMIT 1",
         (user_id,),
     )
-
     if not current_profile:
         return jsonify({"success": False, "message": "Customer profile not found."}), 404
-
     full_name_to_save = new_full_name if new_full_name else current_profile.get("full_name")
     if not full_name_to_save:
         return jsonify({"success": False, "message": "Full name cannot be empty."}), 400
-
     mobile_to_save = current_profile.get("mobile")
-
     # If mobile is being changed, require valid OTP verification
     if raw_mobile is not None:
         normalized_new_mobile = normalize_mobile(str(raw_mobile).strip())
@@ -88,7 +73,6 @@ def update_profile():
                 "success": False,
                 "message": "Enter a valid 10-digit Indian mobile number (starts with 6, 7, 8, or 9)."
             }), 400
-
         if normalized_new_mobile != current_profile.get("mobile"):
             # Check duplicate mobile on another active customer
             existing_mobile = DB.get_one(
@@ -105,7 +89,6 @@ def update_profile():
                     "success": False,
                     "message": "This mobile number is already linked to another active account."
                 }), 409
-
             # Verify OTP record for mobile_update
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             verified_otp = DB.get_one(
@@ -116,7 +99,6 @@ def update_profile():
                 """,
                 (normalized_new_mobile, now_str),
             )
-
             # If client provided an inline code, verify it now
             otp_code_in_body = str(data.get("otp") or "").strip()
             if not verified_otp and otp_code_in_body:
@@ -132,17 +114,14 @@ def update_profile():
                 if otp_match:
                     DB.execute("UPDATE otp_codes SET is_verified = 1, verified_at = %s WHERE id = %s", (now_str, otp_match["id"]))
                     verified_otp = otp_match
-
             if not verified_otp:
                 return jsonify({
                     "success": False,
                     "message": "Mobile number change requires successful OTP verification for the new number."
                 }), 400
-
             # Consume verified OTP record
             DB.execute("UPDATE otp_codes SET is_consumed = 1 WHERE id = %s", (verified_otp["id"],))
             mobile_to_save = normalized_new_mobile
-
     # Persist profile changes
     DB.execute(
         """
@@ -152,24 +131,19 @@ def update_profile():
         """,
         (full_name_to_save, mobile_to_save, user_id),
     )
-
     session["full_name"] = full_name_to_save
     session["mobile"] = mobile_to_save
-
     updated_data = {
         "id": user_id,
         "full_name": full_name_to_save,
         "mobile": mobile_to_save,
     }
-
     return jsonify({
         "success": True,
         "message": "Profile updated successfully.",
         "profile": updated_data,
         "user": updated_data,
     }), 200
-
-
 @customer_bp.put("/password")
 @login_required
 @role_required(["customer"])
@@ -180,37 +154,27 @@ def change_password():
     """
     user_id = session.get("user_id")
     data = request.get_json(silent=True) or {}
-
     current_password = str(data.get("current_password") or "").strip()
     new_password = str(data.get("new_password") or "").strip()
     confirm_password = str(data.get("confirm_password") or "").strip()
-
     if not current_password:
         return jsonify({"success": False, "message": "Current password is required."}), 400
-
     if not new_password:
         return jsonify({"success": False, "message": "New password is required."}), 400
-
     if confirm_password and new_password != confirm_password:
         return jsonify({"success": False, "message": "New passwords do not match."}), 400
-
     if len(new_password) < 8:
         return jsonify({"success": False, "message": "New password must contain at least 8 characters."}), 400
-
     user = DB.get_one("SELECT id, password_hash FROM users WHERE id = %s AND is_active = 1", (user_id,))
     if not user or not verify_password(current_password, user["password_hash"]):
         return jsonify({"success": False, "message": "Current password is incorrect."}), 400
-
     new_hash = hash_password(new_password)
     DB.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user_id))
-
     logger.info("Customer password updated successfully for user_id=%s", user_id)
     return jsonify({
         "success": True,
         "message": "Password updated successfully."
     }), 200
-
-
 def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
     """
     Core aggregator for customer financial intelligence and visual analytics.
@@ -233,7 +197,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
     income_count = int(inc_stats.get("count") or 0)
     avg_income = float(inc_stats.get("avg_amount") or 0.0)
     max_income = float(inc_stats.get("max_amount") or 0.0)
-
     # 2. Total Expenses & Statistical aggregates
     exp_stats = DB.get_one(
         """
@@ -250,18 +213,15 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
     expense_count = int(exp_stats.get("count") or 0)
     avg_expense = float(exp_stats.get("avg_amount") or 0.0)
     max_expense = float(exp_stats.get("max_amount") or 0.0)
-
     # Net balance & Savings Rate
     net_balance = round(total_income - total_expenses, 2)
     savings_rate = round((net_balance / total_income * 100), 1) if total_income > 0 else 0.0
-
     # 3. Wallet Balance
     prof_row = DB.get_one(
         "SELECT wallet_balance FROM customer_profiles WHERE user_id = %s LIMIT 1",
         (user_id,)
     )
     wallet_balance = float(prof_row.get("wallet_balance") or 0.0) if prof_row else 0.0
-
     # 4. Category Expense Breakdown
     cat_rows = DB.get_all(
         """
@@ -283,7 +243,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "count": int(cr.get("count") or 0),
             "percentage": pct
         })
-
     # 5. Income Sources Breakdown
     inc_cat_rows = DB.get_all(
         """
@@ -306,13 +265,12 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "count": int(ir.get("count") or 0),
             "percentage": pct
         })
-
     # 6. Monthly Trends (SQLite & MySQL compatible via SUBSTR)
     exp_monthly_rows = DB.get_all(
         """
         SELECT SUBSTR(expense_date, 1, 7) AS ym, COALESCE(SUM(amount), 0) AS total, COUNT(id) AS count
         FROM expenses
-        WHERE user_id = %s AND expense_date IS NOT NULL AND expense_date != ''
+        WHERE user_id = %s AND expense_date IS NOT NULL
         GROUP BY SUBSTR(expense_date, 1, 7)
         ORDER BY ym ASC
         """,
@@ -322,12 +280,11 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         r["ym"]: {"total": round(float(r["total"] or 0.0), 2), "count": int(r.get("count") or 0)}
         for r in exp_monthly_rows if r.get("ym")
     }
-
     inc_monthly_rows = DB.get_all(
         """
         SELECT SUBSTR(income_date, 1, 7) AS ym, COALESCE(SUM(amount), 0) AS total, COUNT(id) AS count
         FROM income
-        WHERE user_id = %s AND income_date IS NOT NULL AND income_date != ''
+        WHERE user_id = %s AND income_date IS NOT NULL
         GROUP BY SUBSTR(income_date, 1, 7)
         ORDER BY ym ASC
         """,
@@ -337,25 +294,21 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         r["ym"]: {"total": round(float(r["total"] or 0.0), 2), "count": int(r.get("count") or 0)}
         for r in inc_monthly_rows if r.get("ym")
     }
-
     all_months = sorted(set(list(monthly_exp_map.keys()) + list(monthly_inc_map.keys())))
     monthly_trends = []
     month_names = {
         "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun",
         "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
     }
-
     for ym in all_months:
         m_inc = monthly_inc_map.get(ym, {}).get("total", 0.0)
         m_exp = monthly_exp_map.get(ym, {}).get("total", 0.0)
         m_net = round(m_inc - m_exp, 2)
         m_rate = round((m_net / m_inc * 100), 1) if m_inc > 0 else 0.0
-
         parts = ym.split("-")
         label = ym
         if len(parts) == 2 and parts[1] in month_names:
             label = f"{month_names[parts[1]]} {parts[0]}"
-
         monthly_trends.append({
             "month": ym,
             "label": label,
@@ -366,7 +319,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "income_count": monthly_inc_map.get(ym, {}).get("count", 0),
             "expense_count": monthly_exp_map.get(ym, {}).get("count", 0)
         })
-
     # 7. Budgets and per-category spending
     budget_rows = DB.get_all(
         """
@@ -377,23 +329,19 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         """,
         (user_id,)
     )
-
     total_budget_limit = 0.0
     total_budget_spent = 0.0
     budgets_data = []
-
     for b in budget_rows:
         limit_val = float(b.get("amount_limit") or 0.0)
         total_budget_limit += limit_val
         cat_name = b.get("category") or ""
-
         spent_row = DB.get_one(
             "SELECT COALESCE(SUM(amount), 0) AS cat_spent FROM expenses WHERE user_id = %s AND LOWER(category) = LOWER(%s)",
             (user_id, cat_name)
         )
         cat_spent = float(spent_row.get("cat_spent") or 0.0) if spent_row else 0.0
         total_budget_spent += cat_spent
-
         pct_spent = round((cat_spent / limit_val * 100), 1) if limit_val > 0 else 0.0
         if pct_spent > 100:
             status = "exceeded"
@@ -401,7 +349,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             status = "near_limit"
         else:
             status = "on_track"
-
         budgets_data.append({
             "id": b["id"],
             "category": cat_name,
@@ -414,9 +361,7 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "end_date": str(b["end_date"]) if b.get("end_date") else None,
             "status": status
         })
-
     budget_percent_spent = round((total_budget_spent / total_budget_limit * 100), 1) if total_budget_limit > 0 else 0.0
-
     # 8. Financial Goals & Savings Progress
     goal_rows = DB.get_all(
         """
@@ -427,18 +372,15 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         """,
         (user_id,)
     )
-
     total_goals_target = 0.0
     total_goals_saved = 0.0
     goals_data = []
-
     for g in goal_rows:
         target_val = float(g.get("target_amount") or 0.0)
         saved_val = float(g.get("current_amount") or 0.0)
         total_goals_target += target_val
         total_goals_saved += saved_val
         pct = round((saved_val / target_val * 100), 1) if target_val > 0 else 0.0
-
         goals_data.append({
             "id": g["id"],
             "title": g.get("title") or "Savings Goal",
@@ -450,9 +392,7 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "category": g.get("category", "Dining"),
             "status": g.get("status", "in_progress")
         })
-
     goals_overall_progress = round((total_goals_saved / total_goals_target * 100), 1) if total_goals_target > 0 else 0.0
-
     # 9. Recent Transactions (Top 20)
     recent_expenses = DB.get_all(
         """
@@ -464,7 +404,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         """,
         (user_id,)
     )
-
     recent_income = DB.get_all(
         """
         SELECT id, amount, source AS category, description, income_date AS tx_date, created_at
@@ -475,7 +414,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
         """,
         (user_id,)
     )
-
     unified_transactions = []
     for e in recent_expenses:
         unified_transactions.append({
@@ -487,7 +425,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "date": str(e.get("tx_date") or ""),
             "created_at": str(e.get("created_at") or "")
         })
-
     for i in recent_income:
         unified_transactions.append({
             "id": i["id"],
@@ -498,13 +435,11 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "date": str(i.get("tx_date") or ""),
             "created_at": str(i.get("created_at") or "")
         })
-
     unified_transactions.sort(
         key=lambda x: (x["date"] or "", x["created_at"] or ""),
         reverse=True
     )
     capped_transactions = unified_transactions[:tx_limit]
-
     return {
         "success": True,
         "summary": {
@@ -550,8 +485,6 @@ def _compute_customer_analytics_payload(user_id: int, tx_limit: int = 10):
             "budget_comparison": budgets_data
         }
     }
-
-
 @customer_bp.get("/financial-summary")
 @login_required
 @role_required(["customer"])
@@ -570,8 +503,6 @@ def get_financial_summary():
             "success": False,
             "message": "Failed to calculate financial statistics."
         }), 500
-
-
 @customer_bp.get("/analytics")
 @login_required
 @role_required(["customer"])
@@ -592,12 +523,9 @@ def get_customer_analytics():
             "success": False,
             "message": "Failed to calculate analytics."
         }), 500
-
-
 # ====================================================================
 # STUDENT MORNING SURVEY ENDPOINTS (Phase 10)
 # ====================================================================
-
 @customer_bp.get("/survey/today")
 @login_required
 @role_required(["customer"])
@@ -608,7 +536,6 @@ def get_today_morning_survey():
     """
     user_id = session.get("user_id")
     today_str = datetime.now().strftime("%Y-%m-%d")
-
     survey = DB.get_one(
         """
         SELECT id, user_id, survey_date, meal_preference, hunger_level,
@@ -620,7 +547,6 @@ def get_today_morning_survey():
         """,
         (user_id, today_str),
     )
-
     if not survey:
         return jsonify({
             "success": True,
@@ -628,7 +554,6 @@ def get_today_morning_survey():
             "survey": None,
             "date": today_str
         }), 200
-
     survey_data = {
         "id": survey["id"],
         "user_id": survey["user_id"],
@@ -642,15 +567,12 @@ def get_today_morning_survey():
         "notes": survey.get("notes") or "",
         "created_at": str(survey["created_at"]),
     }
-
     return jsonify({
         "success": True,
         "completed": True,
         "survey": survey_data,
         "date": today_str
     }), 200
-
-
 @customer_bp.post("/survey")
 @login_required
 @role_required(["customer"])
@@ -665,7 +587,6 @@ def submit_morning_survey():
     user_id = session.get("user_id")
     data = request.get_json(silent=True) or {}
     today_str = datetime.now().strftime("%Y-%m-%d")
-
     # Check for existing survey today to prevent duplicates
     existing = DB.get_one(
         "SELECT id FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1",
@@ -677,34 +598,29 @@ def submit_morning_survey():
             "message": "You have already completed today's morning survey. Each student may submit once per day.",
             "survey_id": existing["id"]
         }), 409
-
     meal_preference = str(data.get("meal_preference") or "").strip()
     if not meal_preference:
         return jsonify({"success": False, "message": "Meal preference is required."}), 400
-
     allowed_hunger = {"light", "moderate", "ravenous", "low", "normal", "high"}
     hunger_mapping = {"low": "light", "normal": "moderate", "high": "ravenous"}
     raw_hunger = str(data.get("hunger_level") or "moderate").strip().lower()
     if "hunger_level" in data and raw_hunger not in allowed_hunger:
         return jsonify({"success": False, "message": f"Invalid hunger_level. Allowed: light, moderate, ravenous"}), 400
     hunger_level = hunger_mapping.get(raw_hunger, raw_hunger if raw_hunger in allowed_hunger else "moderate")
-
     allowed_diet = {"veg", "non-veg", "vegan", "eggitarian", "any"}
     raw_diet = str(data.get("dietary_preference") or "any").strip().lower()
     if "dietary_preference" in data and raw_diet not in allowed_diet:
         return jsonify({"success": False, "message": f"Invalid dietary_preference. Allowed: {', '.join(sorted(allowed_diet))}"}), 400
     dietary_preference = raw_diet if raw_diet in allowed_diet else "any"
-
-    allowed_meal_types = {"breakfast", "lunch", "evening_snack", "dinner"}
+    allowed_meal_types = {"breakfast", "lunch", "evening_snack", "snack", "snacks", "dinner"}
+    meal_type_mapping = {"snack": "evening_snack", "snacks": "evening_snack"}
     raw_meal_type = str(data.get("meal_type") or "breakfast").strip().lower()
     if "meal_type" in data and raw_meal_type not in allowed_meal_types:
-        return jsonify({"success": False, "message": f"Invalid meal_type. Allowed: {', '.join(sorted(allowed_meal_types))}"}), 400
-    meal_type = raw_meal_type if raw_meal_type in allowed_meal_types else "breakfast"
-
+        return jsonify({"success": False, "message": f"Invalid meal_type. Allowed: breakfast, lunch, evening_snack, dinner"}), 400
+    meal_type = meal_type_mapping.get(raw_meal_type, raw_meal_type if raw_meal_type in allowed_meal_types else "breakfast")
     mood_energy = str(data.get("mood_energy") or "").strip()[:50]
     food_restrictions = str(data.get("food_restrictions") or "").strip()[:255]
     notes = str(data.get("notes") or "").strip()[:500]
-
     try:
         survey_id = DB.execute(
             """
@@ -726,9 +642,7 @@ def submit_morning_survey():
                 notes,
             ),
         )
-
         logger.info("Morning survey created: id=%s user_id=%s date=%s", survey_id, user_id, today_str)
-
         return jsonify({
             "success": True,
             "message": "Morning survey submitted successfully!",
@@ -758,8 +672,6 @@ def submit_morning_survey():
             "success": False,
             "message": "Failed to save morning survey. Please try again."
         }), 500
-
-
 @customer_bp.get("/survey/history")
 @login_required
 @role_required(["customer"])
@@ -767,7 +679,6 @@ def get_survey_history():
     """Retrieves recent morning surveys for the authenticated student."""
     user_id = session.get("user_id")
     limit = request.args.get("limit", 14, type=int)
-
     surveys = DB.get_all(
         """
         SELECT id, survey_date, meal_preference, hunger_level, dietary_preference,
@@ -779,7 +690,6 @@ def get_survey_history():
         """,
         (user_id, limit),
     )
-
     clean_surveys = []
     for s in surveys:
         clean_surveys.append({
@@ -793,5 +703,87 @@ def get_survey_history():
             "food_restrictions": s.get("food_restrictions") or "",
             "created_at": str(s["created_at"]),
         })
-
     return jsonify({"success": True, "surveys": clean_surveys}), 200
+@customer_bp.put("/survey")
+@login_required
+@role_required(["customer"])
+def update_morning_survey():
+    """
+    Updates the authenticated student's morning survey for today.
+    Allows students to change their daily cravings or dietary preference.
+    """
+    user_id = session.get("user_id")
+    data = request.get_json(silent=True) or {}
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    existing = DB.get_one(
+        "SELECT id FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1",
+        (user_id, today_str),
+    )
+    if not existing:
+        return jsonify({
+            "success": False,
+            "message": "No survey found for today to update. Please submit a new survey."
+        }), 404
+    meal_preference = str(data.get("meal_preference") or "").strip()
+    if not meal_preference:
+        return jsonify({"success": False, "message": "Meal preference is required."}), 400
+    allowed_hunger = {"light", "moderate", "ravenous", "low", "normal", "high"}
+    hunger_mapping = {"low": "light", "normal": "moderate", "high": "ravenous"}
+    raw_hunger = str(data.get("hunger_level") or "moderate").strip().lower()
+    if "hunger_level" in data and raw_hunger not in allowed_hunger:
+        return jsonify({"success": False, "message": "Invalid hunger_level. Allowed: light, moderate, ravenous"}), 400
+    hunger_level = hunger_mapping.get(raw_hunger, raw_hunger if raw_hunger in allowed_hunger else "moderate")
+    allowed_diet = {"veg", "non-veg", "vegan", "eggitarian", "any"}
+    raw_diet = str(data.get("dietary_preference") or "any").strip().lower()
+    if "dietary_preference" in data and raw_diet not in allowed_diet:
+        return jsonify({"success": False, "message": f"Invalid dietary_preference. Allowed: {', '.join(sorted(allowed_diet))}"}), 400
+    dietary_preference = raw_diet if raw_diet in allowed_diet else "any"
+    allowed_meal_types = {"breakfast", "lunch", "evening_snack", "snack", "snacks", "dinner"}
+    meal_type_mapping = {"snack": "evening_snack", "snacks": "evening_snack"}
+    raw_meal_type = str(data.get("meal_type") or "breakfast").strip().lower()
+    if "meal_type" in data and raw_meal_type not in allowed_meal_types:
+        return jsonify({"success": False, "message": f"Invalid meal_type. Allowed: breakfast, lunch, evening_snack, dinner"}), 400
+    meal_type = meal_type_mapping.get(raw_meal_type, raw_meal_type if raw_meal_type in allowed_meal_types else "breakfast")
+    mood_energy = str(data.get("mood_energy") or "").strip()[:50]
+    food_restrictions = str(data.get("food_restrictions") or "").strip()[:255]
+    notes = str(data.get("notes") or "").strip()[:500]
+    try:
+        DB.execute(
+            """
+            UPDATE morning_surveys
+            SET meal_preference = %s, hunger_level = %s, dietary_preference = %s,
+                meal_type = %s, mood_energy = %s, food_restrictions = %s, notes = %s
+            WHERE id = %s AND user_id = %s
+            """,
+            (
+                meal_preference,
+                hunger_level,
+                dietary_preference,
+                meal_type,
+                mood_energy,
+                food_restrictions,
+                notes,
+                existing["id"],
+                user_id,
+            ),
+        )
+        return jsonify({
+            "success": True,
+            "message": "Morning survey updated successfully!",
+            "survey_id": existing["id"],
+            "survey": {
+                "id": existing["id"],
+                "user_id": user_id,
+                "survey_date": today_str,
+                "meal_preference": meal_preference,
+                "hunger_level": hunger_level,
+                "dietary_preference": dietary_preference,
+                "meal_type": meal_type,
+                "mood_energy": mood_energy,
+                "food_restrictions": food_restrictions,
+                "notes": notes,
+            }
+        }), 200
+    except Exception as e:
+        logger.exception("Failed to update morning survey for user %s: %s", user_id, e)
+        return jsonify({"success": False, "message": "Failed to update morning survey."}), 500

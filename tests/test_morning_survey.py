@@ -182,6 +182,39 @@ class TestMorningSurveyAPI(unittest.TestCase):
         has_survey_match = any("survey" in item.get("reason", "").lower() or "dosa" in item.get("name", "").lower() for item in recs)
         self.assertTrue(has_survey_match, "Recommender should highlight or boost morning survey preferences")
 
+    def test_update_today_survey(self):
+        # Initial submission
+        payload = {
+            "meal_preference": "South Indian Meals",
+            "hunger_level": "High",
+            "dietary_preference": "Veg",
+            "meal_type": "Lunch"
+        }
+        res1 = self.client.post("/api/customer/survey", json=payload)
+        self.assertEqual(res1.status_code, 201)
+
+        # Update survey
+        updated_payload = {
+            "meal_preference": "Ghee Roast Dosa",
+            "hunger_level": "Ravenous",
+            "dietary_preference": "Veg",
+            "meal_type": "Dinner",
+            "mood_energy": "Excited",
+            "food_restrictions": "None",
+            "notes": "Extra sambar"
+        }
+        res_put = self.client.put("/api/customer/survey", json=updated_payload)
+        self.assertEqual(res_put.status_code, 200)
+        data = res_put.get_json()
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data["survey"]["meal_preference"], "Ghee Roast Dosa")
+        self.assertEqual(data["survey"]["meal_type"], "dinner")
+
+        # Verify today returns updated
+        today_res = self.client.get("/api/customer/survey/today")
+        self.assertEqual(today_res.status_code, 200)
+        self.assertEqual(today_res.get_json()["survey"]["meal_preference"], "Ghee Roast Dosa")
+
 
 if __name__ == "__main__":
     unittest.main()

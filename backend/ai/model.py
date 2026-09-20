@@ -37,9 +37,16 @@ class RecommendationModel:
 
         scored_candidates = []
 
+        today_survey = user_profile.get("today_survey")
+        survey_meal_pref = (today_survey.get("meal_preference") or "").lower() if today_survey else ""
+        survey_diet_pref = (today_survey.get("dietary_preference") or "any").lower() if today_survey else "any"
+
         for item in candidate_items:
             item_id = item["id"]
             cat = item.get("category", "")
+            item_name_lower = item.get("name", "").lower()
+            cat_lower = cat.lower()
+            desc_lower = (item.get("description") or "").lower()
             pop_info = popularity_metrics.get(item_id, {})
             units_sold = pop_info.get("total_units_sold", 0)
 
@@ -71,18 +78,36 @@ class RecommendationModel:
 
                 user_score = 0.65 * cat_norm + 0.35 * item_norm
 
+            # Component 4: Morning Survey Alignment
+            survey_matched = False
+            survey_boost = 0.0
+            if today_survey:
+                # Keyword match on meal preference
+                keywords = [w for w in survey_meal_pref.replace("&", " ").replace("/", " ").split() if len(w) >= 3]
+                if any(kw in item_name_lower or kw in cat_lower or kw in desc_lower for kw in keywords):
+                    survey_matched = True
+                    survey_boost = 0.25
+
+                # Dietary compatibility check
+                if survey_diet_pref in ("veg", "vegan"):
+                    non_veg_terms = ("chicken", "mutton", "fish", "egg", "prawn", "beef", "non-veg", "non veg")
+                    if any(nv in item_name_lower or nv in cat_lower for nv in non_veg_terms):
+                        survey_boost -= 0.40
+                    else:
+                        survey_boost += 0.10
+
             # Compute Final Weighted Composite Score
             if has_user_history:
                 # Personalized Hybrid Weights
                 w_pop = 0.25
                 w_slot = 0.25
                 w_user = 0.50
-                composite = (w_pop * pop_score) + (w_slot * slot_score) + (w_user * user_score)
+                composite = (w_pop * pop_score) + (w_slot * slot_score) + (w_user * user_score) + survey_boost
             else:
                 # Cold-Start Weights
                 w_pop = 0.55
                 w_slot = 0.45
-                composite = (w_pop * pop_score) + (w_slot * slot_score)
+                composite = (w_pop * pop_score) + (w_slot * slot_score) + survey_boost
 
             # Map to calibrated display score between 0.35 and 0.98
             calibrated_score = round(float(np.clip(0.35 + (composite * 0.60), 0.35, 0.98)), 2)
@@ -96,7 +121,9 @@ class RecommendationModel:
                 user_score=user_score,
                 is_personal_favorite=is_personal_favorite,
                 meal_slot=meal_slot,
-                has_user_history=has_user_history
+                has_user_history=has_user_history,
+                survey_matched=survey_matched,
+                today_survey=today_survey
             )
 
             scored_candidates.append({
@@ -112,10 +139,15 @@ class RecommendationModel:
 
     @classmethod
     def _generate_explanation(cls, item, pop_score, units_sold, slot_score, user_score,
-                              is_personal_favorite, meal_slot, has_user_history):
+                              is_personal_favorite, meal_slot, has_user_history,
+                              survey_matched=False, today_survey=None):
         """Generates authentic, human-readable reasons matching actual recommendation signals."""
         cat = item.get("category", "")
         shop_name = item.get("shop_name", "this stall")
+
+        if survey_matched and today_survey:
+            pref = today_survey.get("meal_preference", "your choice")
+            return f"Matches today's survey craving ({pref})"
 
         if has_user_history:
             if is_personal_favorite:

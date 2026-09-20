@@ -541,10 +541,14 @@ def get_my_orders():
 
     # Attach order item summaries
     for order in orders:
+        order["total_amount"] = float(order.get("total_amount") or 0.0)
         items = DB.query(
             "SELECT item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
             (order["id"],),
         )
+        for item in items:
+            item["unit_price"] = float(item.get("unit_price") or 0.0)
+            item["subtotal"] = float(item.get("subtotal") or 0.0)
         order["items"] = items
         order["items_summary"] = ", ".join(f"{i['quantity']}x {i['item_name']}" for i in items)
 
