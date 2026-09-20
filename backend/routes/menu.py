@@ -245,3 +245,68 @@ def get_categories():
     rows = DB.query(sql, tuple(params))
     categories = [r["category"] for r in rows if r.get("category")]
     return jsonify({"success": True, "categories": categories}), 200
+
+
+@menu_bp.get("/menu/today")
+def get_today_daily_menu():
+    """
+    Returns only food items explicitly published by vendors in today's daily menu survey,
+    grouped into breakfast, lunch and dinner. If a shop has not submitted a survey,
+    it is omitted rather than exposing an unconfirmed daily menu.
+    """
+    raw_shop_id = request.args.get("shop_id")
+    params = []
+    sql = """
+        SELECT d.id, d.shop_id, d.menu_item_id, d.meal_period, d.item_name,
+               d.price, d.quantity, d.is_available,
+               s.name AS shop_name, s.slug AS shop_slug
+        FROM vendor_daily_menu_items d
+        INNER JOIN vendor_daily_surveys v ON v.id = d.survey_id
+        INNER JOIN shops s ON s.id = d.shop_id
+        WHERE v.survey_date = CURDATE()
+          AND v.is_serving_today = 1
+          AND d.is_available = 1
+          AND d.quantity > 0
+          AND s.is_active = 1
+          AND s.operational_status = 'OPEN'
+    """
+    if raw_shop_id:
+        try:
+            shop_id = int(raw_shop_id)
+            if shop_id <= 0:
+                raise ValueError
+            sql += " AND d.shop_id = %s"
+            params.append(shop_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid shop_id format."}), 400
+
+    sql += " ORDER BY s.name ASC, FIELD(d.meal_period, 'breakfast', 'lunch', 'dinner'), d.item_name ASC"
+    rows = DB.query(sql, tuple(params))
+
+    grouped = {}
+    for row in rows:
+        shop_key = str(row["shop_id"])
+        if shop_key not in grouped:
+            grouped[shop_key] = {
+                "shop_id": row["shop_id"],
+                "shop_name": row["shop_name"],
+                "shop_slug": row["shop_slug"],
+                "breakfast": [],
+                "lunch": [],
+                "dinner": [],
+            }
+        grouped[shop_key][row["meal_period"]].append({
+            "daily_menu_id": row["id"],
+            "menu_item_id": row["menu_item_id"],
+            "name": row["item_name"],
+            "price": float(row["price"]),
+            "quantity": int(row["quantity"]),
+            "is_available": bool(row["is_available"]),
+            "meal_period": row["meal_period"],
+        })
+
+    return jsonify({
+        "success": True,
+        "date": __import__("datetime").datetime.now().strftime("%Y-%m-%d"),
+        "shops": list(grouped.values()),
+    }), 200
