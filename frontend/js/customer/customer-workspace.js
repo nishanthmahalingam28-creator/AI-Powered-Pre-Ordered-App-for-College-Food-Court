@@ -51,7 +51,7 @@ function build(){
   '<nav class="customer-workspace-nav">'+
   links.map(function(item){return '<a href="'+item[0]+'" class="'+(item[0]===page?'active':'')+'"><i class="'+item[2]+'"></i><span>'+item[1]+'</span></a>';}).join('')+
   '</nav>'+
-  '<div class="customer-workspace-user"><div class="customer-workspace-avatar">'+initial+'</div><div class="min-w-0"><strong>'+name+'</strong><span>'+role+'</span></div><button class="customer-workspace-logout" onclick="handleCustomerLogout()" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></div>';
+  '<div class="customer-workspace-user"><div class="customer-workspace-avatar">'+initial+'</div><div class="min-w-0"><strong>'+name+'</strong><span>'+role+'</span></div><button class="customer-workspace-logout" onclick="if(typeof handleCustomerLogout==='function'){handleCustomerLogout();}" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></div>';
 
  var header=document.createElement('header');
  header.className='customer-workspace-header';
