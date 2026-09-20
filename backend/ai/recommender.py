@@ -62,6 +62,40 @@ class FoodCourtRecommender:
             # 4. Extract Item Popularity Metrics (Strictly valid orders)
             popularity_metrics = FoodCourtFeatures.get_item_popularity_metrics(shop_id=target_shop_id)
 
+            # 4b. Ground today's recommendations in the customer's daily eating plan
+            # and the vendor-published breakfast/lunch/dinner menu.
+            today_survey = None
+            daily_item_ids = []
+            if customer_id:
+                try:
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    today_survey = DB.get_one(
+                        """SELECT plans_to_eat, meal_preference, hunger_level, dietary_preference, meal_type
+                           FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1""",
+                        (customer_id, today_str)
+                    )
+                    if today_survey and bool(today_survey.get("plans_to_eat", 1)):
+                        daily_params = [today_str, today_survey.get("meal_type") or meal_slot]
+                        daily_sql = """
+                            SELECT d.menu_item_id
+                            FROM vendor_daily_menu_items d
+                            INNER JOIN vendor_daily_surveys v ON v.id = d.survey_id
+                            WHERE v.survey_date = %s
+                              AND v.is_serving_today = 1
+                              AND d.meal_period = %s
+                              AND d.is_available = 1
+                              AND d.quantity > 0
+                        """
+                        if target_shop_id:
+                            daily_sql += " AND d.shop_id = %s"
+                            daily_params.append(target_shop_id)
+                        daily_rows = DB.query(daily_sql, tuple(daily_params))
+                        daily_item_ids = [int(row["menu_item_id"]) for row in daily_rows]
+                    elif today_survey and not bool(today_survey.get("plans_to_eat", 1)):
+                        daily_item_ids = []
+                except Exception as se:
+                    logger.debug("Daily survey grounding lookup skipped: %s", se)
+
             # 5. Candidate Generation (Query available menu items)
             # Enforce single-stall constraint right at query level
             sql = """
@@ -80,6 +114,18 @@ class FoodCourtRecommender:
             if target_shop_id:
                 sql += " AND m.shop_id = %s"
                 params.append(target_shop_id)
+
+            # If the customer completed today's survey, recommend only dishes
+            # explicitly published for the selected meal period today.
+            if customer_id and today_survey:
+                if not bool(today_survey.get("plans_to_eat", 1)):
+                    sql += " AND 1 = 0"
+                elif daily_item_ids:
+                    placeholders = ",".join(["%s"] * len(daily_item_ids))
+                    sql += f" AND m.id IN ({placeholders})"
+                    params.extend(daily_item_ids)
+                else:
+                    sql += " AND 1 = 0"
 
             raw_candidates = DB.query(sql, tuple(params))
             if not raw_candidates:
@@ -101,19 +147,9 @@ class FoodCourtRecommender:
                 target_categories=target_categories
             )
 
-            # 6b. Ground with Today's Morning Survey (Personalized explicitly for authenticated student)
-            today_survey = None
-            if customer_id:
-                try:
-                    today_str = datetime.now().strftime("%Y-%m-%d")
-                    today_survey = DB.get_one(
-                        "SELECT meal_preference, hunger_level, dietary_preference, meal_type FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1",
-                        (customer_id, today_str)
-                    )
-                    if today_survey and not target_shop:
-                        slot_heading = f"Today's Survey Picks · {today_survey['meal_preference'].title()}"
-                except Exception as se:
-                    logger.debug("Survey boost lookup skipped: %s", se)
+            # 6b. Apply today's survey preference boost after the authoritative daily-menu filter.
+            if today_survey and not target_shop:
+                slot_heading = f"Today's Survey Picks · {today_survey['meal_preference'].title()}"
 
             if today_survey:
                 pref_tokens = [w.lower() for w in today_survey["meal_preference"].replace("-", " ").replace("/", " ").split() if len(w) > 2]
