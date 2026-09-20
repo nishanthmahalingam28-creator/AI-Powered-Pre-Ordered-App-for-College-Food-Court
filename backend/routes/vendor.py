@@ -449,7 +449,11 @@ def get_vendor_analytics():
             "out_of_stock_dishes": int(menu_stats.get("out_of_stock_dishes") or 0),
             "total_stock": int(menu_stats.get("total_stock") or 0),
             "today_sales": {
-                "date": report_date.isoformat(),
+                "date": end_date.isoformat() if period == "daily" else range_label,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "period": period,
+                "range_label": range_label,
                 "timezone": "Asia/Kolkata",
                 "total_food_sold": int(food_total.get("total_food_sold") or 0),
                 "total_orders": total_orders,
@@ -468,7 +472,7 @@ def get_vendor_analytics():
                 ],
                 "hourly_sales": [
                     {
-                        "hour": int(r.get("hour_of_day") or 0),
+                        "hour": int(r.get("hour") or 0),
                         "total_orders": int(r.get("total_orders") or 0),
                         "food_sold": int(r.get("food_sold") or 0),
                         "revenue": float(r.get("revenue") or 0.0),
