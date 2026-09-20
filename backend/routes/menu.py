@@ -11,19 +11,54 @@ def get_shops():
         """
         SELECT s.id, s.name, s.slug, s.description, s.category, s.image_url, s.is_active,
                s.operational_status, s.created_at, s.updated_at,
-               COUNT(m.id) as total_items
+               (SELECT COUNT(m.id)
+                FROM menu_items m
+                WHERE m.shop_id = s.id AND m.is_available = 1) AS total_items
         FROM shops s
-        LEFT JOIN menu_items m ON m.shop_id = s.id AND m.is_available = 1
-        INNER JOIN audit_logs al
-            ON al.entity_type = 'shop'
-           AND al.action = 'SHOP_CREATED'
-           AND al.entity_id = CAST(s.id AS CHAR)
         WHERE s.is_active = 1
-        GROUP BY s.id
         ORDER BY s.id ASC
         """
     )
-    # Ensure sanitized, clean output without internal secrets
+    safe_shops = []
+    for s in shops:
+        safe_shops.append({
+            "id": s["id"],
+            "name": s["name"],
+            "slug": s["slug"],
+            "description": s.get("description") or "",
+            "category": s.get("category") or "Multi-Cuisine",
+            "image_url": s.get("image_url"),
+            "is_active": bool(s.get("is_active", 1)),
+            "operational_status": str(s.get("operational_status") or "OPEN").upper(),
+            "total_items": int(s.get("total_items") or 0),
+            "created_at": str(s.get("created_at") or ""),
+            "updated_at": str(s.get("updated_at") or ""),
+        })
+    return jsonify({"success": True, "shops": safe_shops}), 200
+
+
+@menu_bp.get("/shops/admin-created")
+def get_admin_created_shops():
+    """Returns only active shops that were created through the Admin shop-management flow."""
+    shops = DB.query(
+        """
+        SELECT s.id, s.name, s.slug, s.description, s.category, s.image_url, s.is_active,
+               s.operational_status, s.created_at, s.updated_at,
+               (SELECT COUNT(m.id)
+                FROM menu_items m
+                WHERE m.shop_id = s.id AND m.is_available = 1) AS total_items
+        FROM shops s
+        WHERE s.is_active = 1
+          AND EXISTS (
+              SELECT 1
+              FROM audit_logs al
+              WHERE al.entity_type = 'shop'
+                AND al.action = 'SHOP_CREATED'
+                AND al.entity_id = CAST(s.id AS CHAR)
+          )
+        ORDER BY s.id ASC
+        """
+    )
     safe_shops = []
     for s in shops:
         safe_shops.append({
