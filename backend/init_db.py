@@ -363,6 +363,13 @@ def init_sqlite():
     _safe_add_column("shops", "operational_status", "TEXT NOT NULL DEFAULT 'OPEN'")
     _safe_add_column("shops", "created_by_admin", "TINYINT(1) NOT NULL DEFAULT 0")
 
+    # Preserve the current production workflow: YPR is the existing Admin-created shop.
+    # Future shops created through the Admin API are explicitly marked created_by_admin=1.
+    try:
+        cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
+    except Exception:
+        pass
+
     cur.executemany("INSERT OR REPLACE INTO users (id, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)", DEFAULT_USERS)
     cur.execute("INSERT OR REPLACE INTO customer_profiles (id, user_id, customer_type, full_name, identifier, mobile) VALUES (1, 8, 'student', 'KPR Student', '21CS042', '9876543210')")
     cur.executemany("INSERT OR REPLACE INTO shops (id, name, slug, owner_user_id, description, category, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)", DEFAULT_STALLS)
