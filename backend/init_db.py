@@ -408,6 +408,17 @@ def init_mysql():
                         cur.execute(stmt)
             print("MySQL schema executed successfully.")
 
+        # Production-safe migrations for existing MySQL databases.
+        # CREATE TABLE IF NOT EXISTS does not add new columns to an existing table,
+        # so explicitly migrate the shops table before the Admin-created-shop endpoint is used.
+        with conn.cursor() as cur:
+            cur.execute("""
+                ALTER TABLE shops
+                ADD COLUMN IF NOT EXISTS created_by_admin TINYINT(1) NOT NULL DEFAULT 0
+            """)
+            # Preserve the existing production YPR shop as Admin-created.
+            cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
+
         # Seed data handling: Only seed in development mode or when explicitly opted in
         flask_env = os.getenv("FLASK_ENV", "development").lower()
         is_prod = flask_env in ("production", "prod")
