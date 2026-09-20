@@ -412,10 +412,26 @@ def init_mysql():
         # CREATE TABLE IF NOT EXISTS does not add new columns to an existing table,
         # so explicitly migrate the shops table before the Admin-created-shop endpoint is used.
         with conn.cursor() as cur:
+            # MySQL 8.4 does not support IF NOT EXISTS for ALTER TABLE ... ADD COLUMN.
+            # Check INFORMATION_SCHEMA first so this migration is safe for both new and
+            # existing production databases.
             cur.execute("""
-                ALTER TABLE shops
-                ADD COLUMN IF NOT EXISTS created_by_admin TINYINT(1) NOT NULL DEFAULT 0
-            """)
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s
+                  AND TABLE_NAME = 'shops'
+                  AND COLUMN_NAME = 'created_by_admin'
+            """, (db_name,))
+            column_exists = int(cur.fetchone()[0] or 0) > 0
+            if not column_exists:
+                cur.execute("""
+                    ALTER TABLE shops
+                    ADD COLUMN created_by_admin TINYINT(1) NOT NULL DEFAULT 0
+                """)
+                print("MySQL migration: added shops.created_by_admin.")
+            else:
+                print("MySQL migration: shops.created_by_admin already exists.")
+
             # Preserve the existing production YPR shop as Admin-created.
             cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
 
