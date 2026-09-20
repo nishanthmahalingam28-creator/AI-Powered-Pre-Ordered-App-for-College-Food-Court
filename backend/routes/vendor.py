@@ -1477,9 +1477,15 @@ def get_vendor_morning_vote_results():
     if not shop_id:
         return jsonify({"success": False, "message": "No active stall is assigned to this vendor."}), 403
     today = _today_str()
+    vendor_id = session.get("user_id")
     survey = DB.get_one(
-        "SELECT id, shop_id, survey_date, is_serving_today FROM vendor_daily_surveys WHERE shop_id=%s AND survey_date=%s LIMIT 1",
-        (shop_id, today),
+        """
+        SELECT id, shop_id, survey_date, is_serving_today
+        FROM vendor_daily_surveys
+        WHERE vendor_user_id=%s AND shop_id=%s AND survey_date=%s
+        LIMIT 1
+        """,
+        (vendor_id, shop_id, today),
     )
     if not survey:
         return jsonify({"success": True, "date": today, "survey": None, "total_votes": 0, "options": []}), 200
@@ -1490,7 +1496,7 @@ def get_vendor_morning_vote_results():
         FROM vendor_daily_menu_items d
         LEFT JOIN morning_survey_votes v
           ON v.survey_id = d.survey_id AND v.menu_item_id = d.menu_item_id
-        WHERE d.survey_id = %s AND d.is_available = 1
+        WHERE d.survey_id = %s
         GROUP BY d.menu_item_id, d.meal_period, d.item_name, d.price
         ORDER BY vote_count DESC, d.meal_period, d.item_name
     """, (survey["id"],))
