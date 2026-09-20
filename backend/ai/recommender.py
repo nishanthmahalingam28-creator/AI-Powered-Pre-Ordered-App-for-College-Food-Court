@@ -67,6 +67,7 @@ class FoodCourtRecommender:
             today_survey = None
             daily_item_ids = []
             daily_menu_published = False
+            today_poll_item_ids = set()
             if customer_id:
                 try:
                     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -107,6 +108,30 @@ class FoodCourtRecommender:
                         daily_item_ids = []
                 except Exception as se:
                     logger.debug("Daily survey grounding lookup skipped: %s", se)
+
+            # 4c. Read the student's choices from today's vendor-published Morning Survey.
+            # The vote table stores vendor_daily_menu_items.id; resolve that to the
+            # real menu_items.id used by the cart/order system.
+            if customer_id:
+                try:
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    poll_rows = DB.query(
+                        """
+                        SELECT d.menu_item_id
+                        FROM morning_survey_votes v
+                        INNER JOIN vendor_daily_surveys s ON s.id = v.survey_id
+                        INNER JOIN vendor_daily_menu_items d ON d.id = v.menu_item_id
+                        WHERE v.student_user_id = %s
+                          AND s.survey_date = %s
+                          AND s.is_serving_today = 1
+                          AND d.is_available = 1
+                          AND d.quantity > 0
+                        """,
+                        (customer_id, today_str),
+                    )
+                    today_poll_item_ids = {int(row["menu_item_id"]) for row in poll_rows}
+                except Exception as pe:
+                    logger.debug("Morning poll preference lookup skipped: %s", pe)
 
             # 5. Candidate Generation (Query available menu items)
             # Enforce single-stall constraint right at query level
@@ -175,6 +200,15 @@ class FoodCourtRecommender:
                         entry["reason"] = f"Matches your morning preference ({today_survey['meal_preference']})"
                     elif diet in ("veg", "vegetarian") and "chicken" not in c_name and "egg" not in c_name:
                         entry["score"] += 0.1
+                scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+
+            # 6c. Direct choices from today's Morning Survey get a strong
+            # preference boost while the normal AI ranking still applies to all items.
+            if today_poll_item_ids:
+                for entry in scored_candidates:
+                    if int(entry["item"]["id"]) in today_poll_item_ids:
+                        entry["score"] += 0.6
+                        entry["reason"] = "Selected in today's Morning Survey"
                 scored_candidates.sort(key=lambda x: x["score"], reverse=True)
 
             # 7. AUTHORITATIVE AVAILABILITY & INTEGRITY FILTER (Mandatory Step 7)
