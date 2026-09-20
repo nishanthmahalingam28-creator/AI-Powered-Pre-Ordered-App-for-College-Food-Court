@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('customer', 'vendor', 'admin') NOT NULL DEFAULT 'customer',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    is_temporary TINYINT(1) NOT NULL DEFAULT 0,
+    account_expires_at DATETIME NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
