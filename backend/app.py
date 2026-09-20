@@ -21,6 +21,7 @@ from routes.expenses import expenses_bp
 from routes.income import income_bp
 from routes.budgets import budgets_bp
 from routes.goals import goals_bp
+from realtime import socketio
 
 # Load local .env only if not explicitly in production mode
 if os.getenv("FLASK_ENV", "").lower() not in ("production", "prod"):
@@ -100,6 +101,15 @@ if "*" in allowed_origins and not is_development:
     allowed_origins = [o for o in allowed_origins if o != "*"]
 
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+# Socket.IO uses the same authenticated Flask session as the REST API.
+# REDIS_URL is optional for a future multi-instance deployment; the current
+# deployment intentionally uses one Socket.IO worker so in-memory rooms stay coherent.
+socketio_options = {"cors_allowed_origins": allowed_origins}
+redis_url = os.getenv("REDIS_URL")
+if redis_url:
+    socketio_options["message_queue"] = redis_url
+socketio.init_app(app, **socketio_options)
 
 # Register All API Blueprints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
