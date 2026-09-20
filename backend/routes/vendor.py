@@ -388,7 +388,17 @@ def get_vendor_analytics():
         completed = row.get("completed_time")
         if not completed:
             continue
-        hour = completed.hour if hasattr(completed, "hour") else int(str(completed)[11:13])
+        if hasattr(completed, "hour"):
+            if getattr(completed, "tzinfo", None) is None:
+                completed = completed.replace(tzinfo=timezone.utc)
+            hour = completed.astimezone(ist).hour
+        else:
+            raw_completed = str(completed).strip()
+            try:
+                parsed_completed = datetime.strptime(raw_completed[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+                hour = parsed_completed.astimezone(ist).hour
+            except ValueError:
+                hour = int(raw_completed[11:13])
         bucket = hourly_map.setdefault(hour, {"order_ids": set(), "food_sold": 0, "revenue": 0.0})
         bucket["order_ids"].add(row["id"])
         bucket["food_sold"] += int(row.get("quantity") or 0)
