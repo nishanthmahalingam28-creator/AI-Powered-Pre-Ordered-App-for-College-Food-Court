@@ -8,7 +8,7 @@ let currentOperationalStatus = 'OPEN';
 document.addEventListener('DOMContentLoaded', async () => {
     const authed = await initShopProfile();
     if (authed) {
-        await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications(), loadVendorDailySurvey()]);
+        await Promise.all([loadAnalytics(), renderMenuItems(), renderOrders(), initVendorNotifications(), loadVendorDailySurvey(), loadMorningFoodVotes()]);
     }
 });
 
@@ -141,6 +141,44 @@ async function setVendorOperationalStatus(newStatus) {
     } catch (e) {
         alert('Failed to connect to server.');
     }
+}
+
+
+async function loadMorningFoodVotes() {
+    const wrap = document.getElementById('dashboard-vote-results');
+    const totalEl = document.getElementById('dashboard-vote-total');
+    if (!wrap) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/vendor/daily-survey/vote-results`, { credentials: 'include' });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Unable to load food votes.');
+        const total = Number(data.total_votes) || 0;
+        const options = data.options || [];
+        if (totalEl) totalEl.innerText = `${total} vote${total === 1 ? '' : 's'}`;
+        if (!options.length) {
+            wrap.innerHTML = '<p class="text-xs text-slate-400 py-4">No morning food survey has been published for today.</p>';
+            return;
+        }
+        wrap.innerHTML = options.map(item => {
+            const votes = Number(item.vote_count) || 0;
+            const pct = Number(item.percentage) || 0;
+            return `<div class="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-black text-slate-800 truncate">${escapeHtmlDashboard(item.item_name)}</p>
+                    <span class="text-xs font-black text-amber-700 whitespace-nowrap">${votes} vote${votes === 1 ? '' : 's'}</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase mt-1">${escapeHtmlDashboard(item.meal_period || 'food')}</p>
+                <div class="h-2 rounded-full bg-slate-200 overflow-hidden mt-3"><div class="h-full bg-amber-500 rounded-full" style="width:${Math.min(100, pct)}%"></div></div>
+                <p class="text-[10px] text-slate-400 text-right mt-1">${pct}%</p>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        wrap.innerHTML = '<p class="text-xs text-rose-600">Unable to load morning food votes.</p>';
+        console.error('Morning food votes:', e);
+    }
+}
+function escapeHtmlDashboard(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // Load Vendor Analytics
