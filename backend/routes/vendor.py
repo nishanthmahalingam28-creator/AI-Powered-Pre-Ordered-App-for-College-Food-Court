@@ -614,10 +614,10 @@ def get_vendor_daily_survey():
 
     menu_items = DB.query(
         """
-        SELECT id, name, description, price, category, quantity, is_available
+        SELECT id, name, description, price, category, meal_period, quantity, is_available
         FROM menu_items
         WHERE shop_id = %s
-        ORDER BY category ASC, name ASC
+        ORDER BY FIELD(meal_period, 'breakfast', 'lunch', 'dinner'), category ASC, name ASC
         """,
         (shop_id,),
     )
@@ -653,6 +653,7 @@ def get_vendor_daily_survey():
             "description": item.get("description") or "",
             "price": float(item["price"]),
             "category": item.get("category") or "Food",
+            "meal_period": str(item.get("meal_period") or "lunch").lower(),
             "stock_quantity": int(item.get("quantity") or 0),
             "is_available": bool(item.get("is_available")),
         })
