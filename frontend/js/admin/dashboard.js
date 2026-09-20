@@ -6,6 +6,7 @@ let cachedVendors = [];
 let cachedAdminCount = 0;
 let cachedCustomerCount = null;
 const loadedAdminTabs = new Set(['shops']);
+let cachedTemporaryAccounts = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const isAdmin = await verifyAdmin();
@@ -34,7 +35,7 @@ async function verifyAdmin() {
 }
 
 function switchTab(tabId) {
-    const tabs = ['shops', 'vendors', 'customers', 'orders', 'payments', 'audit'];
+    const tabs = ['shops', 'vendors', 'customers', 'temporary', 'orders', 'payments', 'audit'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         const sec = document.getElementById(`section-${t}`);
@@ -52,6 +53,7 @@ function switchTab(tabId) {
         if (tabId === 'shops') loadShops();
         else if (tabId === 'vendors') loadVendors();
         else if (tabId === 'customers') loadCustomers();
+        else if (tabId === 'temporary') loadTemporaryAccounts();
         else if (tabId === 'orders') loadGlobalOrders();
         else if (tabId === 'payments') loadPayments();
         else if (tabId === 'audit') loadAuditLogs();
@@ -421,6 +423,92 @@ async function toggleCustomerStatus(userId) {
     } catch (e) {
         alert('Failed to connect to server.');
     }
+}
+
+// ============================================================================
+// TEMPORARY CUSTOMER ACCOUNTS
+// ============================================================================
+
+async function loadTemporaryAccounts() {
+    const tbody = document.getElementById('temporary-accounts-table-body');
+    if (!tbody) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/customers`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.customers)) {
+            cachedTemporaryAccounts = data.customers.filter(c => Number(c.is_temporary) === 1);
+            renderTemporaryAccounts();
+        }
+    } catch (e) { console.error('Temporary accounts fetch error:', e); }
+}
+
+function renderTemporaryAccounts() {
+    const tbody = document.getElementById('temporary-accounts-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!cachedTemporaryAccounts.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No temporary accounts created.</td></tr>';
+        return;
+    }
+    const now = Date.now();
+    cachedTemporaryAccounts.forEach(c => {
+        const expires = c.account_expires_at ? new Date(String(c.account_expires_at).replace(' ', 'T')).getTime() : 0;
+        const expired = expires && expires <= now;
+        const active = Number(c.is_active) === 1 && !expired;
+        const status = active ? 'Active' : (expired ? 'Expired' : 'Suspended');
+        const statusClass = active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors';
+        tr.innerHTML = `<td class="p-3 font-bold text-slate-800">${c.full_name || 'Temporary User'}</td>
+            <td class="p-3 text-slate-600">${c.email}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase">${c.customer_type || 'guest'}</span></td>
+            <td class="p-3 font-mono text-[11px]">${c.account_expires_at || '—'}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusClass}">${status}</span></td>
+            <td class="p-3 text-right"><button onclick="deleteTemporaryAccount(${c.id}, '${String(c.email).replace(/'/g, "\\'")}')" class="px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700">Delete</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function toggleTemporaryAccountModal(show) {
+    const modal = document.getElementById('temporary-account-modal');
+    if (!modal) return;
+    if (show) modal.classList.remove('hidden');
+    else { modal.classList.add('hidden'); document.getElementById('temporary-account-form')?.reset(); }
+}
+
+async function handleCreateTemporaryAccount(event) {
+    event.preventDefault();
+    const payload = {
+        customer_type: document.getElementById('temporary-customer-type').value,
+        full_name: document.getElementById('temporary-full-name').value.trim(),
+        email: document.getElementById('temporary-email').value.trim(),
+        password: document.getElementById('temporary-password').value,
+        identifier: document.getElementById('temporary-identifier').value.trim(),
+        mobile: document.getElementById('temporary-mobile').value.trim(),
+        duration_hours: Number(document.getElementById('temporary-duration').value)
+    };
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/customers/temporary`, { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const data = await res.json();
+        if (!data.success) { alert(data.message || 'Failed to create temporary account.'); return; }
+        toggleTemporaryAccountModal(false);
+        alert(`Temporary ${payload.customer_type} account created.\\n\\nLogin: ${payload.email}\\nPassword: ${payload.password}\\nExpires: ${data.account.account_expires_at}`);
+        await loadTemporaryAccounts();
+        await loadCustomers();
+        await loadOverview();
+    } catch (e) { alert('Failed to connect to server while creating the temporary account.'); }
+}
+
+async function deleteTemporaryAccount(userId, email) {
+    if (!confirm(`Delete temporary account "${email}" permanently?`)) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/customers/${userId}/temporary`, { method:'DELETE', credentials:'include' });
+        const data = await res.json();
+        if (!data.success) { alert(data.message || 'Failed to delete temporary account.'); return; }
+        await loadTemporaryAccounts();
+        await loadCustomers();
+        await loadOverview();
+    } catch (e) { alert('Failed to connect to server while deleting the temporary account.'); }
 }
 
 // ============================================================================
