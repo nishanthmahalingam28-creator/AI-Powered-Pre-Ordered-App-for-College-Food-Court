@@ -59,21 +59,26 @@ def role_required(allowed_roles):
                 return jsonify({"success": False, "message": "Authentication required."}), 401
             user_role = session.get("role")
 
-            # The database is authoritative for authorization. If a stale session
-            # contains an old role (for example after switching customer/vendor
-            # portals in the same browser), refresh the role from the authenticated
-            # user record before denying access.
-            if user_role not in allowed_roles:
-                canonical_user = DB.get_one(
-                    "SELECT role, is_active, account_expires_at FROM users WHERE id = %s LIMIT 1",
-                    (session.get("user_id"),),
-                )
-                if canonical_user and canonical_user.get("is_active") and canonical_user.get("role") in allowed_roles and (not canonical_user.get("account_expires_at") or canonical_user.get("account_expires_at") > datetime.now()):
-                    user_role = canonical_user["role"]
-                    session["role"] = user_role
-                else:
-                    return jsonify({"success": False, "message": "Forbidden: Insufficient privileges."}), 403
+            # The database is authoritative for authorization. Always refresh the
+            # authenticated user record so temporary accounts stop working exactly
+            # at their expiry time, even if a session was opened before expiry.
+            canonical_user = DB.get_one(
+                "SELECT role, is_active, is_temporary, account_expires_at FROM users WHERE id = %s LIMIT 1",
+                (session.get("user_id"),),
+            )
+            if not canonical_user or not canonical_user.get("is_active"):
+                session.clear()
+                return jsonify({"success": False, "message": "Account is inactive."}), 403
 
+            expires_at = canonical_user.get("account_expires_at")
+            if canonical_user.get("is_temporary") and expires_at and expires_at <= datetime.now():
+                session.clear()
+                return jsonify({"success": False, "message": "This temporary account has expired."}), 403
+
+            if canonical_user.get("role") not in allowed_roles:
+                return jsonify({"success": False, "message": "Forbidden: Insufficient privileges."}), 403
+
+            session["role"] = canonical_user["role"]
             return f(*args, **kwargs)
         return decorated_function
     return decorator
