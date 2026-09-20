@@ -1053,7 +1053,19 @@ def save_vendor_daily_survey():
                     """,
                     (1 if is_serving_today else 0, survey_id),
                 )
-                tx.execute("DELETE FROM vendor_daily_menu_items WHERE survey_id = %s", (survey_id,))
+                # Never delete daily-menu rows after students may have voted.
+                # morning_survey_votes has an FK to these rows with ON DELETE CASCADE,
+                # so deleting them would silently erase the students' votes.
+                # Instead, mark the old rows unavailable and update/insert the
+                # selected rows below. This preserves the historical vote rows.
+                tx.execute(
+                    """
+                    UPDATE vendor_daily_menu_items
+                    SET is_available = 0, quantity = 0, updated_at = CURRENT_TIMESTAMP
+                    WHERE survey_id = %s
+                    """,
+                    (survey_id,),
+                )
             else:
                 survey_id = tx.execute(
                     """
@@ -1088,23 +1100,47 @@ def save_vendor_daily_survey():
                         if not item:
                             raise PermissionError("One or more selected dishes do not belong to your assigned stall.")
 
-                        tx.execute(
+                        item_available = 1 if quantity > 0 and item.get("is_available") else 0
+                        existing_daily = tx.get_one(
                             """
-                            INSERT INTO vendor_daily_menu_items
-                                (survey_id, shop_id, menu_item_id, meal_period, item_name, price, quantity, is_available)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            SELECT id
+                            FROM vendor_daily_menu_items
+                            WHERE survey_id = %s AND menu_item_id = %s AND meal_period = %s
+                            LIMIT 1
                             """,
-                            (
-                                survey_id,
-                                shop_id,
-                                item_id,
-                                period,
-                                item["name"],
-                                item["price"],
-                                quantity,
-                                1 if quantity > 0 and item.get("is_available") else 0,
-                            ),
+                            (survey_id, item_id, period),
                         )
+                        if existing_daily:
+                            tx.execute(
+                                """
+                                UPDATE vendor_daily_menu_items
+                                SET item_name = %s,
+                                    price = %s,
+                                    quantity = %s,
+                                    is_available = %s,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE id = %s
+                                """,
+                                (item["name"], item["price"], quantity, item_available, existing_daily["id"]),
+                            )
+                        else:
+                            tx.execute(
+                                """
+                                INSERT INTO vendor_daily_menu_items
+                                    (survey_id, shop_id, menu_item_id, meal_period, item_name, price, quantity, is_available)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                """,
+                                (
+                                    survey_id,
+                                    shop_id,
+                                    item_id,
+                                    period,
+                                    item["name"],
+                                    item["price"],
+                                    quantity,
+                                    item_available,
+                                ),
+                            )
 
             AuditService.log_action(
                 actor_id=vendor_id,
