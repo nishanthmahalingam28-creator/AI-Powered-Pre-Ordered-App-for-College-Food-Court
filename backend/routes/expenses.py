@@ -165,7 +165,7 @@ def get_expenses():
     try:
         rows = DB.get_all(
             """
-            SELECT id, user_id, amount, category, description, expense_date, created_at, updated_at
+            SELECT id, user_id, order_id, amount, category, description, expense_date, created_at, updated_at
             FROM expenses
             WHERE user_id = %s
             ORDER BY expense_date DESC, id DESC
@@ -319,7 +319,7 @@ def delete_expense(expense_id: int):
     user_id = session.get("user_id")
 
     existing = DB.get_one(
-        "SELECT id, user_id FROM expenses WHERE id = %s",
+        "SELECT id, user_id, order_id FROM expenses WHERE id = %s",
         (expense_id,)
     )
 
