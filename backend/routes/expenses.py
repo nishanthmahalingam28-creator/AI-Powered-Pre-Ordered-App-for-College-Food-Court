@@ -163,13 +163,37 @@ def get_expenses():
     user_id = session.get("user_id")
 
     try:
+        # Sync every existing non-cancelled food order into the student's
+        # expense ledger. This also backfills orders placed before the
+        # expense feature/fix was deployed. The unique order_id constraint
+        # makes this idempotent and prevents duplicate expenses.
+        DB.execute(
+            """
+            INSERT INTO expenses
+                (user_id, order_id, amount, category, description, expense_date)
+            SELECT
+                o.customer_id,
+                o.id,
+                o.total_amount,
+                'Food',
+                CONCAT('Food order #', o.order_reference),
+                DATE(COALESCE(o.completed_time, o.created_at))
+            FROM orders o
+            LEFT JOIN expenses e ON e.order_id = o.id
+            WHERE o.customer_id = %s
+              AND o.order_status <> 'cancelled'
+              AND e.id IS NULL
+            """
+            (user_id,)
+        )
+
         rows = DB.get_all(
             """
             SELECT id, user_id, order_id, amount, category, description, expense_date, created_at, updated_at
             FROM expenses
             WHERE user_id = %s
             ORDER BY expense_date DESC, id DESC
-            """,
+            """
             (user_id,)
         )
 
