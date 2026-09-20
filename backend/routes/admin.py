@@ -16,107 +16,88 @@ ALLOWED_OPERATIONAL_STATUSES = {"OPEN", "CLOSED", "TEMPORARILY_UNAVAILABLE"}
 @admin_bp.get("/overview")
 @role_required(["admin"])
 def get_admin_overview():
-    """
-    Returns high-level system metrics, revenue turnover, stall operational telemetry,
-    user counts, payment summaries, and recent orders.
-    """
-    stats = {}
+    """Returns dashboard metrics using one pooled DB connection for all reads."""
+    results = DB.query_many([
+        ("""
+            SELECT COALESCE(SUM(total_amount), 0) as total_turnover,
+                   COUNT(id) as total_orders,
+                   SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+                   SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders,
+                   SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+                   SUM(CASE WHEN order_status = 'preparing' THEN 1 ELSE 0 END) as preparing_orders,
+                   SUM(CASE WHEN order_status = 'ready' THEN 1 ELSE 0 END) as ready_orders,
+                   SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders
+            FROM orders
+        """, ()),
+        ("""
+            SELECT COUNT(id) as total_shops,
+                   SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_shops,
+                   SUM(CASE WHEN is_active = 1 AND UPPER(operational_status) = 'OPEN' THEN 1 ELSE 0 END) as open_shops,
+                   SUM(CASE WHEN is_active = 1 AND UPPER(operational_status) = 'CLOSED' THEN 1 ELSE 0 END) as closed_shops,
+                   SUM(CASE WHEN is_active = 1 AND UPPER(operational_status) = 'TEMPORARILY_UNAVAILABLE' THEN 1 ELSE 0 END) as unavailable_shops
+            FROM shops
+        """, ()),
+        ("""
+            SELECT COUNT(id) as total_users,
+                   SUM(CASE WHEN role = 'customer' THEN 1 ELSE 0 END) as total_customers,
+                   SUM(CASE WHEN role = 'vendor' THEN 1 ELSE 0 END) as total_vendors,
+                   SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as total_admins
+            FROM users WHERE is_active = 1
+        """, ()),
+        ("""
+            SELECT COALESCE(SUM(CASE WHEN status = 'successful' THEN amount ELSE 0 END), 0) as total_collected,
+                   COALESCE(SUM(CASE WHEN status = 'refunded' THEN amount ELSE 0 END), 0) as total_refunded,
+                   SUM(CASE WHEN status = 'successful' THEN 1 ELSE 0 END) as successful_payments,
+                   SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_payments,
+                   SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_payments
+            FROM payments
+        """, ()),
+        ("""
+            SELECT o.id, o.order_reference, o.total_amount, o.order_status, o.payment_status,
+                   o.payment_method, o.created_at,
+                   s.name as shop_name, cp.full_name as customer_name, u.email as customer_email
+            FROM orders o
+            INNER JOIN shops s ON s.id = o.shop_id
+            LEFT JOIN customer_profiles cp ON cp.user_id = o.customer_id
+            LEFT JOIN users u ON u.id = o.customer_id
+            ORDER BY o.id DESC LIMIT 10
+        """, ()),
+    ])
 
-    # Revenue and Orders
-    order_stats = DB.get_one(
-        """
-        SELECT COALESCE(SUM(total_amount), 0) as total_turnover,
-               COUNT(id) as total_orders,
-               SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
-               SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders,
-               SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
-               SUM(CASE WHEN order_status = 'preparing' THEN 1 ELSE 0 END) as preparing_orders,
-               SUM(CASE WHEN order_status = 'ready' THEN 1 ELSE 0 END) as ready_orders,
-               SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders
-        FROM orders
-        """
-    ) or {}
-    stats["total_turnover"] = float(order_stats.get("total_turnover") or 0.0)
-    stats["total_orders"] = int(order_stats.get("total_orders") or 0)
-    stats["completed_orders"] = int(order_stats.get("completed_orders") or 0)
-    stats["active_orders"] = int(order_stats.get("active_orders") or 0)
-    stats["pending_orders"] = int(order_stats.get("pending_orders") or 0)
-    stats["preparing_orders"] = int(order_stats.get("preparing_orders") or 0)
-    stats["ready_orders"] = int(order_stats.get("ready_orders") or 0)
-    stats["cancelled_orders"] = int(order_stats.get("cancelled_orders") or 0)
+    order_stats = (results[0][0] if results[0] else {}) or {}
+    shop_stats = (results[1][0] if results[1] else {}) or {}
+    user_counts = (results[2][0] if results[2] else {}) or {}
+    payment_stats = (results[3][0] if results[3] else {}) or {}
+    recent_orders = results[4]
 
-    # Shops count and operational breakdown
-    shop_stats = DB.get_one(
-        """
-        SELECT COUNT(id) as total_shops,
-               SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_shops,
-               SUM(CASE WHEN is_active = 1 AND UPPER(operational_status) = 'OPEN' THEN 1 ELSE 0 END) as open_shops,
-               SUM(CASE WHEN is_active = 1 AND UPPER(operational_status) = 'CLOSED' THEN 1 ELSE 0 END) as closed_shops,
-               SUM(CASE WHEN is_active = 1 AND UPPER(operational_status) = 'TEMPORARILY_UNAVAILABLE' THEN 1 ELSE 0 END) as unavailable_shops
-        FROM shops
-        """
-    ) or {}
-    stats["total_shops"] = int(shop_stats.get("total_shops") or 0)
-    stats["active_shops"] = int(shop_stats.get("active_shops") or 0)
-    stats["open_shops"] = int(shop_stats.get("open_shops") or 0)
-    stats["closed_shops"] = int(shop_stats.get("closed_shops") or 0)
-    stats["unavailable_shops"] = int(shop_stats.get("unavailable_shops") or 0)
-
-    # Users count
-    user_counts = DB.get_one(
-        """
-        SELECT COUNT(id) as total_users,
-               SUM(CASE WHEN role = 'customer' THEN 1 ELSE 0 END) as total_customers,
-               SUM(CASE WHEN role = 'vendor' THEN 1 ELSE 0 END) as total_vendors,
-               SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as total_admins
-        FROM users
-        WHERE is_active = 1
-        """
-    ) or {}
-    stats["total_users"] = int(user_counts.get("total_users") or 0)
-    stats["total_customers"] = int(user_counts.get("total_customers") or 0)
-    stats["total_vendors"] = int(user_counts.get("total_vendors") or 0)
-    stats["total_admins"] = int(user_counts.get("total_admins") or 0)
-
-    # Payments summary
-    payment_stats = DB.get_one(
-        """
-        SELECT COALESCE(SUM(CASE WHEN status = 'successful' THEN amount ELSE 0 END), 0) as total_collected,
-               COALESCE(SUM(CASE WHEN status = 'refunded' THEN amount ELSE 0 END), 0) as total_refunded,
-               SUM(CASE WHEN status = 'successful' THEN 1 ELSE 0 END) as successful_payments,
-               SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_payments,
-               SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_payments
-        FROM payments
-        """
-    ) or {}
-    stats["payments"] = {
-        "total_collected": float(payment_stats.get("total_collected") or 0.0),
-        "total_refunded": float(payment_stats.get("total_refunded") or 0.0),
-        "successful_payments": int(payment_stats.get("successful_payments") or 0),
-        "pending_payments": int(payment_stats.get("pending_payments") or 0),
-        "failed_payments": int(payment_stats.get("failed_payments") or 0),
+    stats = {
+        "total_turnover": float(order_stats.get("total_turnover") or 0.0),
+        "total_orders": int(order_stats.get("total_orders") or 0),
+        "completed_orders": int(order_stats.get("completed_orders") or 0),
+        "active_orders": int(order_stats.get("active_orders") or 0),
+        "pending_orders": int(order_stats.get("pending_orders") or 0),
+        "preparing_orders": int(order_stats.get("preparing_orders") or 0),
+        "ready_orders": int(order_stats.get("ready_orders") or 0),
+        "cancelled_orders": int(order_stats.get("cancelled_orders") or 0),
+        "total_shops": int(shop_stats.get("total_shops") or 0),
+        "active_shops": int(shop_stats.get("active_shops") or 0),
+        "open_shops": int(shop_stats.get("open_shops") or 0),
+        "closed_shops": int(shop_stats.get("closed_shops") or 0),
+        "unavailable_shops": int(shop_stats.get("unavailable_shops") or 0),
+        "total_users": int(user_counts.get("total_users") or 0),
+        "total_customers": int(user_counts.get("total_customers") or 0),
+        "total_vendors": int(user_counts.get("total_vendors") or 0),
+        "total_admins": int(user_counts.get("total_admins") or 0),
+        "payments": {
+            "total_collected": float(payment_stats.get("total_collected") or 0.0),
+            "total_refunded": float(payment_stats.get("total_refunded") or 0.0),
+            "successful_payments": int(payment_stats.get("successful_payments") or 0),
+            "pending_payments": int(payment_stats.get("pending_payments") or 0),
+            "failed_payments": int(payment_stats.get("failed_payments") or 0),
+        },
     }
 
-    # Recent Transactions
-    recent_orders = DB.query(
-        """
-        SELECT o.id, o.order_reference, o.total_amount, o.order_status, o.payment_status,
-               o.payment_method, o.created_at,
-               s.name as shop_name, cp.full_name as customer_name, u.email as customer_email
-        FROM orders o
-        INNER JOIN shops s ON s.id = o.shop_id
-        LEFT JOIN customer_profiles cp ON cp.user_id = o.customer_id
-        LEFT JOIN users u ON u.id = o.customer_id
-        ORDER BY o.id DESC
-        LIMIT 10
-        """
-    )
-
-    return jsonify({
-        "success": True,
-        "overview": stats,
-        "recent_orders": recent_orders
-    }), 200
+    return jsonify({"success": True, "overview": stats, "recent_orders": recent_orders}), 200
 
 
 # ============================================================================
