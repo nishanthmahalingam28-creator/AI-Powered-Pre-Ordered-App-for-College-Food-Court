@@ -92,58 +92,25 @@ body.customer-workspace-page .customer-workspace-main code { max-width: 100%; ov
   body.customer-workspace-page .student-welcome-actions { grid-template-columns: 1fr; }
 }
 
-@media(max-width:480px){
-  /* Dashboard only: replace the page title with a compact navigation dropdown on phones. */
-  .customer-workspace-header .mobile-workspace-menu{
-    display:block;
-    width:min(190px,52vw);
-    height:38px;
-    margin-top:5px;
-    padding:0 30px 0 10px;
-    border:1px solid rgba(255,255,255,.18);
-    border-radius:10px;
-    background:#0b2864;
-    color:#fff;
-    font-size:12px;
-    font-weight:800;
-    outline:none;
-    box-sizing:border-box;
-  }
-  .customer-workspace-header .mobile-workspace-menu:focus{
-    border-color:#20cbbd;
-    box-shadow:0 0 0 2px rgba(32,203,189,.18);
-  }
-}
-@media(min-width:481px){
-  .customer-workspace-header .mobile-workspace-menu{display:none;}
-}
 @media (max-width:480px){
-  /* Student dashboard mobile header: hamburger replaces Dashboard title. */
   .customer-workspace-header #customer-workspace-page-title,
-  .customer-workspace-header .customer-workspace-header-label,
-  .customer-workspace-header #mobile-workspace-menu{display:none!important}
-  .customer-workspace-header > div:first-child{
-    display:flex;
-    align-items:center;
-    min-width:44px;
+  .customer-workspace-header .customer-workspace-header-label{display:none!important}
+  .customer-workspace-header > div:first-child{display:flex;align-items:center;min-width:44px}
+  .mobile-workspace-menu{
+    display:flex!important;width:44px;height:44px;padding:0;border:0;border-radius:12px;
+    align-items:center;justify-content:center;flex-direction:column;gap:5px;
+    background:rgba(255,255,255,.08);cursor:pointer;
   }
-  .customer-workspace-header > div:first-child:before{
-    content:"";
-    width:44px;
-    height:44px;
-    border-radius:12px;
-    background:rgba(255,255,255,.08);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
-    background-image:
-      linear-gradient(#fff,#fff),
-      linear-gradient(#fff,#fff),
-      linear-gradient(#fff,#fff);
-    background-size:22px 2px,22px 2px,22px 2px;
-    background-position:center 13px,center 21px,center 29px;
-    background-repeat:no-repeat;
-    cursor:pointer;
+  .mobile-workspace-menu span{display:block;width:21px;height:2px;border-radius:99px;background:#fff}
+  .mobile-workspace-panel{
+    display:none;position:absolute;top:62px;left:12px;width:min(235px,calc(100vw - 24px));
+    padding:8px;border-radius:15px;background:#0b2864;border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 16px 35px rgba(0,0,0,.35);z-index:1000;
   }
+  .mobile-workspace-panel.open{display:block}
+  .mobile-workspace-panel a{display:block;padding:12px 13px;border-radius:9px;color:#fff;text-decoration:none;font-size:12px;font-weight:800}
+  .mobile-workspace-panel a:hover,.mobile-workspace-panel a:active{background:rgba(45,212,191,.14);color:#5eead4}
 }
-@media(min-width:481px){
-  .customer-workspace-header > div:first-child:before{display:none}
+@media (min-width:481px){
+  .mobile-workspace-menu,.mobile-workspace-panel{display:none!important}
 }
