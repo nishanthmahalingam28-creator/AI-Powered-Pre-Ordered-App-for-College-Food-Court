@@ -94,6 +94,7 @@ def place_order():
             "unit_price": unit_price,
             "quantity": qty,
             "subtotal": subtotal,
+            "meal_period": str(item.get("meal_period") or "lunch").lower(),
             "shop_id": item["shop_id"]
         })
 
@@ -135,10 +136,19 @@ def place_order():
 
                 tx.execute(
                     """
-                    INSERT INTO order_items (order_id, menu_item_id, item_name, unit_price, quantity, subtotal)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO order_items
+                        (order_id, menu_item_id, item_name, meal_period, unit_price, quantity, subtotal)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """,
-                    (order_id, item["menu_item_id"], item["name"], item["unit_price"], item["quantity"], item["subtotal"]),
+                    (
+                        order_id,
+                        item["menu_item_id"],
+                        item["name"],
+                        item.get("meal_period") or "lunch",
+                        item["unit_price"],
+                        item["quantity"],
+                        item["subtotal"],
+                    ),
                 )
 
             # 3. Process Payment via Service Abstraction within transaction
