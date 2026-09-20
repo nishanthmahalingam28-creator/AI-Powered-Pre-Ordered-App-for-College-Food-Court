@@ -310,6 +310,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (e) {}
     }
+    window.refreshRealtimeOrderData = loadActiveOrders;
+
     // Global quick cart add via authoritative backend cart API
     window.addQuickCart = async function (id, name, shop, price, btn) {
         if (btn) btn.disabled = true;
