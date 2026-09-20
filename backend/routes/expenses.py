@@ -193,7 +193,7 @@ def get_expenses():
             FROM expenses
             WHERE user_id = %s
             ORDER BY expense_date DESC, id DESC
-            """
+            """,
             (user_id,)
         )
 
