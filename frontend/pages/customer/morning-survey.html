@@ -128,7 +128,41 @@
         <section id="survey-form-view" class="hidden bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl shadow-slate-900/5">
             <form id="morningSurveyForm" class="space-y-6">
 
-                <!-- 1. Today's Food Preference -->
+                <!-- 1. Today's Eating Plan -->
+                <div class="bg-teal-50/60 border border-teal-100 rounded-2xl p-4">
+                    <label class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-calendar-check text-teal-600"></i> Are you planning to eat at the food court today? <span class="text-rose-500">*</span>
+                    </label>
+                    <p class="text-[11px] text-slate-400 mb-3">This helps the system understand today's expected dining demand.</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer p-4 rounded-2xl border-2 border-teal-500 bg-white text-center transition-all">
+                            <input type="radio" name="plans_to_eat" value="true" class="accent-teal-600 w-4 h-4" checked>
+                            <span class="ml-2 text-xs font-black text-slate-800">Yes, I plan to eat</span>
+                        </label>
+                        <label class="cursor-pointer p-4 rounded-2xl border-2 border-slate-100 hover:border-rose-300 bg-white text-center transition-all">
+                            <input type="radio" name="plans_to_eat" value="false" class="accent-rose-600 w-4 h-4">
+                            <span class="ml-2 text-xs font-black text-slate-800">No, not today</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Today's Vendor-Published Menu -->
+                <div id="today-menu-section" class="bg-white border border-slate-200 rounded-2xl p-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h3 class="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-bowl-food text-teal-600"></i> Today's Food Menu
+                            </h3>
+                            <p class="text-[11px] text-slate-400 mt-1">Menus published by vendors this morning, separated by meal period.</p>
+                        </div>
+                        <span class="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">Live Today</span>
+                    </div>
+                    <div id="today-menu-list" class="space-y-3">
+                        <p class="text-xs text-slate-400">Loading today's vendor menus...</p>
+                    </div>
+                </div>
+
+                <!-- 3. Today's Food Preference -->
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
                         <i class="fa-solid fa-heart text-rose-500"></i> What are you craving today? <span class="text-rose-500">*</span>
@@ -162,7 +196,7 @@
                     </div>
                 </div>
 
-                <!-- 2. Hunger Level -->
+                <!-- 4. Hunger Level -->
                 <div>
                     <label class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
                         <i class="fa-solid fa-gauge-high text-teal-600"></i> How hungry are you? <span class="text-rose-500">*</span>
@@ -190,7 +224,7 @@
                     </div>
                 </div>
 
-                <!-- 3. Dietary Preference & Meal Type (Two columns) -->
+                <!-- 5. Dietary Preference & Meal Type (Two columns) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- Dietary Preference -->
                     <div>
@@ -220,7 +254,7 @@
                     </div>
                 </div>
 
-                <!-- 4. Optional Mood / Energy & Food Restrictions -->
+                <!-- 6. Optional Mood / Energy & Food Restrictions -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="mood_energy" class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
@@ -238,7 +272,7 @@
                     </div>
                 </div>
 
-                <!-- 5. Optional Notes -->
+                <!-- 7. Optional Notes -->
                 <div>
                     <label for="notes" class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 flex items-center gap-1.5">
                         <i class="fa-regular fa-note-sticky text-slate-400"></i> Additional Dining Notes (Optional)
