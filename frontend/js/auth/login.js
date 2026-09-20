@@ -73,6 +73,12 @@ loginForm?.addEventListener("submit", async function (event) {
     }
 
     try {
+        // Clear any previous vendor/admin session before creating the customer session.
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: "POST",
+            credentials: "include"
+        }).catch(() => {});
+
         const response = await fetch(`${API_BASE_URL}/auth/customer/login`, {
             method: "POST",
             headers: {
@@ -105,7 +111,22 @@ loginForm?.addEventListener("submit", async function (event) {
             }));
         }
 
-        // All customer types use the same customer dashboard.
+        // Verify the server-side Flask session before entering the customer dashboard.
+        const sessionResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store"
+        });
+        const sessionResult = await sessionResponse.json().catch(() => ({}));
+
+        if (!sessionResponse.ok || !sessionResult.authenticated || sessionResult.user?.role !== "customer") {
+            console.error("Customer session verification failed:", sessionResult);
+            sessionStorage.removeItem("foodCourtUser");
+            passwordError.innerHTML = "Customer session could not be established. Please try logging in again.";
+            return;
+        }
+
+        // Only enter the customer dashboard after the server confirms role=customer.
         window.location.href = "../customer/dashboard.html";
 
     } catch (error) {
