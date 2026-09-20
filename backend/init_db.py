@@ -361,6 +361,7 @@ def init_sqlite():
     _safe_add_column("payments", "refunded_at", "TIMESTAMP NULL")
     _safe_add_column("payments", "updated_at", "TIMESTAMP NULL")
     _safe_add_column("shops", "operational_status", "TEXT NOT NULL DEFAULT 'OPEN'")
+    _safe_add_column("shops", "created_by_admin", "TINYINT(1) NOT NULL DEFAULT 0")
 
     cur.executemany("INSERT OR REPLACE INTO users (id, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)", DEFAULT_USERS)
     cur.execute("INSERT OR REPLACE INTO customer_profiles (id, user_id, customer_type, full_name, identifier, mobile) VALUES (1, 8, 'student', 'KPR Student', '21CS042', '9876543210')")
