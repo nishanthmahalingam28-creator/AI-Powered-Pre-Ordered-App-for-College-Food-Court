@@ -59,6 +59,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (badgeEl && user.customer_type) {
             badgeEl.textContent = user.customer_type.toUpperCase();
         }
+
+        const rollEl = document.getElementById('customer-roll-badge');
+        if (rollEl) {
+            const rollNumber = user.roll_number || user.identifier;
+            if (rollNumber) {
+                rollEl.textContent = rollNumber;
+                rollEl.classList.remove('hidden');
+            } else {
+                rollEl.classList.add('hidden');
+            }
+        }
+    }
+
+    // Load Morning Survey Status for Today
+    async function loadMorningSurveyStatus() {
+        const bannerBadge = document.getElementById('survey-banner-badge');
+        const bannerTitle = document.getElementById('survey-banner-title');
+        const bannerSubtitle = document.getElementById('survey-banner-subtitle');
+        const bannerBtn = document.getElementById('survey-banner-btn');
+        const bannerIcon = document.getElementById('survey-banner-icon');
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/customer/survey/today`, { credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success) {
+                if (data.completed && data.survey) {
+                    if (bannerBadge) {
+                        bannerBadge.textContent = 'Survey Completed ✓';
+                        bannerBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300';
+                    }
+                    if (bannerTitle) {
+                        bannerTitle.textContent = `Today's Choice: ${data.survey.meal_preference || 'Logged'} (${data.survey.dietary_preference || 'Standard'})`;
+                    }
+                    if (bannerSubtitle) {
+                        bannerSubtitle.textContent = `Hunger: ${data.survey.hunger_level || 'Normal'} • Type: ${data.survey.meal_type || 'Lunch'} • AI recommendations personalized!`;
+                    }
+                    if (bannerBtn) {
+                        bannerBtn.innerHTML = `<span>Update Survey</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
+                        bannerBtn.className = 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl border border-slate-300 transition-all flex items-center gap-2';
+                    }
+                    if (bannerIcon) {
+                        bannerIcon.className = 'w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold shrink-0';
+                        bannerIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                    }
+                } else {
+                    if (bannerBadge) {
+                        bannerBadge.textContent = 'Not Completed';
+                        bannerBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300';
+                    }
+                    if (bannerTitle) {
+                        bannerTitle.textContent = 'Complete Morning Survey';
+                    }
+                    if (bannerSubtitle) {
+                        bannerSubtitle.textContent = 'Tell us what you are craving today to unlock personalized food court recommendations.';
+                    }
+                    if (bannerBtn) {
+                        bannerBtn.innerHTML = `<span>Complete Morning Survey</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
+                        bannerBtn.className = 'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl shadow-md transition-all flex items-center gap-2';
+                    }
+                    if (bannerIcon) {
+                        bannerIcon.className = 'w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold shrink-0';
+                        bannerIcon.innerHTML = '<i class="fa-solid fa-sun"></i>';
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Morning survey status check failed:', e);
+        }
     }
 
     // Global customer logout handler
@@ -324,6 +393,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const budgetConsumedEl = document.getElementById('dash-budget-consumed-text');
             const incCountEl = document.getElementById('dash-income-count');
             const expCountEl = document.getElementById('dash-expense-count');
+            const walletEl = document.getElementById('stat-dash-wallet');
+            const savingsRateEl = document.getElementById('stat-dash-savings-rate');
 
             if (incomeEl) incomeEl.textContent = `₹${(summary.total_income || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (expensesEl) expensesEl.textContent = `₹${(summary.total_expenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -336,11 +407,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     balanceEl.className = "text-2xl font-black text-slate-900 mt-0.5 block";
                 }
             }
+            if (walletEl) {
+                const wallet = summary.wallet_balance || 0;
+                walletEl.textContent = `₹${wallet.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
             if (budgetEl) budgetEl.textContent = `₹${(summary.total_budget || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (budgetConsumedEl) {
                 const pct = summary.budget_percent_spent || 0;
                 const spent = (summary.total_budget_spent || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 budgetConsumedEl.textContent = `${pct}% allocated spent (₹${spent})`;
+            }
+            if (savingsRateEl) {
+                const rate = summary.savings_rate !== undefined ? summary.savings_rate : 0;
+                savingsRateEl.textContent = `${rate}%`;
+                if (rate > 20) {
+                    savingsRateEl.className = "text-2xl font-black text-emerald-600 mt-0.5 block";
+                } else if (rate < 0) {
+                    savingsRateEl.className = "text-2xl font-black text-rose-600 mt-0.5 block";
+                } else {
+                    savingsRateEl.className = "text-2xl font-black text-slate-900 mt-0.5 block";
+                }
             }
             if (incCountEl) incCountEl.textContent = summary.counts?.income_entries ?? 0;
             if (expCountEl) expCountEl.textContent = summary.counts?.expense_entries ?? 0;
@@ -632,6 +718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await initUser();
     await Promise.all([
+        loadMorningSurveyStatus(),
         loadFinancialSummary(),
         loadRecommendations(),
         loadActiveOrders(),

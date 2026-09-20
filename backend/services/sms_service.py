@@ -41,6 +41,21 @@ class SMSService:
         }
 
     @classmethod
+    def get_otp_mode(cls) -> str:
+        """
+        Returns the OTP mode.
+
+        development = free test OTP (123456)
+        twilio      = real Twilio Verify SMS
+        """
+        mode = (os.getenv("OTP_MODE") or "").strip().lower()
+
+        if mode in ("development", "dev", "test"):
+            return "development"
+
+        return "twilio"
+
+    @classmethod
     def is_configured(cls) -> bool:
         """Returns True only if an SMS provider with non-placeholder credentials is configured."""
         cfg = cls.get_sms_config()
@@ -125,7 +140,7 @@ class SMSService:
         NEVER logs OTP values or exposes credentials.
         """
         if "@" in str(mobile):
-            is_dev = os.getenv("FLASK_ENV", "production").lower() in ("development", "dev", "test", "testing")
+            is_dev = cls.get_otp_mode() == "development"
             if is_dev:
                 dev_otp = "123456"
                 cls._dev_verifications[mobile] = dev_otp

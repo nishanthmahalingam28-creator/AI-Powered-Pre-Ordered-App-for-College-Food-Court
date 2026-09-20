@@ -6,6 +6,7 @@ database validation (availability, stock, and shop operational status).
 """
 
 import logging
+from datetime import datetime
 from db import DB
 from ai.features import FoodCourtFeatures
 from ai.model import RecommendationModel
@@ -99,6 +100,34 @@ class FoodCourtRecommender:
                 meal_slot=meal_slot,
                 target_categories=target_categories
             )
+
+            # 6b. Ground with Today's Morning Survey (Personalized explicitly for authenticated student)
+            today_survey = None
+            if customer_id:
+                try:
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    today_survey = DB.get_one(
+                        "SELECT meal_preference, hunger_level, dietary_preference, meal_type FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1",
+                        (customer_id, today_str)
+                    )
+                    if today_survey and not target_shop:
+                        slot_heading = f"Today's Survey Picks · {today_survey['meal_preference'].title()}"
+                except Exception as se:
+                    logger.debug("Survey boost lookup skipped: %s", se)
+
+            if today_survey:
+                pref_tokens = [w.lower() for w in today_survey["meal_preference"].replace("-", " ").replace("/", " ").split() if len(w) > 2]
+                diet = (today_survey.get("dietary_preference") or "any").lower()
+                for entry in scored_candidates:
+                    c_name = entry["item"]["name"].lower()
+                    c_cat = entry["item"]["category"].lower()
+                    matched = any(tok in c_name or tok in c_cat for tok in pref_tokens)
+                    if matched:
+                        entry["score"] += 0.4
+                        entry["reason"] = f"Matches your morning preference ({today_survey['meal_preference']})"
+                    elif diet in ("veg", "vegetarian") and "chicken" not in c_name and "egg" not in c_name:
+                        entry["score"] += 0.1
+                scored_candidates.sort(key=lambda x: x["score"], reverse=True)
 
             # 7. AUTHORITATIVE AVAILABILITY & INTEGRITY FILTER (Mandatory Step 7)
             # Re-verifies every candidate against real-time database before dispatching

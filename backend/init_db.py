@@ -234,6 +234,23 @@ CREATE TABLE IF NOT EXISTS password_resets (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS morning_surveys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    survey_date TEXT NOT NULL,
+    meal_preference TEXT NOT NULL,
+    hunger_level TEXT NOT NULL,
+    dietary_preference TEXT NOT NULL DEFAULT 'any',
+    meal_type TEXT NOT NULL DEFAULT 'breakfast',
+    mood_energy TEXT,
+    food_restrictions TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (user_id, survey_date)
+);
+
 CREATE INDEX IF NOT EXISTS idx_cart_user ON cart_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_expense_user ON expenses(user_id);
 CREATE INDEX IF NOT EXISTS idx_expense_date ON expenses(expense_date);
@@ -249,6 +266,8 @@ CREATE INDEX IF NOT EXISTS idx_notification_user_unread ON notifications(user_id
 CREATE INDEX IF NOT EXISTS idx_notification_user_created ON notifications(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notification_order ON notifications(order_id);
 CREATE INDEX IF NOT EXISTS idx_notification_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_survey_user ON morning_surveys(user_id);
+CREATE INDEX IF NOT EXISTS idx_survey_date ON morning_surveys(survey_date);
 """
 
 DEFAULT_STALLS = [

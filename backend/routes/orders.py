@@ -517,6 +517,8 @@ def get_order_bill(order_id):
     return jsonify({"success": True, "bill": bill}), 200
 
 
+@orders_bp.get("")
+@orders_bp.get("/")
 @orders_bp.get("/my-orders")
 @role_required(["customer", "admin"])
 def get_my_orders():

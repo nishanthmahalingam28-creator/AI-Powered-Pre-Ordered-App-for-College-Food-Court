@@ -592,3 +592,206 @@ def get_customer_analytics():
             "success": False,
             "message": "Failed to calculate analytics."
         }), 500
+
+
+# ====================================================================
+# STUDENT MORNING SURVEY ENDPOINTS (Phase 10)
+# ====================================================================
+
+@customer_bp.get("/survey/today")
+@login_required
+@role_required(["customer"])
+def get_today_morning_survey():
+    """
+    Retrieves the authenticated student's morning survey for today.
+    Enforces tenant isolation and session authorization.
+    """
+    user_id = session.get("user_id")
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    survey = DB.get_one(
+        """
+        SELECT id, user_id, survey_date, meal_preference, hunger_level,
+               dietary_preference, meal_type, mood_energy, food_restrictions,
+               notes, created_at, updated_at
+        FROM morning_surveys
+        WHERE user_id = %s AND survey_date = %s
+        LIMIT 1
+        """,
+        (user_id, today_str),
+    )
+
+    if not survey:
+        return jsonify({
+            "success": True,
+            "completed": False,
+            "survey": None,
+            "date": today_str
+        }), 200
+
+    survey_data = {
+        "id": survey["id"],
+        "user_id": survey["user_id"],
+        "survey_date": str(survey["survey_date"]),
+        "meal_preference": survey["meal_preference"],
+        "hunger_level": survey["hunger_level"],
+        "dietary_preference": survey["dietary_preference"],
+        "meal_type": survey["meal_type"],
+        "mood_energy": survey.get("mood_energy") or "",
+        "food_restrictions": survey.get("food_restrictions") or "",
+        "notes": survey.get("notes") or "",
+        "created_at": str(survey["created_at"]),
+    }
+
+    return jsonify({
+        "success": True,
+        "completed": True,
+        "survey": survey_data,
+        "date": today_str
+    }), 200
+
+
+@customer_bp.post("/survey")
+@login_required
+@role_required(["customer"])
+def submit_morning_survey():
+    """
+    Submits a student's daily morning food and dining preferences survey.
+    Enforces:
+    1. Authenticated customer session ownership.
+    2. Prevention of duplicate submissions for the same student on the same date.
+    3. Input validation and sanitization.
+    """
+    user_id = session.get("user_id")
+    data = request.get_json(silent=True) or {}
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Check for existing survey today to prevent duplicates
+    existing = DB.get_one(
+        "SELECT id FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1",
+        (user_id, today_str),
+    )
+    if existing:
+        return jsonify({
+            "success": False,
+            "message": "You have already completed today's morning survey. Each student may submit once per day.",
+            "survey_id": existing["id"]
+        }), 409
+
+    meal_preference = str(data.get("meal_preference") or "").strip()
+    if not meal_preference:
+        return jsonify({"success": False, "message": "Meal preference is required."}), 400
+
+    allowed_hunger = {"light", "moderate", "ravenous", "low", "normal", "high"}
+    hunger_mapping = {"low": "light", "normal": "moderate", "high": "ravenous"}
+    raw_hunger = str(data.get("hunger_level") or "moderate").strip().lower()
+    if "hunger_level" in data and raw_hunger not in allowed_hunger:
+        return jsonify({"success": False, "message": f"Invalid hunger_level. Allowed: light, moderate, ravenous"}), 400
+    hunger_level = hunger_mapping.get(raw_hunger, raw_hunger if raw_hunger in allowed_hunger else "moderate")
+
+    allowed_diet = {"veg", "non-veg", "vegan", "eggitarian", "any"}
+    raw_diet = str(data.get("dietary_preference") or "any").strip().lower()
+    if "dietary_preference" in data and raw_diet not in allowed_diet:
+        return jsonify({"success": False, "message": f"Invalid dietary_preference. Allowed: {', '.join(sorted(allowed_diet))}"}), 400
+    dietary_preference = raw_diet if raw_diet in allowed_diet else "any"
+
+    allowed_meal_types = {"breakfast", "lunch", "evening_snack", "dinner"}
+    raw_meal_type = str(data.get("meal_type") or "breakfast").strip().lower()
+    if "meal_type" in data and raw_meal_type not in allowed_meal_types:
+        return jsonify({"success": False, "message": f"Invalid meal_type. Allowed: {', '.join(sorted(allowed_meal_types))}"}), 400
+    meal_type = raw_meal_type if raw_meal_type in allowed_meal_types else "breakfast"
+
+    mood_energy = str(data.get("mood_energy") or "").strip()[:50]
+    food_restrictions = str(data.get("food_restrictions") or "").strip()[:255]
+    notes = str(data.get("notes") or "").strip()[:500]
+
+    try:
+        survey_id = DB.execute(
+            """
+            INSERT INTO morning_surveys (
+                user_id, survey_date, meal_preference, hunger_level,
+                dietary_preference, meal_type, mood_energy, food_restrictions, notes
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                user_id,
+                today_str,
+                meal_preference,
+                hunger_level,
+                dietary_preference,
+                meal_type,
+                mood_energy,
+                food_restrictions,
+                notes,
+            ),
+        )
+
+        logger.info("Morning survey created: id=%s user_id=%s date=%s", survey_id, user_id, today_str)
+
+        return jsonify({
+            "success": True,
+            "message": "Morning survey submitted successfully!",
+            "survey_id": survey_id,
+            "survey": {
+                "id": survey_id,
+                "user_id": user_id,
+                "survey_date": today_str,
+                "meal_preference": meal_preference,
+                "hunger_level": hunger_level,
+                "dietary_preference": dietary_preference,
+                "meal_type": meal_type,
+                "mood_energy": mood_energy,
+                "food_restrictions": food_restrictions,
+                "notes": notes,
+            }
+        }), 201
+    except Exception as e:
+        logger.exception("Failed to insert morning survey for user %s: %s", user_id, e)
+        # Check if error was due to race-condition duplicate key
+        if "UNIQUE" in str(e).upper() or "uq_user_survey_date" in str(e).lower():
+            return jsonify({
+                "success": False,
+                "message": "You have already completed today's morning survey."
+            }), 409
+        return jsonify({
+            "success": False,
+            "message": "Failed to save morning survey. Please try again."
+        }), 500
+
+
+@customer_bp.get("/survey/history")
+@login_required
+@role_required(["customer"])
+def get_survey_history():
+    """Retrieves recent morning surveys for the authenticated student."""
+    user_id = session.get("user_id")
+    limit = request.args.get("limit", 14, type=int)
+
+    surveys = DB.get_all(
+        """
+        SELECT id, survey_date, meal_preference, hunger_level, dietary_preference,
+               meal_type, mood_energy, food_restrictions, created_at
+        FROM morning_surveys
+        WHERE user_id = %s
+        ORDER BY survey_date DESC, id DESC
+        LIMIT %s
+        """,
+        (user_id, limit),
+    )
+
+    clean_surveys = []
+    for s in surveys:
+        clean_surveys.append({
+            "id": s["id"],
+            "survey_date": str(s["survey_date"]),
+            "meal_preference": s["meal_preference"],
+            "hunger_level": s["hunger_level"],
+            "dietary_preference": s["dietary_preference"],
+            "meal_type": s["meal_type"],
+            "mood_energy": s.get("mood_energy") or "",
+            "food_restrictions": s.get("food_restrictions") or "",
+            "created_at": str(s["created_at"]),
+        })
+
+    return jsonify({"success": True, "surveys": clean_surveys}), 200

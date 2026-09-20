@@ -275,7 +275,14 @@ function initiateRazorpayPayment(order) {
 
     const gatewayOrderId = order.payment?.razorpay_order_id || order.razorpay_order_id || order.payment?.gateway_order_id;
     const keyId = order.payment?.key_id || order.key_id || window.RAZORPAY_KEY_ID || '';
-    const amountPaise = order.payment?.amount_paise || order.amount_paise || Math.round(order.total_amount * 100);
+    let cachedUser = {};
+    try {
+        cachedUser = JSON.parse(sessionStorage.getItem('foodCourtUser') || '{}');
+    } catch (e) {}
+
+    const customerName = cachedUser.full_name || order.customer_name || 'College Student';
+    const customerEmail = cachedUser.email || order.customer_email || 'student@campus.edu';
+    const customerContact = cachedUser.mobile_number || order.customer_mobile || '';
 
     const options = {
         key: keyId,
@@ -289,9 +296,9 @@ function initiateRazorpayPayment(order) {
             verifyPaymentWithBackend(order, response);
         },
         prefill: {
-            name: 'College Customer',
-            email: 'student@kpriet.ac.in',
-            contact: '9876543210'
+            name: customerName,
+            email: customerEmail,
+            contact: customerContact
         },
         theme: {
             color: '#0f766e'
