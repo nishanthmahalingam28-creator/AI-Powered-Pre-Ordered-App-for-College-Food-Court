@@ -65,10 +65,10 @@ def role_required(allowed_roles):
             # user record before denying access.
             if user_role not in allowed_roles:
                 canonical_user = DB.get_one(
-                    "SELECT role, is_active FROM users WHERE id = %s LIMIT 1",
+                    "SELECT role, is_active, account_expires_at FROM users WHERE id = %s LIMIT 1",
                     (session.get("user_id"),),
                 )
-                if canonical_user and canonical_user.get("is_active") and canonical_user.get("role") in allowed_roles:
+                if canonical_user and canonical_user.get("is_active") and canonical_user.get("role") in allowed_roles and (not canonical_user.get("account_expires_at") or canonical_user.get("account_expires_at") > datetime.now()):
                     user_role = canonical_user["role"]
                     session["role"] = user_role
                 else:
@@ -405,6 +405,7 @@ def customer_login():
         FROM users u
         LEFT JOIN customer_profiles cp ON cp.user_id = u.id
         WHERE LOWER(u.email) = %s AND u.role = 'customer' AND u.is_active = 1
+          AND (u.account_expires_at IS NULL OR u.account_expires_at > NOW())
         LIMIT 1
         """,
         (email,),
@@ -441,6 +442,8 @@ def customer_login():
             "identifier": user.get("identifier"),
             "roll_number": user.get("identifier"),
             "mobile": user.get("mobile"),
+            "is_temporary": int(user.get("is_temporary") or 0),
+            "account_expires_at": user.get("account_expires_at"),
         },
         "redirect": "/pages/customer/dashboard.html",
     }), 200
@@ -573,12 +576,13 @@ def current_user():
 
     user = DB.get_one(
         """
-        SELECT u.id, u.email, u.role, cp.customer_type, cp.full_name, cp.identifier, cp.mobile,
+        SELECT u.id, u.email, u.role, u.is_temporary, u.account_expires_at, cp.customer_type, cp.full_name, cp.identifier, cp.mobile,
                s.id as shop_id, s.name as shop_name
         FROM users u
         LEFT JOIN customer_profiles cp ON cp.user_id = u.id
         LEFT JOIN shops s ON s.owner_user_id = u.id
         WHERE u.id = %s AND u.is_active = 1
+          AND (u.account_expires_at IS NULL OR u.account_expires_at > NOW())
         LIMIT 1
         """,
         (user_id,),
