@@ -362,6 +362,7 @@ def init_sqlite():
     _safe_add_column("payments", "updated_at", "TIMESTAMP NULL")
     _safe_add_column("shops", "operational_status", "TEXT NOT NULL DEFAULT 'OPEN'")
     _safe_add_column("shops", "created_by_admin", "TINYINT(1) NOT NULL DEFAULT 0")
+    _safe_add_column("morning_surveys", "plans_to_eat", "INTEGER NOT NULL DEFAULT 1")
 
     # Preserve the current production workflow: YPR is the existing Admin-created shop.
     # Future shops created through the Admin API are explicitly marked created_by_admin=1.
@@ -431,6 +432,54 @@ def init_mysql():
                 print("MySQL migration: added shops.created_by_admin.")
             else:
                 print("MySQL migration: shops.created_by_admin already exists.")
+
+            # Customer morning survey migration
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'morning_surveys' AND COLUMN_NAME = 'plans_to_eat'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE morning_surveys ADD COLUMN plans_to_eat TINYINT(1) NOT NULL DEFAULT 1")
+                print("MySQL migration: added morning_surveys.plans_to_eat.")
+
+            # Daily vendor survey tables are created by schema.sql above; this CREATE IF NOT EXISTS
+            # is retained here for databases initialized before the new schema was deployed.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS vendor_daily_surveys (
+                    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    vendor_user_id INT UNSIGNED NOT NULL,
+                    shop_id INT UNSIGNED NOT NULL,
+                    survey_date DATE NOT NULL,
+                    is_serving_today TINYINT(1) NOT NULL DEFAULT 1,
+                    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_vendor_daily_survey_user FOREIGN KEY (vendor_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_vendor_daily_survey_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+                    UNIQUE KEY uq_vendor_daily_survey_date (vendor_user_id, survey_date),
+                    UNIQUE KEY uq_shop_daily_survey_date (shop_id, survey_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS vendor_daily_menu_items (
+                    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    survey_id INT UNSIGNED NOT NULL,
+                    shop_id INT UNSIGNED NOT NULL,
+                    menu_item_id INT UNSIGNED NOT NULL,
+                    meal_period VARCHAR(20) NOT NULL,
+                    item_name VARCHAR(150) NOT NULL,
+                    price DECIMAL(10,2) NOT NULL,
+                    quantity INT NOT NULL DEFAULT 0,
+                    is_available TINYINT(1) NOT NULL DEFAULT 1,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_vendor_daily_menu_survey FOREIGN KEY (survey_id) REFERENCES vendor_daily_surveys(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_vendor_daily_menu_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_vendor_daily_menu_item FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
+                    UNIQUE KEY uq_vendor_daily_menu_slot (survey_id, menu_item_id, meal_period),
+                    INDEX idx_vendor_daily_menu_shop_date (shop_id, meal_period),
+                    INDEX idx_vendor_daily_menu_item (menu_item_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """)
 
             # Preserve the existing production YPR shop as Admin-created.
             cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
