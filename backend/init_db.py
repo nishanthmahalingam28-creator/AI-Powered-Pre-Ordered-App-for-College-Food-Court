@@ -367,6 +367,57 @@ def init_sqlite():
     _safe_add_column("morning_surveys", "plans_to_eat", "INTEGER NOT NULL DEFAULT 1")
     _safe_add_column("menu_items", "meal_period", "TEXT NOT NULL DEFAULT 'lunch'")
     _safe_add_column("order_items", "meal_period", "TEXT NOT NULL DEFAULT 'lunch'")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS workers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shop_id INTEGER NOT NULL,
+            employee_code TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            phone TEXT,
+            role_title TEXT NOT NULL DEFAULT 'Kitchen Staff',
+            salary_type TEXT NOT NULL DEFAULT 'monthly',
+            salary_amount REAL NOT NULL DEFAULT 0,
+            joining_date DATE,
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(shop_id, employee_code),
+            FOREIGN KEY(shop_id) REFERENCES shops(id) ON DELETE CASCADE
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS worker_attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            worker_id INTEGER NOT NULL,
+            attendance_date DATE NOT NULL,
+            status TEXT NOT NULL DEFAULT 'present',
+            check_in TIME,
+            check_out TIME,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(worker_id, attendance_date),
+            FOREIGN KEY(worker_id) REFERENCES workers(id) ON DELETE CASCADE
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS worker_salary_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            worker_id INTEGER NOT NULL,
+            salary_month DATE NOT NULL,
+            base_salary REAL NOT NULL DEFAULT 0,
+            attendance_days REAL NOT NULL DEFAULT 0,
+            paid_amount REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'pending',
+            paid_on DATE,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(worker_id, salary_month),
+            FOREIGN KEY(worker_id) REFERENCES workers(id) ON DELETE CASCADE
+        )
+    """)
+
 
     # Preserve the current production workflow: YPR is the existing Admin-created shop.
     # Future shops created through the Admin API are explicitly marked created_by_admin=1.
