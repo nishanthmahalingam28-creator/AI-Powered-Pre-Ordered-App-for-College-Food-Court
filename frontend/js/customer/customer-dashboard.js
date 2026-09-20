@@ -231,22 +231,55 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 3. Load the authoritative Food Budget/Spent snapshot.
-    // The backend calculates spending from completed-order expense records.
+    // 3. Load the same Food Budget/Spent calculation used by the Food Budget page.
+    // Dashboard has no period selector, so it mirrors the Food Budget page's
+    // default/current Monthly period and only counts Food expenses in this month.
     async function loadFoodBudgetSnapshot() {
         try {
-            const res = await fetch(`${API_BASE_URL}/customer/financial-summary`, { credentials: 'include' });
-            if (!res.ok) return;
-            const data = await res.json();
-            if (!data.success) return;
-            const summary = data.summary || {};
-            const budget = Number(summary.total_budget || 0);
-            const spent = Number(summary.total_budget_spent || 0);
+            const [budgetRes, expenseRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/budgets`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/expenses`, { credentials: 'include' })
+            ]);
+
+            if (!budgetRes.ok || !expenseRes.ok) return;
+
+            const budgetData = await budgetRes.json();
+            const expenseData = await expenseRes.json();
+            if (!budgetData.success) return;
+
+            const budgets = Array.isArray(budgetData.budgets) ? budgetData.budgets : [];
+            const monthlyBudget = budgets.find(
+                b => String(b.period || '').toLowerCase() === 'monthly'
+            );
+            const budget = Number(monthlyBudget?.amount_limit || 0);
+
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const toDate = value => {
+                const d = new Date(String(value || '').slice(0, 10) + 'T00:00:00');
+                return Number.isNaN(d.getTime()) ? null : d;
+            };
+
+            const expenses = Array.isArray(expenseData.expenses) ? expenseData.expenses : [];
+            const spent = expenses
+                .filter(expense => {
+                    const category = String(expense.category || '').trim().toLowerCase();
+                    const date = toDate(expense.expense_date || expense.date);
+                    return category === 'food' &&
+                        date &&
+                        date >= monthStart &&
+                        date < nextMonthStart;
+                })
+                .reduce((total, expense) => total + Number(expense.amount || 0), 0);
+
             const remaining = Math.max(0, budget - spent);
-            const money = value => `₹${value.toFixed(2)}`;
+            const money = value => `₹${Number(value || 0).toFixed(2)}`;
+
             const budgetEl = document.getElementById('dashboard-food-budget');
             const spentEl = document.getElementById('dashboard-food-spent');
             const remainingEl = document.getElementById('dashboard-food-remaining');
+
             if (budgetEl) budgetEl.textContent = money(budget);
             if (spentEl) spentEl.textContent = money(spent);
             if (remainingEl) remainingEl.textContent = money(remaining);
