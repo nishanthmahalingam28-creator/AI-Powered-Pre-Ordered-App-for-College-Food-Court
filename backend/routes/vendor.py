@@ -1467,3 +1467,45 @@ def save_worker_salary(worker_id):
             (worker_id, month, worker_id, month, month, paid_amount, status, paid_on, str(data.get("notes") or "")[:255] or None, worker_id),
         )
     return jsonify({"success": True, "message": "Salary record saved."}), 200
+
+
+@vendor_bp.get("/daily-survey/vote-results")
+@role_required(["vendor"])
+def get_vendor_morning_vote_results():
+    """Return aggregate votes for this vendor's published morning survey."""
+    shop_id = _get_active_shop_id()
+    if not shop_id:
+        return jsonify({"success": False, "message": "No active stall is assigned to this vendor."}), 403
+    today = _today_str()
+    survey = DB.get_one(
+        "SELECT id, shop_id, survey_date, is_serving_today FROM vendor_daily_surveys WHERE shop_id=%s AND survey_date=%s LIMIT 1",
+        (shop_id, today),
+    )
+    if not survey:
+        return jsonify({"success": True, "date": today, "survey": None, "total_votes": 0, "options": []}), 200
+
+    rows = DB.query("""
+        SELECT d.menu_item_id, d.meal_period, d.item_name, d.price,
+               COUNT(v.id) AS vote_count
+        FROM vendor_daily_menu_items d
+        LEFT JOIN morning_survey_votes v
+          ON v.survey_id = d.survey_id AND v.menu_item_id = d.menu_item_id
+        WHERE d.survey_id = %s AND d.is_available = 1
+        GROUP BY d.menu_item_id, d.meal_period, d.item_name, d.price
+        ORDER BY vote_count DESC, d.meal_period, d.item_name
+    """, (survey["id"],))
+    total = sum(int(r.get("vote_count") or 0) for r in rows)
+    return jsonify({
+        "success": True,
+        "date": today,
+        "survey": {"id": survey["id"], "is_serving_today": bool(survey["is_serving_today"])},
+        "total_votes": total,
+        "options": [{
+            "menu_item_id": r["menu_item_id"],
+            "meal_period": r["meal_period"],
+            "item_name": r["item_name"],
+            "price": float(r["price"]),
+            "vote_count": int(r.get("vote_count") or 0),
+            "percentage": round((int(r.get("vote_count") or 0) / total) * 100, 1) if total else 0
+        } for r in rows]
+    }), 200
