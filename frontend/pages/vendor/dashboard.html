@@ -122,6 +122,23 @@
                 </div>
             </div>
 
+            <!-- MORNING FOOD VOTING RESULTS -->
+            <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white flex flex-col gap-4 md:col-span-2">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-chart-column"></i></div>
+                        <div><h3 class="font-bold text-slate-800 text-lg">Today's Morning Food Votes</h3><p class="text-xs text-slate-500">See what students want to eat today.</p></div>
+                    </div>
+                    <span id="dashboard-vote-total" class="px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-black">0 votes</span>
+                </div>
+                <div id="dashboard-vote-results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <p class="text-xs text-slate-400">Loading today's food votes...</p>
+                </div>
+                <div class="flex justify-end">
+                    <a href="morning-survey.html" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black">Open Morning Survey</a>
+                </div>
+            </div>
+
             <!-- 4. MANAGE INVENTORY CARD -->
             <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white flex flex-col gap-4">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
