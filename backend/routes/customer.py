@@ -729,6 +729,7 @@ def update_morning_survey():
             "success": False,
             "message": "No survey found for today to update. Please submit a new survey."
         }), 404
+    plans_to_eat = bool(data.get("plans_to_eat", True))
     meal_preference = str(data.get("meal_preference") or "").strip()
     if not meal_preference:
         return jsonify({"success": False, "message": "Meal preference is required."}), 400
