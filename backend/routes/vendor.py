@@ -723,7 +723,7 @@ def save_vendor_daily_survey():
                 )
 
             if is_serving_today:
-                        for period in DAILY_MEAL_PERIODS:
+                for period in DAILY_MEAL_PERIODS:
                     for row in normalized[period]:
                         try:
                             item_id = int(row.get("menu_item_id"))
