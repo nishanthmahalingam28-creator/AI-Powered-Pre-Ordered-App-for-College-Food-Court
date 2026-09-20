@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
     wallet_balance REAL NOT NULL DEFAULT 500.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+    UNIQUE (order_id)
 );
 
 CREATE TABLE IF NOT EXISTS shops (
@@ -175,6 +177,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
 CREATE TABLE IF NOT EXISTS expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    order_id INTEGER,
     amount REAL NOT NULL,
     category TEXT NOT NULL,
     description TEXT NOT NULL,
