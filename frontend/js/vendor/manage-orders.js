@@ -1,7 +1,6 @@
 const MANAGE_ORDERS_API = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 let manageOrdersShopId = null;
 let selectedOrderStatus = 'all';
-let refreshTimer = null;
 
 document.addEventListener('DOMContentLoaded', initManageOrders);
 
@@ -22,11 +21,8 @@ async function initManageOrders() {
       renderOrders();
     }));
     await loadOrders();
-    refreshTimer = setInterval(loadOrders, 10000);
   } catch (e) { showOrdersMessage('Unable to connect to the server.', false); }
 }
-
-window.addEventListener('beforeunload', () => { if (refreshTimer) clearInterval(refreshTimer); });
 
 let cachedOrders = [];
 async function loadOrders() {
