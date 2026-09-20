@@ -1477,15 +1477,19 @@ def get_vendor_morning_vote_results():
     if not shop_id:
         return jsonify({"success": False, "message": "No active stall is assigned to this vendor."}), 403
     today = _today_str()
-    vendor_id = session.get("user_id")
+    # Resolve today's survey from the authenticated vendor's authoritative shop.
+    # Do not require vendor_user_id to match the current session because older
+    # survey rows can retain a previous owner/session id after a vendor account
+    # is reassigned to the same shop.
     survey = DB.get_one(
         """
         SELECT id, shop_id, survey_date, is_serving_today
         FROM vendor_daily_surveys
-        WHERE vendor_user_id=%s AND shop_id=%s AND survey_date=%s
+        WHERE shop_id=%s AND survey_date=%s
+        ORDER BY id DESC
         LIMIT 1
         """,
-        (vendor_id, shop_id, today),
+        (shop_id, today),
     )
     if not survey:
         return jsonify({"success": True, "date": today, "survey": None, "total_votes": 0, "options": []}), 200
