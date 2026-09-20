@@ -156,8 +156,8 @@ def add_shop():
             }), 409
 
         shop_id = tx.execute(
-            """INSERT INTO shops (name, slug, description, category, is_active, operational_status)
-               VALUES (%s, %s, %s, %s, 1, %s)""",
+            """INSERT INTO shops (name, slug, description, category, is_active, operational_status, created_by_admin)
+               VALUES (%s, %s, %s, %s, 1, %s, 1)""",
             (name, slug, description, category, operational_status),
         )
         AuditService.log_action(
