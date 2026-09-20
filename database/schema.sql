@@ -344,3 +344,46 @@ CREATE TABLE IF NOT EXISTS morning_surveys (
 
 
 
+
+
+-- 18. Vendor Daily Menu Surveys
+CREATE TABLE IF NOT EXISTS vendor_daily_surveys (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    vendor_user_id INT UNSIGNED NOT NULL,
+    shop_id INT UNSIGNED NOT NULL,
+    survey_date DATE NOT NULL,
+    is_serving_today TINYINT(1) NOT NULL DEFAULT 1,
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vendor_daily_survey_user
+        FOREIGN KEY (vendor_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_vendor_daily_survey_shop
+        FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_vendor_daily_survey_date (vendor_user_id, survey_date),
+    UNIQUE KEY uq_shop_daily_survey_date (shop_id, survey_date),
+    INDEX idx_vendor_daily_survey_shop_date (shop_id, survey_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 19. Vendor Daily Menu Items
+CREATE TABLE IF NOT EXISTS vendor_daily_menu_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    survey_id INT UNSIGNED NOT NULL,
+    shop_id INT UNSIGNED NOT NULL,
+    menu_item_id INT UNSIGNED NOT NULL,
+    meal_period VARCHAR(20) NOT NULL,
+    item_name VARCHAR(150) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    quantity INT NOT NULL DEFAULT 0,
+    is_available TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vendor_daily_menu_survey
+        FOREIGN KEY (survey_id) REFERENCES vendor_daily_surveys(id) ON DELETE CASCADE,
+    CONSTRAINT fk_vendor_daily_menu_shop
+        FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+    CONSTRAINT fk_vendor_daily_menu_item
+        FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_vendor_daily_menu_slot (survey_id, menu_item_id, meal_period),
+    INDEX idx_vendor_daily_menu_shop_date (shop_id, meal_period),
+    INDEX idx_vendor_daily_menu_item (menu_item_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
