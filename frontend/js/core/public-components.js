@@ -5,6 +5,15 @@
   var currentScript = document.currentScript;
   var currentScriptUrl = currentScript ? new URL(currentScript.src, window.location.href) : null;
 
+  function loadGlobalResponsiveStyles() {
+    if (document.getElementById('global-responsive-css')) return;
+    var link = document.createElement('link');
+    link.id = 'global-responsive-css';
+    link.rel = 'stylesheet';
+    link.href = getFrontendRoot() + 'css/global-responsive.css';
+    document.head.appendChild(link);
+  }
+
   function getFrontendRoot() {
     if (currentScriptUrl) {
       var scriptPath = currentScriptUrl.pathname;
@@ -13,6 +22,8 @@
       if (index >= 0) {
         return scriptPath.slice(0, index + 1);
       }
+
+  loadGlobalResponsiveStyles();
     }
 
     var pathname = decodeURIComponent(new URL(window.location.href).pathname);
