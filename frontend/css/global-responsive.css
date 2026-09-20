@@ -134,3 +134,9 @@ pre, code { max-width: 100%; overflow-x: auto; }
     min-height: 44px;
   }
 }
+@media (max-width: 480px) {
+  /* Mobile only: keep the Login arrow pointing right. */
+  header > div.max-w-\\[1500px\\] > div.shrink-0 a.lg\\:hidden svg {
+    transform: rotate(180deg);
+  }
+}
