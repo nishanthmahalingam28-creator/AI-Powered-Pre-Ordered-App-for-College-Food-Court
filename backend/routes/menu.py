@@ -121,7 +121,7 @@ def get_menu():
     search_q = request.args.get("q", "").strip().lower()
 
     sql = """
-        SELECT m.id, m.shop_id, m.name, m.description, m.price, m.category,
+        SELECT m.id, m.shop_id, m.name, m.description, m.price, m.category, m.meal_period,
                m.quantity, m.is_available, m.image_url, m.created_at, m.updated_at,
                s.name as shop_name, s.slug as shop_slug
         FROM menu_items m
@@ -166,6 +166,7 @@ def get_menu():
             "description": item.get("description") or "",
             "price": float(item["price"]),
             "category": item.get("category") or "General",
+            "meal_period": item.get("meal_period") or "lunch",
             "quantity": int(item.get("quantity") or 0),
             "is_available": int(item.get("is_available") or 0),
             "image_url": item.get("image_url"),
@@ -204,6 +205,7 @@ def get_menu_item(item_id):
             "description": item.get("description") or "",
             "price": float(item["price"]),
             "category": item.get("category") or "General",
+            "meal_period": item.get("meal_period") or "lunch",
             "quantity": int(item.get("quantity") or 0),
             "is_available": int(item.get("is_available") or 0),
             "image_url": item.get("image_url"),
