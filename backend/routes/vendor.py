@@ -1166,23 +1166,37 @@ def list_workers():
         return error
     workers = DB.query(
         """
-        SELECT w.id, w.employee_code, w.full_name, w.phone, w.role_title,
-               w.salary_type, w.salary_amount, w.joining_date, w.status,
-               COALESCE(SUM(CASE WHEN a.status = 'present' THEN 1 WHEN a.status = 'half_day' THEN 0.5 ELSE 0 END), 0) AS attendance_days
-        FROM workers w
-        LEFT JOIN worker_attendance a
-          ON a.worker_id = w.id
-         AND a.attendance_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
-         AND a.attendance_date < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
-        WHERE w.shop_id = %s
-        GROUP BY w.id
-        ORDER BY w.status ASC, w.full_name ASC
+        SELECT id, employee_code, full_name, phone, role_title,
+               salary_type, salary_amount, joining_date, status
+        FROM workers
+        WHERE shop_id = %s
+        ORDER BY status ASC, full_name ASC
         """,
         (shop_id,),
     )
+    from datetime import date as _date
+    today = _date.today()
+    month_start = today.replace(day=1).isoformat()
+    if today.month == 12:
+        month_end = _date(today.year + 1, 1, 1).isoformat()
+    else:
+        month_end = _date(today.year, today.month + 1, 1).isoformat()
+    attendance_rows = DB.query(
+        """
+        SELECT worker_id, status
+        FROM worker_attendance
+        WHERE attendance_date >= %s AND attendance_date < %s
+        """,
+        (month_start, month_end),
+    )
+    attendance_map = {}
+    for row in attendance_rows:
+        attendance_map[row["worker_id"]] = attendance_map.get(row["worker_id"], 0) + (
+            1 if row["status"] == "present" else 0.5 if row["status"] == "half_day" else 0
+        )
     for w in workers:
         w["salary_amount"] = float(w.get("salary_amount") or 0)
-        w["attendance_days"] = float(w.get("attendance_days") or 0)
+        w["attendance_days"] = float(attendance_map.get(w["id"], 0))
     return jsonify({"success": True, "workers": workers, "shop_id": shop_id}), 200
 
 
@@ -1372,26 +1386,40 @@ def get_worker_salary():
         """
         SELECT w.id AS worker_id, w.employee_code, w.full_name, w.role_title,
                w.salary_type, w.salary_amount,
-               COALESCE(SUM(CASE WHEN a.status='present' THEN 1 WHEN a.status='half_day' THEN 0.5 ELSE 0 END),0) AS attendance_days,
                COALESCE(sp.status,'pending') AS salary_status,
                COALESCE(sp.paid_amount,0) AS paid_amount,
                sp.paid_on
         FROM workers w
-        LEFT JOIN worker_attendance a
-          ON a.worker_id=w.id
-         AND a.attendance_date >= %s
-         AND a.attendance_date < DATE_ADD(%s, INTERVAL 1 MONTH)
         LEFT JOIN worker_salary_payments sp
           ON sp.worker_id=w.id AND sp.salary_month=%s
         WHERE w.shop_id=%s
-        GROUP BY w.id, sp.status, sp.paid_amount, sp.paid_on
         ORDER BY w.full_name
         """,
-        (month, month, month, shop_id),
+        (month, shop_id),
     )
+    next_month = month[:8] + "02" if month[5:7] == "01" else None
+    from datetime import datetime as _dt
+    parsed_month = _dt.strptime(month, "%Y-%m-%d").date()
+    if parsed_month.month == 12:
+        month_end = _date(parsed_month.year + 1, 1, 1).isoformat()
+    else:
+        month_end = _date(parsed_month.year, parsed_month.month + 1, 1).isoformat()
+    attendance_rows = DB.query(
+        """
+        SELECT worker_id, status
+        FROM worker_attendance
+        WHERE attendance_date >= %s AND attendance_date < %s
+        """,
+        (month, month_end),
+    )
+    attendance_map = {}
+    for row in attendance_rows:
+        attendance_map[row["worker_id"]] = attendance_map.get(row["worker_id"], 0) + (
+            1 if row["status"] == "present" else 0.5 if row["status"] == "half_day" else 0
+        )
     for row in rows:
         row["salary_amount"] = float(row.get("salary_amount") or 0)
-        row["attendance_days"] = float(row.get("attendance_days") or 0)
+        row["attendance_days"] = float(attendance_map.get(row["worker_id"], 0))
         row["paid_amount"] = float(row.get("paid_amount") or 0)
     return jsonify({"success": True, "month": month, "salary": rows}), 200
 
