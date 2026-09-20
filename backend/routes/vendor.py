@@ -436,10 +436,6 @@ def update_menu_item(item_id):
         meal_period = item.get("meal_period") or "lunch"
 
     # Validate price if provided
-    if "meal_period" in data:
-        fields.append("meal_period = %s")
-        params.append(meal_period)
-
     if "price" in data:
         price, price_err = validate_price(data.get("price"))
         if price_err:
@@ -490,10 +486,10 @@ def update_menu_item(item_id):
     DB.execute(
         """
         UPDATE menu_items
-        SET name = %s, description = %s, price = %s, quantity = %s, category = %s, is_available = %s
+        SET name = %s, description = %s, price = %s, quantity = %s, category = %s, meal_period = %s, is_available = %s
         WHERE id = %s
         """,
-        (name, description, price, quantity, category, is_available, item_id),
+        (name, description, price, quantity, category, meal_period, is_available, item_id),
     )
 
     actor_id = session.get("user_id")
@@ -516,6 +512,7 @@ def update_menu_item(item_id):
             "price": price,
             "quantity": quantity,
             "category": category,
+            "meal_period": meal_period,
             "is_available": is_available,
         }
     }), 200
