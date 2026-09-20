@@ -776,6 +776,20 @@ def verify_pickup_otp():
         (order["id"],),
     )
 
+    # Record the customer's food expense only when the order is actually completed.
+    # The expenses.order_id UNIQUE constraint makes this idempotent if completion
+    # handling is retried. This also drives the Food Budget "spent" calculation.
+    try:
+        PaymentService._record_food_expense(order["id"], DB)
+    except Exception as expense_error:
+        # Do not roll back a successfully completed/picked-up order because of a
+        # financial-summary write failure; log it so it can be repaired safely.
+        logger.error(
+            "Failed to record food expense for completed order %s: %s",
+            order["id"],
+            expense_error,
+        )
+
     actor_id = session.get("user_id")
     AuditService.log_action(
         actor_id=actor_id,
