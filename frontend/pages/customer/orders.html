@@ -57,6 +57,31 @@
       </div>
     </div>
 
+    <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 class="text-sm font-black text-slate-900">Order History</h2>
+          <p class="text-[11px] text-slate-500">Search your food orders by status, shop, or date.</p>
+        </div>
+        <button id="order-history-clear" type="button" class="text-xs font-bold text-teal-700 hover:text-teal-900">Clear</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <select id="order-history-status" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="preparing">Preparing</option>
+          <option value="ready">Ready</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select id="order-history-shop" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white">
+          <option value="">All Shops</option>
+        </select>
+        <input id="order-history-from" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white" aria-label="Orders from date">
+        <input id="order-history-to" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white" aria-label="Orders to date">
+      </div>
+    </section>
+
     <!-- Dynamic Orders List Container -->
     <div id="orders-container" class="space-y-4">
       <!-- Dynamically loaded via orders.js -->
