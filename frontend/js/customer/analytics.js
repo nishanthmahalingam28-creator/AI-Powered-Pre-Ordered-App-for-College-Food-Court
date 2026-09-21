@@ -1,356 +1,128 @@
-/**
- * Customer Financial Analytics & Spending Intelligence Controller.
- * 
- * Directly queries authenticated backend database APIs:
- * - GET /api/customer/analytics
- * - POST /api/expenses & DELETE /api/expenses/:id
- * - POST /api/income & DELETE /api/income/:id
- * - GET /api/auth/me & POST /api/auth/logout
- * 
- * Enforces:
- * 1. Zero localStorage reliance (strict server database source of truth).
- * 2. Authenticated multi-tenant session isolation (credentials: "include").
- * 3. Graceful rendering of empty datasets with zero JavaScript errors.
- * 4. Real-time chart and metric synchronization upon adding or deleting transactions.
- * 5. Clean Chart.js instance destruction and memory management.
- */
-
 document.addEventListener("DOMContentLoaded", async () => {
-    // -------------------------------------------------------------
-    // 1. API Configuration & Storage Sanitization
-    // -------------------------------------------------------------
-    const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === "function" ? window.getApiUrl("") : "/api");
+    "use strict";
 
-    try {
-        localStorage.removeItem("expenses");
-        localStorage.removeItem("income");
-        localStorage.removeItem("budgets");
-        localStorage.removeItem("goals");
-        localStorage.removeItem("financial_goals");
-        localStorage.removeItem("food_court_expenses");
-        localStorage.removeItem("food_court_income");
-        localStorage.removeItem("food_court_budgets");
-        localStorage.removeItem("food_court_goals");
-    } catch (e) {
-        console.warn("Storage access restricted:", e);
+    const API_BASE_URL =
+        window.FOOD_COURT_API_BASE ||
+        (typeof window.getApiUrl === "function" ? window.getApiUrl("") : "/api");
+
+    let monthlyChart = null;
+    let categoryChart = null;
+    let budgetChart = null;
+
+    const money = (value) => "₹" + (Number(value) || 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    const escapeHtml = (value) => String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    function showAlert(message, error = false) {
+        const box = document.getElementById("analytics-alert");
+        const icon = document.getElementById("analytics-alert-icon");
+        const text = document.getElementById("analytics-alert-text");
+        if (!box || !icon || !text) return;
+
+        box.className = "mb-5 rounded-2xl p-4 text-xs font-semibold flex items-center justify-between gap-3 " +
+            (error
+                ? "bg-rose-50 border border-rose-200 text-rose-800"
+                : "bg-teal-50 border border-teal-200 text-teal-800");
+
+        icon.className = error
+            ? "fa-solid fa-triangle-exclamation text-rose-600"
+            : "fa-solid fa-circle-check text-teal-600";
+
+        text.textContent = message;
+        box.classList.remove("hidden");
     }
 
-    // Chart.js Instances
-    let monthlyTrendsChartInstance = null;
-    let categoryExpenseChartInstance = null;
-    let budgetComparisonChartInstance = null;
+    window.dismissAlert = function () {
+        const box = document.getElementById("analytics-alert");
+        if (box) box.classList.add("hidden");
+    };
 
-    // State
-    let currentUser = null;
-
-    // -------------------------------------------------------------
-    // 2. Authentication & Session Verification
-    // -------------------------------------------------------------
     async function verifyAuthentication() {
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: "include" });
-            if (!res.ok) {
-                window.location.href = "../auth/login.html";
-                return false;
-            }
-            const data = await res.json();
+            const response = await fetch(API_BASE_URL + "/auth/me", { credentials: "include" });
+            if (!response.ok) throw new Error("Authentication failed");
+
+            const data = await response.json();
             if (!data.authenticated || !data.user || data.user.role !== "customer") {
                 window.location.href = "../auth/login.html";
                 return false;
             }
-            currentUser = data.user;
             return true;
-        } catch (err) {
-            console.error("Session verification failed:", err);
+        } catch (error) {
+            console.error("Analytics authentication error:", error);
             window.location.href = "../auth/login.html";
             return false;
         }
     }
 
-    // Global logout handler
-    window.handleCustomerLogout = async function () {
-        try {
-            await fetch(`${API_BASE_URL}/auth/logout`, {
-                method: "POST",
-                credentials: "include"
-            });
-        } catch (e) {
-            console.warn("Logout error:", e);
-        }
-        sessionStorage.clear();
-        try {
-            localStorage.removeItem("expenses");
-            localStorage.removeItem("income");
-            localStorage.removeItem("budgets");
-            localStorage.removeItem("goals");
-        } catch (e) {}
-        window.location.href = "../auth/login.html";
-    };
-
-    // -------------------------------------------------------------
-    // 3. UI Helpers & Formatters
-    // -------------------------------------------------------------
-    function formatCurrency(val) {
-        const num = Number(val) || 0;
-        return "₹" + num.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-
-    function showAlert(message, isError = false) {
-        const alertEl = document.getElementById("analytics-alert");
-        const iconEl = document.getElementById("analytics-alert-icon");
-        const textEl = document.getElementById("analytics-alert-text");
-
-        if (!alertEl || !textEl || !iconEl) return;
-
-        textEl.textContent = message;
-        if (isError) {
-            alertEl.className = "mb-6 p-4 rounded-2xl text-xs font-semibold flex items-center justify-between gap-3 shadow-sm bg-rose-50 border border-rose-200 text-rose-800";
-            iconEl.className = "fa-solid fa-triangle-exclamation text-base shrink-0 text-rose-600";
-        } else {
-            alertEl.className = "mb-6 p-4 rounded-2xl text-xs font-semibold flex items-center justify-between gap-3 shadow-sm bg-teal-50 border border-teal-200 text-teal-800";
-            iconEl.className = "fa-solid fa-circle-check text-base shrink-0 text-teal-600";
-        }
-        alertEl.classList.remove("hidden");
-    }
-
-    window.dismissAlert = function () {
-        const alertEl = document.getElementById("analytics-alert");
-        if (alertEl) alertEl.classList.add("hidden");
-    };
-
-    // -------------------------------------------------------------
-    // 4. Fetch Analytics Data from Backend
-    // -------------------------------------------------------------
-    async function loadAnalyticsData() {
-        const skeleton = document.getElementById("analytics-loading-skeleton");
-        const contentShell = document.getElementById("analytics-content-shell");
-        const refreshIcon = document.getElementById("refresh-icon");
-
-        if (refreshIcon) refreshIcon.classList.add("fa-spin");
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/customer/analytics`, {
-                credentials: "include"
-            });
-
-            if (!res.ok) {
-                throw new Error(`Server returned HTTP ${res.status}`);
-            }
-
-            const data = await res.json();
-            if (!data.success) {
-                throw new Error(data.message || "Failed to retrieve analytics.");
-            }
-
-            renderAnalytics(data);
-
-            if (skeleton) skeleton.classList.add("hidden");
-            if (contentShell) contentShell.classList.remove("hidden");
-        } catch (err) {
-            console.error("Failed to load analytics:", err);
-            showAlert("Failed to load financial statistics from the server. Please check your connection and click Refresh.", true);
-            if (skeleton) skeleton.classList.add("hidden");
-            if (contentShell) contentShell.classList.remove("hidden");
-        } finally {
-            if (refreshIcon) refreshIcon.classList.remove("fa-spin");
-        }
-    }
-
-    // -------------------------------------------------------------
-    // 5. Render All Financial Visualizations & Metrics
-    // -------------------------------------------------------------
-    function renderAnalytics(data) {
-        const summary = data.summary || {};
-        const categoryExpenses = data.category_breakdown || [];
-                const monthlyTrends = data.monthly_trends || [];
-        const budgetComparisons = data.budget_comparisons || [];
-        const goals = data.goals || [];
-        const recentTransactions = data.recent_transactions || [];
-
-        const hasAnyData = (summary.total_expenses > 0) ||
-                           (recentTransactions.length > 0) || (budgetComparisons.length > 0);
-
-        const emptyBanner = document.getElementById("analytics-empty-state");
-        const chartsSection = document.getElementById("charts-grid-section");
-
-        if (!hasAnyData) {
-            if (emptyBanner) emptyBanner.classList.remove("hidden");
-        } else {
-            if (emptyBanner) emptyBanner.classList.add("hidden");
-        }
-
-        // 1. Metric Cards
-        renderMetricCards(summary);
-
-        // 2. Monthly Trends Chart
-        renderMonthlyTrendsChart(monthlyTrends);
-
-        // 3. Category Expenses Doughnut Chart
-        renderCategoryExpenseChart(categoryExpenses, summary.total_expenses);
-
-        // 5. Budget Comparison Chart
-        renderBudgetComparisonChart(budgetComparisons, summary);
-
-        // 6. Category Budgets Table
-        renderBudgetTable(budgetComparisons);
-
-        // 7. Financial Goals Grid
-        renderGoalsGrid(goals);
-
-        // 8. Recent Transactions Table
-        renderRecentTransactions(recentTransactions);
-    }
-
-    // -------------------------------------------------------------
-    // 6. Metric Cards Renderer
-    // -------------------------------------------------------------
     function renderMetricCards(summary) {
-        const elTotalExpenses = document.getElementById("metric-total-expenses");
-        const elExpenseCount = document.getElementById("metric-expense-count");
-        const elAvgExpense = document.getElementById("metric-avg-expense");
-        const elBudgetPercent = document.getElementById("metric-budget-percent");
-        const elBudgetCounts = document.getElementById("metric-budget-counts");
-        const elBudgetStatusLabel = document.getElementById("metric-budget-status-label");
+        const total = Number(summary.total_expenses) || 0;
+        const count = Number(summary.counts?.expense_entries) || 0;
+        const average = Number(summary.average_expense) || 0;
+        const budgetPercent = Number(summary.budget_percent_spent) || 0;
+        const activeBudgets = Number(summary.counts?.active_budgets) || 0;
+        const goalsPercent = Number(summary.goals_overall_progress) || 0;
+        const activeGoals = Number(summary.counts?.active_goals) || 0;
+        const goalsSaved = Number(summary.total_goals_saved) || 0;
 
-        const elGoalsPercent = document.getElementById("metric-goals-percent");
-        const elGoalsCounts = document.getElementById("metric-goals-counts");
-        const elGoalsSavedTotal = document.getElementById("metric-goals-saved-total");
-        if (elTotalExpenses) elTotalExpenses.textContent = formatCurrency(summary.total_expenses || 0);
-        if (elExpenseCount) elExpenseCount.textContent = `${summary.counts?.expense_entries || 0} purchases`;
-        if (elAvgExpense) elAvgExpense.textContent = `avg ${formatCurrency(summary.average_expense || 0)}`;const bPct = Number(summary.budget_percent_spent || 0);
-        if (elBudgetPercent) elBudgetPercent.textContent = `${Math.round(bPct)}%`;
-        if (elBudgetCounts) elBudgetCounts.textContent = `${summary.counts?.active_budgets || 0} active budgets`;
-        if (elBudgetStatusLabel) {
-            if (bPct > 100) {
-                elBudgetStatusLabel.textContent = "Exceeded";
-                elBudgetStatusLabel.className = "text-rose-600 font-semibold";
-            } else if (bPct >= 80) {
-                elBudgetStatusLabel.textContent = "Near Limit";
-                elBudgetStatusLabel.className = "text-amber-600 font-semibold";
-            } else {
-                elBudgetStatusLabel.textContent = "On Track";
-                elBudgetStatusLabel.className = "text-indigo-600 font-semibold";
-            }
+        document.getElementById("metric-total-expenses").textContent = money(total);
+        document.getElementById("metric-expense-count").textContent = count + (count === 1 ? " purchase" : " purchases");
+        document.getElementById("metric-avg-expense").textContent = money(average);
+        document.getElementById("metric-budget-percent").textContent = Math.round(budgetPercent) + "%";
+        document.getElementById("metric-budget-counts").textContent = activeBudgets + " active " + (activeBudgets === 1 ? "budget" : "budgets");
+
+        const budgetStatus = document.getElementById("metric-budget-status-label");
+        if (budgetStatus) {
+            budgetStatus.textContent = budgetPercent > 100 ? "Exceeded" : budgetPercent >= 80 ? "Near Limit" : "On Track";
+            budgetStatus.className = budgetPercent > 100
+                ? "text-rose-600 font-semibold"
+                : budgetPercent >= 80
+                    ? "text-amber-600 font-semibold"
+                    : "text-emerald-600 font-semibold";
         }
 
-        const gPct = Number(summary.goals_overall_progress || 0);
-        if (elGoalsPercent) elGoalsPercent.textContent = `${Math.round(gPct)}%`;
-        if (elGoalsCounts) elGoalsCounts.textContent = `${summary.counts?.active_goals || 0} active goals`;
-        if (elGoalsSavedTotal) elGoalsSavedTotal.textContent = `${formatCurrency(summary.total_goals_saved || 0)} saved`;
+        document.getElementById("metric-goals-percent").textContent = Math.round(goalsPercent) + "%";
+        document.getElementById("metric-goals-counts").textContent = activeGoals + " active " + (activeGoals === 1 ? "goal" : "goals");
+        document.getElementById("metric-goals-saved-total").textContent = money(goalsSaved) + " saved";
     }
 
-    // -------------------------------------------------------------
-    // 7. Monthly Trends Chart (Chart 1)
-    // -------------------------------------------------------------
-    function renderMonthlyTrendsChart(trends) {
+    function renderMonthlyChart(trends) {
         const canvas = document.getElementById("monthlyTrendsChart");
-        const emptyEl = document.getElementById("monthly-trends-empty");
+        const empty = document.getElementById("monthly-trends-empty");
         if (!canvas || typeof Chart === "undefined") return;
 
-        if (!trends || trends.length === 0) {
+        if (monthlyChart) {
+            monthlyChart.destroy();
+            monthlyChart = null;
+        }
+
+        if (!Array.isArray(trends) || trends.length === 0) {
             canvas.classList.add("hidden");
-            if (emptyEl) emptyEl.classList.remove("hidden");
-            if (monthlyTrendsChartInstance) {
-                monthlyTrendsChartInstance.destroy();
-                monthlyTrendsChartInstance = null;
-            }
+            empty?.classList.remove("hidden");
             return;
         }
 
         canvas.classList.remove("hidden");
-        if (emptyEl) emptyEl.classList.add("hidden");
+        empty?.classList.add("hidden");
 
-        if (monthlyTrendsChartInstance) {
-            monthlyTrendsChartInstance.destroy();
-        }
-
-        const labels = trends.map(t => t.label || t.month);        const expenseData = trends.map(t => t.expenses);
-        const netData = trends.map(t => t.net_savings);
-
-        const ctx = canvas.getContext("2d");
-        monthlyTrendsChartInstance = new Chart(ctx, {
+        monthlyChart = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
-                labels: labels,
-                datasets: [
-                    {
-                        type: "bar",
-                        label: "Expenses",
-                        data: expenseData,
-                        backgroundColor: "#f43f5e",
-                        borderRadius: 8,
-                        order: 3
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` ${ctx.dataset.label}: ₹${Number(ctx.raw).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: (val) => "₹" + val },
-                        grid: { color: "rgba(226, 232, 240, 0.6)" }
-                    },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    // -------------------------------------------------------------
-    // 8. Expense Category Breakdown Chart (Chart 2)
-    // -------------------------------------------------------------
-    function renderCategoryExpenseChart(categories, totalExpenses) {
-        const canvas = document.getElementById("categoryExpenseChart");
-        const emptyEl = document.getElementById("category-expense-empty");
-        const legendEl = document.getElementById("category-expense-legend");
-        if (!canvas || typeof Chart === "undefined") return;
-
-        if (!categories || categories.length === 0 || totalExpenses <= 0) {
-            canvas.classList.add("hidden");
-            if (emptyEl) emptyEl.classList.remove("hidden");
-            if (legendEl) legendEl.innerHTML = '<p class="text-slate-400 text-center text-xs">No categorized expenses</p>';
-            if (categoryExpenseChartInstance) {
-                categoryExpenseChartInstance.destroy();
-                categoryExpenseChartInstance = null;
-            }
-            return;
-        }
-
-        canvas.classList.remove("hidden");
-        if (emptyEl) emptyEl.classList.add("hidden");
-
-        if (categoryExpenseChartInstance) {
-            categoryExpenseChartInstance.destroy();
-        }
-
-        const colors = [
-            "#0d9488", "#06b6d4", "#3b82f6", "#8b5cf6",
-            "#ec4899", "#f59e0b", "#10b981", "#64748b"
-        ];
-
-        const ctx = canvas.getContext("2d");
-        categoryExpenseChartInstance = new Chart(ctx, {
-            type: "doughnut",
-            data: {
-                labels: categories.map(c => c.category),
+                labels: trends.map(item => item.label || item.month || ""),
                 datasets: [{
-                    data: categories.map(c => c.amount),
-                    backgroundColor: colors.slice(0, categories.length),
-                    borderWidth: 2,
-                    borderColor: "#ffffff"
+                    label: "Spent",
+                    data: trends.map(item => Number(item.expenses) || 0),
+                    backgroundColor: "#0d9488",
+                    borderRadius: 8,
+                    maxBarThickness: 48
                 }]
             },
             options: {
@@ -360,86 +132,125 @@ document.addEventListener("DOMContentLoaded", async () => {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => ` ${ctx.label}: ₹${Number(ctx.raw).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                            label: context => " Spent: " + money(context.raw)
                         }
                     }
                 },
-                cutout: "68%"
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: value => "₹" + Number(value).toLocaleString("en-IN") },
+                        grid: { color: "rgba(226,232,240,.65)" }
+                    },
+                    x: { grid: { display: false } }
+                }
             }
         });
-
-        // Render custom legend
-        if (legendEl) {
-            legendEl.innerHTML = categories.map((cat, idx) => {
-                const color = colors[idx % colors.length];
-                return `
-                    <div class="flex items-center justify-between text-xs py-0.5">
-                        <div class="flex items-center gap-2 truncate">
-                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${color}"></span>
-                            <span class="font-bold text-slate-700 truncate">${escapeHtml(cat.category)}</span>
-                        </div>
-                        <div class="flex items-center gap-2 font-bold shrink-0">
-                            <span class="text-slate-900">${formatCurrency(cat.amount)}</span>
-                            <span class="text-slate-400 text-[10px] w-10 text-right">${cat.percentage}%</span>
-                        </div>
-                    </div>
-                `;
-            }).join("");
-        }
     }
 
-    // -------------------------------------------------------------
-    // 9. Budget Comparison Chart
-    // -------------------------------------------------------------
-    function renderBudgetComparisonChart(budgets, summary) {
-        const canvas = document.getElementById("budgetComparisonChart");
-        const emptyEl = document.getElementById("budget-comparison-empty");
-        const limitSummaryEl = document.getElementById("budget-total-limit-text");
-        const spentSummaryEl = document.getElementById("budget-total-spent-text");
+    function renderCategoryChart(categories, total) {
+        const canvas = document.getElementById("categoryExpenseChart");
+        const empty = document.getElementById("category-expense-empty");
+        const legend = document.getElementById("category-expense-legend");
         if (!canvas || typeof Chart === "undefined") return;
 
-        if (limitSummaryEl) limitSummaryEl.textContent = `Total Limit: ${formatCurrency(summary.total_budget || 0)}`;
-        if (spentSummaryEl) spentSummaryEl.textContent = `Total Spent: ${formatCurrency(summary.total_budget_spent || 0)}`;
+        if (categoryChart) {
+            categoryChart.destroy();
+            categoryChart = null;
+        }
 
-        if (!budgets || budgets.length === 0) {
+        if (!Array.isArray(categories) || categories.length === 0 || total <= 0) {
             canvas.classList.add("hidden");
-            if (emptyEl) emptyEl.classList.remove("hidden");
-            if (budgetComparisonChartInstance) {
-                budgetComparisonChartInstance.destroy();
-                budgetComparisonChartInstance = null;
-            }
+            empty?.classList.remove("hidden");
+            if (legend) legend.innerHTML = "";
             return;
         }
 
         canvas.classList.remove("hidden");
-        if (emptyEl) emptyEl.classList.add("hidden");
+        empty?.classList.add("hidden");
 
-        if (budgetComparisonChartInstance) {
-            budgetComparisonChartInstance.destroy();
+        const palette = ["#0d9488", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#64748b"];
+
+        categoryChart = new Chart(canvas.getContext("2d"), {
+            type: "doughnut",
+            data: {
+                labels: categories.map(item => item.category || "Other"),
+                datasets: [{
+                    data: categories.map(item => Number(item.amount) || 0),
+                    backgroundColor: categories.map((_, index) => palette[index % palette.length]),
+                    borderColor: "#ffffff",
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "68%",
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: context => " " + context.label + ": " + money(context.raw)
+                        }
+                    }
+                }
+            }
+        });
+
+        if (legend) {
+            legend.innerHTML = categories.map((item, index) => {
+                const color = palette[index % palette.length];
+                const percent = Number(item.percentage) || 0;
+                return '<div class="flex items-center justify-between gap-3 text-xs">' +
+                    '<div class="flex items-center gap-2 min-w-0">' +
+                    '<span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:' + color + '"></span>' +
+                    '<span class="font-bold text-slate-700 truncate">' + escapeHtml(item.category || "Other") + '</span>' +
+                    '</div><span class="text-slate-500 font-semibold shrink-0">' + percent.toFixed(1) + '%</span></div>';
+            }).join("");
+        }
+    }
+
+    function renderBudgetChart(budgets, summary) {
+        const canvas = document.getElementById("budgetComparisonChart");
+        const empty = document.getElementById("budget-comparison-empty");
+        if (!canvas || typeof Chart === "undefined") return;
+
+        document.getElementById("budget-total-limit-text").textContent =
+            "Total Limit: " + money(summary.total_budget || 0);
+        document.getElementById("budget-total-spent-text").textContent =
+            "Total Spent: " + money(summary.total_budget_spent || 0);
+
+        if (budgetChart) {
+            budgetChart.destroy();
+            budgetChart = null;
         }
 
-        const labels = budgets.map(b => b.category);
-        const limits = budgets.map(b => b.amount_limit);
-        const spents = budgets.map(b => b.spent);
+        if (!Array.isArray(budgets) || budgets.length === 0) {
+            canvas.classList.add("hidden");
+            empty?.classList.remove("hidden");
+            return;
+        }
 
-        const ctx = canvas.getContext("2d");
-        budgetComparisonChartInstance = new Chart(ctx, {
+        canvas.classList.remove("hidden");
+        empty?.classList.add("hidden");
+
+        budgetChart = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
-                labels: labels,
+                labels: budgets.map(item => item.category || "Other"),
                 datasets: [
                     {
                         label: "Budget Limit",
-                        data: limits,
-                        backgroundColor: "rgba(99, 102, 241, 0.25)",
+                        data: budgets.map(item => Number(item.amount_limit) || 0),
+                        backgroundColor: "rgba(99,102,241,.20)",
                         borderColor: "#6366f1",
                         borderWidth: 1.5,
                         borderRadius: 6
                     },
                     {
                         label: "Actual Spent",
-                        data: spents,
-                        backgroundColor: spents.map((s, idx) => s > limits[idx] ? "#ef4444" : "#0d9488"),
+                        data: budgets.map(item => Number(item.spent) || 0),
+                        backgroundColor: budgets.map(item => Number(item.spent) > Number(item.amount_limit) ? "#ef4444" : "#0d9488"),
                         borderRadius: 6
                     }
                 ]
@@ -448,21 +259,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: "top",
-                        labels: { boxWidth: 10, font: { size: 10, weight: "bold" } }
-                    },
+                    legend: { position: "top", labels: { boxWidth: 10, font: { size: 10, weight: "bold" } } },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => ` ${ctx.dataset.label}: ₹${Number(ctx.raw).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                            label: context => " " + context.dataset.label + ": " + money(context.raw)
                         }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { callback: (val) => "₹" + val },
-                        grid: { color: "rgba(226, 232, 240, 0.6)" }
+                        ticks: { callback: value => "₹" + Number(value).toLocaleString("en-IN") },
+                        grid: { color: "rgba(226,232,240,.65)" }
                     },
                     x: { grid: { display: false } }
                 }
@@ -470,165 +278,133 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    // -------------------------------------------------------------
-    // 11. Category Budgets Table Renderer
-    // -------------------------------------------------------------
     function renderBudgetTable(budgets) {
-        const tbody = document.getElementById("budget-table-body");
-        if (!tbody) return;
+        const body = document.getElementById("budget-table-body");
+        if (!body) return;
 
-        if (!budgets || budgets.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="py-8 text-center text-slate-400 font-medium">
-                        No category budgets configured yet. <a href="budgets.html" class="text-teal-600 font-bold hover:underline">Add a Budget</a>
-                    </td>
-                </tr>
-            `;
+        if (!Array.isArray(budgets) || budgets.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">No category budgets configured yet. <a href="budgets.html" class="text-teal-600 font-bold">Create a budget</a>.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = budgets.map(b => {
-            const pct = Math.min(100, Math.max(0, b.percent_spent || 0));
-            let badgeHtml = "";
-            let barColor = "bg-teal-500";
+        body.innerHTML = budgets.map(item => {
+            const limit = Number(item.amount_limit) || 0;
+            const spent = Number(item.spent) || 0;
+            const remaining = Number(item.remaining);
+            const percent = Math.max(0, Number(item.percent_spent) || 0);
+            const status = item.status === "exceeded" ? "Exceeded" : item.status === "near_limit" ? "Near Limit" : "On Track";
+            const statusClass = item.status === "exceeded"
+                ? "bg-rose-100 text-rose-700"
+                : item.status === "near_limit"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-emerald-100 text-emerald-700";
+            const barClass = item.status === "exceeded" ? "bg-rose-500" : item.status === "near_limit" ? "bg-amber-500" : "bg-teal-500";
 
-            if (b.status === "exceeded") {
-                badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">Exceeded</span>`;
-                barColor = "bg-rose-500";
-            } else if (b.status === "near_limit") {
-                badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">Near Limit</span>`;
-                barColor = "bg-amber-500";
-            } else {
-                badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">On Track</span>`;
-                barColor = "bg-teal-500";
-            }
-
-            return `
-                <tr class="hover:bg-slate-50/75 transition-colors">
-                    <td class="py-3.5 px-4 font-bold text-slate-900">${escapeHtml(b.category)}</td>
-                    <td class="py-3.5 px-4 font-bold text-slate-700">${formatCurrency(b.amount_limit)}</td>
-                    <td class="py-3.5 px-4 font-bold text-slate-900">${formatCurrency(b.spent)}</td>
-                    <td class="py-3.5 px-4 font-bold ${b.remaining <= 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatCurrency(b.remaining)}</td>
-                    <td class="py-3.5 px-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-28 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-                            </div>
-                            <span class="text-[11px] font-bold text-slate-500 w-10">${b.percent_spent}%</span>
-                        </div>
-                    </td>
-                    <td class="py-3.5 px-4 text-center">${badgeHtml}</td>
-                </tr>
-            `;
+            return '<tr class="hover:bg-slate-50">' +
+                '<td class="py-3 px-3 font-bold text-slate-900">' + escapeHtml(item.category || "Other") + '</td>' +
+                '<td class="py-3 px-3 font-semibold">' + money(limit) + '</td>' +
+                '<td class="py-3 px-3 font-semibold">' + money(spent) + '</td>' +
+                '<td class="py-3 px-3 font-semibold ' + (remaining <= 0 ? "text-rose-600" : "text-emerald-700") + '">' + money(remaining) + '</td>' +
+                '<td class="py-3 px-3"><div class="flex items-center gap-2"><div class="w-24 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="' + barClass + ' h-full rounded-full" style="width:' + Math.min(100, percent) + '%"></div></div><span class="text-[10px] font-bold text-slate-500">' + percent.toFixed(1) + '%</span></div></td>' +
+                '<td class="py-3 px-3 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-[10px] font-black ' + statusClass + '">' + status + '</span></td>' +
+                '</tr>';
         }).join("");
     }
 
-    // -------------------------------------------------------------
-    // 12. Financial Goals Grid Renderer
-    // -------------------------------------------------------------
-    function renderGoalsGrid(goals) {
-        const container = document.getElementById("goals-grid-container");
-        if (!container) return;
+    function renderGoals(goals) {
+        const grid = document.getElementById("goals-grid-container");
+        if (!grid) return;
 
-        if (!goals || goals.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-full py-8 text-center text-slate-400 font-medium bg-slate-50 rounded-2xl border border-slate-200/60">
-                    No financial goals active. <a href="budgets.html#goals-section" class="text-purple-600 font-bold hover:underline">Set a savings goal</a> to track your milestones!
-                </div>
-            `;
+        if (!Array.isArray(goals) || goals.length === 0) {
+            grid.innerHTML = '<div class="col-span-full rounded-2xl bg-slate-50 border border-slate-200 p-8 text-center text-xs text-slate-400">No financial goals active. <a href="budgets.html#goals-section" class="text-purple-600 font-bold">Create a savings goal</a>.</div>';
             return;
         }
 
-        container.innerHTML = goals.map(g => {
-            const pct = Math.min(100, Math.max(0, g.progress_percent || 0));
-            return `
-                <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <h4 class="text-sm font-black text-slate-900 truncate">${escapeHtml(g.title)}</h4>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 shrink-0">
-                                ${escapeHtml(g.category || 'General')}
-                            </span>
-                        </div>
-                        <div class="flex items-baseline justify-between text-xs mt-3 mb-1.5">
-                            <span class="font-bold text-slate-900">${formatCurrency(g.current_amount)}</span>
-                            <span class="text-slate-400">target ${formatCurrency(g.target_amount)}</span>
-                        </div>
-                        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                            <div class="bg-gradient-to-r from-purple-500 to-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                        <span>${g.progress_percent}% achieved</span>
-                        <span>${g.target_date ? 'By ' + escapeHtml(g.target_date) : 'Ongoing'}</span>
-                    </div>
-                </div>
-            `;
+        grid.innerHTML = goals.map(goal => {
+            const progress = Math.max(0, Number(goal.progress_percent) || 0);
+            return '<div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">' +
+                '<div class="flex items-start justify-between gap-3">' +
+                '<h3 class="text-sm font-black text-slate-900 truncate">' + escapeHtml(goal.title || "Savings Goal") + '</h3>' +
+                '<span class="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold shrink-0">' + escapeHtml(goal.category || "General") + '</span>' +
+                '</div>' +
+                '<div class="flex justify-between mt-4 text-xs"><span class="font-bold">' + money(goal.current_amount) + '</span><span class="text-slate-400">Target ' + money(goal.target_amount) + '</span></div>' +
+                '<div class="h-2.5 bg-slate-200 rounded-full overflow-hidden mt-2"><div class="h-full bg-purple-500 rounded-full" style="width:' + Math.min(100, progress) + '%"></div></div>' +
+                '<div class="flex justify-between mt-3 text-[11px] text-slate-500"><span>' + progress.toFixed(1) + '% achieved</span><span>' + (goal.target_date ? "By " + escapeHtml(goal.target_date) : "Ongoing") + '</span></div>' +
+                '</div>';
         }).join("");
     }
 
-    // -------------------------------------------------------------
-    // 13. Recent Transactions Ledger & Delete Buttons
-    // -------------------------------------------------------------
-    function renderRecentTransactions(transactions) {
-        const tbody = document.getElementById("recent-transactions-body");
-        if (!tbody) return;
+    function renderRecentExpenses(transactions) {
+        const body = document.getElementById("recent-transactions-body");
+        if (!body) return;
 
-        if (!transactions || transactions.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="py-8 text-center text-slate-400 font-medium">
-                        No transactions recorded yet. Use the buttons above to log your first transaction.
-                    </td>
-                </tr>
-            `;
+        const expenses = (Array.isArray(transactions) ? transactions : [])
+            .filter(item => !item.type || item.type === "expense")
+            .slice(0, 10);
+
+        if (!expenses.length) {
+            body.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-400">No recent expenses found.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = transactions.map(tx => {
-            const isExpense = tx.type === "expense";
-            const badgeClass = isExpense
-                ? "bg-rose-100 text-rose-800 border-rose-200"
-                : "bg-emerald-100 text-emerald-800 border-emerald-200";
-            const typeLabel = "Expense";
-            const sign = isExpense ? "-" : "+";
-            const amountClass = "text-slate-900 font-black";
-
-            return `
-                <tr class="hover:bg-slate-50/75 transition-colors">
-                    <td class="py-3.5 px-4">
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeClass}">
-                            ${typeLabel}
-                        </span>
-                    </td>
-                    <td class="py-3.5 px-4 text-slate-500 font-medium whitespace-nowrap">${escapeHtml(tx.date || tx.created_at?.slice(0, 10) || "")}</td>
-                    <td class="py-3.5 px-4 font-bold text-slate-800">${escapeHtml(tx.category || "General")}</td>
-                    <td class="py-3.5 px-4 text-slate-600 max-w-xs truncate">${escapeHtml(tx.description || "-")}</td>
-                    <td class="py-3.5 px-4 text-right ${amountClass}">${sign}${formatCurrency(tx.amount)}</td>
-                    <td class="py-3.5 px-4 text-center">
-                        <button
-                            onclick="requestDeleteTransaction('${tx.type}', ${tx.id})"
-                            class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all cursor-pointer"
-                            title="Delete transaction and refresh charts"
-                        >
-                            <i class="fa-solid fa-trash-can text-xs"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join("");
+        body.innerHTML = expenses.map(item =>
+            '<tr class="hover:bg-slate-50">' +
+            '<td class="py-3 px-3 text-slate-500 whitespace-nowrap">' + escapeHtml(item.date || item.created_at?.slice(0, 10) || "-") + '</td>' +
+            '<td class="py-3 px-3 font-bold text-slate-800">' + escapeHtml(item.category || "General") + '</td>' +
+            '<td class="py-3 px-3 text-slate-600">' + escapeHtml(item.description || "-") + '</td>' +
+            '<td class="py-3 px-3 text-right font-black text-slate-900">-' + money(item.amount) + '</td>' +
+            '</tr>'
+        ).join("");
     }
 
-    // -------------------------------------------------------------
-    // 14. Transaction Deletion Flow (Real-time update)
-    // -------------------------------------------------------------
+    function render(data) {
+        const summary = data.summary || {};
+        const budgets = data.budget_comparisons || [];
+        const expenses = Number(summary.total_expenses) || 0;
+        const recent = data.recent_transactions || [];
 
-    // -------------------------------------------------------------
-    // 16. Initialize Flow
-    // -------------------------------------------------------------
-    const isAuth = await verifyAuthentication();
-    if (isAuth) {
-        await loadAnalyticsData();
+        renderMetricCards(summary);
+        renderMonthlyChart(data.monthly_trends || []);
+        renderCategoryChart(data.category_breakdown || [], expenses);
+        renderBudgetChart(budgets, summary);
+        renderBudgetTable(budgets);
+        renderGoals(data.goals || []);
+        renderRecentExpenses(recent);
+
+        const hasData = expenses > 0 || recent.some(item => !item.type || item.type === "expense") || budgets.length > 0 || (data.goals || []).length > 0;
+        document.getElementById("analytics-empty-state")?.classList.toggle("hidden", hasData);
+    }
+
+    async function loadAnalytics() {
+        const skeleton = document.getElementById("analytics-loading-skeleton");
+        const content = document.getElementById("analytics-content-shell");
+        const icon = document.getElementById("refresh-icon");
+
+        icon?.classList.add("fa-spin");
+
+        try {
+            const response = await fetch(API_BASE_URL + "/customer/analytics", { credentials: "include" });
+            if (!response.ok) throw new Error("Server returned HTTP " + response.status);
+
+            const data = await response.json();
+            if (!data.success) throw new Error(data.message || "Unable to load analytics.");
+
+            render(data);
+            skeleton?.classList.add("hidden");
+            content?.classList.remove("hidden");
+        } catch (error) {
+            console.error("Analytics load failed:", error);
+            skeleton?.classList.add("hidden");
+            content?.classList.remove("hidden");
+            showAlert("Unable to load analytics data. Please refresh and try again.", true);
+        } finally {
+            icon?.classList.remove("fa-spin");
+        }
+    }
+
+    document.getElementById("refresh-analytics-btn")?.addEventListener("click", loadAnalytics);
+
+    if (await verifyAuthentication()) {
+        await loadAnalytics();
     }
 });
