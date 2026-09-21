@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spending Analytics | KPR Smart Food Court</title>
+    <title>Food Spending Analytics | KPR Smart Food Court</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../../js/core/tailwind-config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../css/base/reset.css">
     <link rel="stylesheet" href="../../css/pages/customer.css">
     <link rel="stylesheet" href="../../css/pages/customer-workspace.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/core/public-components.js" defer></script>
 </head>
@@ -42,7 +41,7 @@
 <header class="customer-workspace-header">
   <div>
     <span class="customer-workspace-header-label">Student workspace</span>
-    <h2 id="customer-workspace-page-title">Spending Analytics</h2>
+    <h2 id="customer-workspace-page-title">Food Spending Analytics</h2>
   </div>
   <div class="customer-workspace-actions">
     <button class="customer-workspace-notification notification-bell-trigger" title="Notifications">
@@ -56,28 +55,20 @@
 <main class="customer-workspace-main w-full min-w-0 px-3 sm:px-5 lg:px-7 py-6 sm:py-8">
   <div class="max-w-7xl mx-auto">
 
-    <section class="rounded-3xl bg-gradient-to-r from-[#071638] via-[#0f2d6b] to-[#0b245c] p-5 sm:p-7 text-white shadow-xl mb-6 overflow-hidden">
+    <section class="rounded-3xl bg-gradient-to-r from-[#071638] via-[#0f2d6b] to-[#0b245c] p-5 sm:p-7 text-white shadow-xl mb-6">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
         <div>
           <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-400/15 border border-teal-300/20 text-teal-200 text-[10px] font-black uppercase tracking-wider">
-            <i class="fa-solid fa-chart-line"></i> Spending Analytics
+            <i class="fa-solid fa-chart-line"></i> Food Spending
           </span>
-          <h1 class="text-2xl sm:text-3xl font-black mt-3">Food Court Spending Overview</h1>
+          <h1 class="text-2xl sm:text-3xl font-black mt-3">Food Budget &amp; Spending Status</h1>
           <p class="text-slate-300 text-xs sm:text-sm mt-2 max-w-2xl">
-            Track your completed expenses, spending trends, category usage, budgets, and savings goals in one place.
+            This dashboard uses your saved food expenses and food budget to show your current spending status.
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button id="refresh-analytics-btn" class="px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs font-bold hover:bg-white/20 transition flex items-center gap-2">
-            <i id="refresh-icon" class="fa-solid fa-rotate-right"></i> Refresh
-          </button>
-          <a href="expenses.html" class="px-4 py-2.5 rounded-xl bg-teal-400 text-slate-950 text-xs font-black hover:bg-teal-300 transition flex items-center gap-2">
-            <i class="fa-solid fa-wallet"></i> Expenses
-          </a>
-          <a href="budgets.html" class="px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs font-bold hover:bg-white/20 transition flex items-center gap-2">
-            <i class="fa-solid fa-chart-pie"></i> Budgets
-          </a>
-        </div>
+        <button id="refresh-analytics-btn" class="px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs font-bold hover:bg-white/20 transition flex items-center gap-2">
+          <i id="refresh-icon" class="fa-solid fa-rotate-right"></i> Refresh
+        </button>
       </div>
     </section>
 
@@ -87,84 +78,102 @@
     </div>
 
     <div id="analytics-loading-skeleton" class="space-y-5">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="h-28 rounded-2xl bg-white border border-slate-200 animate-pulse"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="h-28 rounded-2xl bg-white border border-slate-200 animate-pulse"></div>
         <div class="h-28 rounded-2xl bg-white border border-slate-200 animate-pulse"></div>
         <div class="h-28 rounded-2xl bg-white border border-slate-200 animate-pulse"></div>
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div class="h-80 rounded-3xl bg-white border border-slate-200 animate-pulse"></div>
-        <div class="h-80 rounded-3xl bg-white border border-slate-200 animate-pulse"></div>
-      </div>
+      <div class="h-72 rounded-3xl bg-white border border-slate-200 animate-pulse"></div>
     </div>
 
     <div id="analytics-content-shell" class="hidden space-y-5">
 
-      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div class="flex items-center justify-between"><span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Total Spent</span><span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-receipt"></i></span></div>
-          <div id="metric-total-expenses" class="text-2xl font-black text-slate-900 mt-3">₹0.00</div>
-          <div id="metric-expense-count" class="text-[11px] text-slate-400 mt-1">0 purchases</div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Food Expenses</span>
+            <span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-receipt"></i></span>
+          </div>
+          <div id="metric-food-spent" class="text-2xl font-black text-slate-900 mt-3">₹0.00</div>
+          <div id="metric-food-count" class="text-[11px] text-slate-400 mt-1">0 expenses this month</div>
         </article>
+
         <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div class="flex items-center justify-between"><span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Average Expense</span><span class="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><i class="fa-solid fa-calculator"></i></span></div>
-          <div id="metric-avg-expense" class="text-2xl font-black text-slate-900 mt-3">₹0.00</div>
-          <div class="text-[11px] text-slate-400 mt-1">Average per purchase</div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Food Budget</span>
+            <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fa-solid fa-chart-pie"></i></span>
+          </div>
+          <div id="metric-food-budget" class="text-2xl font-black text-slate-900 mt-3">₹0.00</div>
+          <div class="text-[11px] text-slate-400 mt-1">Monthly food budget</div>
         </article>
+
         <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div class="flex items-center justify-between"><span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Budget Usage</span><span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fa-solid fa-chart-pie"></i></span></div>
-          <div id="metric-budget-percent" class="text-2xl font-black text-slate-900 mt-3">0%</div>
-          <div class="flex justify-between gap-2 mt-1 text-[11px] text-slate-400"><span id="metric-budget-counts">0 active budgets</span><span id="metric-budget-status-label">On Track</span></div>
-        </article>
-        <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div class="flex items-center justify-between"><span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Goal Progress</span><span class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-bullseye"></i></span></div>
-          <div id="metric-goals-percent" class="text-2xl font-black text-slate-900 mt-3">0%</div>
-          <div class="flex justify-between gap-2 mt-1 text-[11px] text-slate-400"><span id="metric-goals-counts">0 active goals</span><span id="metric-goals-saved-total">₹0 saved</span></div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Remaining</span>
+            <span id="remaining-icon" class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-wallet"></i></span>
+          </div>
+          <div id="metric-food-remaining" class="text-2xl font-black text-slate-900 mt-3">₹0.00</div>
+          <div id="metric-food-status" class="text-[11px] font-bold text-emerald-600 mt-1">No budget set</div>
         </article>
       </section>
 
-      <div id="analytics-empty-state" class="hidden bg-white rounded-3xl border border-slate-200 p-8 text-center shadow-sm">
-        <div class="w-14 h-14 mx-auto rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-chart-simple"></i></div>
-        <h3 class="text-lg font-black text-slate-900 mt-4">No spending data yet</h3>
-        <p class="text-xs text-slate-500 mt-2">Complete a food order or record an expense to see your analytics.</p>
-        <div class="flex justify-center flex-wrap gap-2 mt-5">
-          <a href="menu.html" class="px-4 py-2.5 rounded-xl bg-teal-700 text-white text-xs font-bold">Order Food</a>
-          <a href="expenses.html" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">View Expenses</a>
+      <section class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-teal-700">Current Month</span>
+            <h2 class="text-lg font-black text-slate-900 mt-1">Food Spending Status</h2>
+            <p id="status-period-label" class="text-xs text-slate-500 mt-1">Monthly food budget vs food expenses</p>
+          </div>
+          <a href="budgets.html" class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700">Manage Food Budget</a>
         </div>
-      </div>
 
-      <section id="charts-grid-section" class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <article class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-          <div class="mb-4"><span class="text-[10px] font-black uppercase tracking-wider text-teal-700">Monthly Trend</span><h2 class="text-lg font-black text-slate-900 mt-1">Monthly Spending</h2><p class="text-xs text-slate-500 mt-1">Your expense total by month.</p></div>
-          <div class="relative h-64 sm:h-72"><canvas id="monthlyTrendsChart"></canvas><div id="monthly-trends-empty" class="hidden absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-semibold">No monthly spending data</div></div>
-        </article>
-        <article class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-          <div class="mb-4"><span class="text-[10px] font-black uppercase tracking-wider text-teal-700">Categories</span><h2 class="text-lg font-black text-slate-900 mt-1">Expense Breakdown</h2><p class="text-xs text-slate-500 mt-1">Where your money is being spent.</p></div>
-          <div class="relative h-64 sm:h-72 flex items-center justify-center"><canvas id="categoryExpenseChart"></canvas><div id="category-expense-empty" class="hidden absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-semibold">No categorized expenses</div></div>
-          <div id="category-expense-legend" class="mt-4 pt-3 border-t border-slate-100 space-y-2 max-h-32 overflow-y-auto"></div>
-        </article>
-        <article class="xl:col-span-2 bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4"><div><span class="text-[10px] font-black uppercase tracking-wider text-indigo-700">Budget Tracking</span><h2 class="text-lg font-black text-slate-900 mt-1">Budget Limit vs Actual Spent</h2></div><a href="budgets.html" class="text-xs font-bold text-indigo-600">Manage Budgets <i class="fa-solid fa-arrow-right ml-1"></i></a></div>
-          <div class="relative h-64 sm:h-72"><canvas id="budgetComparisonChart"></canvas><div id="budget-comparison-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs font-semibold">No category budgets configured<a href="budgets.html" class="mt-2 text-teal-600">Create a Budget</a></div></div>
-          <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between gap-3 text-xs text-slate-500"><span id="budget-total-limit-text">Total Limit: ₹0.00</span><span id="budget-total-spent-text">Total Spent: ₹0.00</span></div>
-        </article>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-center">
+          <div class="lg:col-span-2">
+            <div class="flex justify-between text-xs font-bold text-slate-600 mb-2">
+              <span>Food spending</span>
+              <span id="status-percent">0.0%</span>
+            </div>
+            <div class="h-4 bg-slate-100 rounded-full overflow-hidden">
+              <div id="status-progress" class="h-full bg-teal-500 rounded-full transition-all duration-500" style="width:0%"></div>
+            </div>
+            <div class="flex justify-between gap-3 mt-3 text-xs">
+              <span id="status-spent-text" class="font-bold text-slate-700">Spent: ₹0.00</span>
+              <span id="status-budget-text" class="font-bold text-slate-700">Budget: ₹0.00</span>
+            </div>
+          </div>
+
+          <div id="status-card" class="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 text-center">
+            <div id="status-icon" class="text-2xl text-emerald-600"><i class="fa-solid fa-circle-check"></i></div>
+            <div id="status-title" class="text-sm font-black text-emerald-800 mt-2">No budget set</div>
+            <div id="status-detail" class="text-xs text-emerald-700 mt-1">Create a food budget to track spending.</div>
+          </div>
+        </div>
       </section>
 
       <section class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5"><div><span class="text-[10px] font-black uppercase tracking-wider text-teal-700">Category Budgets</span><h2 class="text-lg font-black text-slate-900 mt-1">Spending Status</h2></div><a href="budgets.html" class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700">Edit Budgets</a></div>
-        <div class="overflow-x-auto"><table class="w-full min-w-[650px] text-left"><thead><tr class="border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-400"><th class="py-3 px-3">Category</th><th class="py-3 px-3">Limit</th><th class="py-3 px-3">Spent</th><th class="py-3 px-3">Remaining</th><th class="py-3 px-3">Usage</th><th class="py-3 px-3 text-center">Status</th></tr></thead><tbody id="budget-table-body" class="divide-y divide-slate-100 text-xs"></tbody></table></div>
+        <div class="mb-5">
+          <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Expense Data</span>
+          <h2 class="text-lg font-black text-slate-900 mt-1">Recent Food Expenses</h2>
+          <p class="text-xs text-slate-500 mt-1">Food-category expenses from your expense records.</p>
+        </div>
+        <div id="expenses-empty" class="hidden rounded-2xl bg-slate-50 border border-slate-200 p-8 text-center text-xs text-slate-400">
+          No food expenses recorded for this month.
+        </div>
+        <div id="expenses-table-wrapper" class="overflow-x-auto">
+          <table class="w-full min-w-[620px] text-left">
+            <thead>
+              <tr class="border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-400">
+                <th class="py-3 px-3">Date</th>
+                <th class="py-3 px-3">Category</th>
+                <th class="py-3 px-3">Description</th>
+                <th class="py-3 px-3 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="food-expenses-body" class="divide-y divide-slate-100 text-xs"></tbody>
+          </table>
+        </div>
       </section>
 
-      <section class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5"><div><span class="text-[10px] font-black uppercase tracking-wider text-purple-700">Savings Goals</span><h2 class="text-lg font-black text-slate-900 mt-1">Goal Progress</h2></div><a href="budgets.html#goals-section" class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700">Manage Goals</a></div>
-        <div id="goals-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-      </section>
-
-      <section class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-        <div class="mb-5"><span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Expense History</span><h2 class="text-lg font-black text-slate-900 mt-1">Recent Expenses</h2><p class="text-xs text-slate-500 mt-1">Completed expense records linked to your account.</p></div>
-        <div class="overflow-x-auto"><table class="w-full min-w-[650px] text-left"><thead><tr class="border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-400"><th class="py-3 px-3">Date</th><th class="py-3 px-3">Category</th><th class="py-3 px-3">Description</th><th class="py-3 px-3 text-right">Amount</th></tr></thead><tbody id="recent-transactions-body" class="divide-y divide-slate-100 text-xs"></tbody></table></div>
-      </section>
     </div>
   </div>
 </main>
