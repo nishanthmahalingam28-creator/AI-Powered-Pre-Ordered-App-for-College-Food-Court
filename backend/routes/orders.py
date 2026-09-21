@@ -756,7 +756,8 @@ def verify_pickup_otp():
     # Reset failed attempts counter upon successful verification
     _failed_otp_attempts.pop(lock_key, None)
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # The database clock is authoritative for the completion event.
+    # The client/device clock is never trusted for order timestamps.
 
     # Complete the order, settle any pending payment, and record the food
     # expense in ONE database transaction. This guarantees that a completed
@@ -767,12 +768,12 @@ def verify_pickup_otp():
                 """
                 UPDATE orders
                 SET order_status = 'completed',
-                    completed_time = %s,
+                    completed_time = UTC_TIMESTAMP(),
                     payment_status = 'paid',
-                    payment_time = COALESCE(payment_time, %s)
+                    payment_time = COALESCE(payment_time, UTC_TIMESTAMP())
                 WHERE id = %s
                 """,
-                (now_str, now_str, order["id"]),
+                (order["id"],),
             )
             tx.execute(
                 "UPDATE payments SET status = 'successful' WHERE order_id = %s AND status = 'pending'",
@@ -890,14 +891,12 @@ def update_order_status(order_id):
                 "message": "Order completion requires customer pickup OTP verification."
             }), 400
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Handle cancellation by vendor: restore stock and refund
+    # Use the database clock for every vendor lifecycle timestamp.
     if new_status == "cancelled" and current_status != "cancelled":
         with DB.transaction() as tx:
             tx.execute(
-                "UPDATE orders SET order_status = 'cancelled', cancellation_time = %s WHERE id = %s",
-                (now_str, order_id)
+                "UPDATE orders SET order_status = 'cancelled', cancellation_time = UTC_TIMESTAMP() WHERE id = %s",
+                (order_id,)
             )
             items = tx.query("SELECT menu_item_id, quantity FROM order_items WHERE order_id = %s", (order_id,))
             for i in items:
@@ -952,11 +951,9 @@ def update_order_status(order_id):
     params = [new_status]
 
     if new_status == "preparing":
-        sql += ", preparing_time = COALESCE(preparing_time, %s)"
-        params.append(now_str)
+        sql += ", preparing_time = COALESCE(preparing_time, UTC_TIMESTAMP())"
     elif new_status == "ready":
-        sql += ", ready_time = COALESCE(ready_time, %s)"
-        params.append(now_str)
+        sql += ", ready_time = COALESCE(ready_time, UTC_TIMESTAMP())"
 
     sql += " WHERE id = %s"
     params.append(order_id)
