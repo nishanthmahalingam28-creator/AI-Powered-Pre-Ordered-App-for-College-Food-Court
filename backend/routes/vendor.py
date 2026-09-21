@@ -780,6 +780,12 @@ def delete_menu_item(item_id):
 
     actor_id = session.get("user_id")
     try:
+        # Clean up live references first so deletion also works with older
+        # production schemas that may still have restrictive foreign keys.
+        # Order history is preserved: order_items keeps its item_name/price/
+        # quantity, so only the nullable menu_item_id reference is cleared.
+        DB.execute("UPDATE order_items SET menu_item_id = NULL WHERE menu_item_id = %s", (item_id,))
+        DB.execute("DELETE FROM cart_items WHERE menu_item_id = %s", (item_id,))
         DB.execute("DELETE FROM menu_items WHERE id = %s", (item_id,))
         AuditService.log_action(
             actor_id=actor_id,
