@@ -107,7 +107,6 @@ def place_order():
     pickup_otp = str(secrets.randbelow(900000) + 100000)
     raw_method = str(data.get("payment_method") or "Pay at Counter")
     _, payment_method_label = PaymentService.normalize_method(raw_method)
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         with DB.transaction() as tx:
@@ -116,9 +115,9 @@ def place_order():
                 """
                 INSERT INTO orders (order_reference, customer_id, shop_id, total_amount, order_status,
                                     payment_status, payment_method, pickup_otp, created_at)
-                VALUES (%s, %s, %s, %s, 'pending', 'pending', %s, %s, %s)
+                VALUES (%s, %s, %s, %s, 'pending', 'pending', %s, %s, UTC_TIMESTAMP())
                 """,
-                (order_ref, customer_id, shop_id, total_amount, payment_method_label, pickup_otp, created_at),
+                (order_ref, customer_id, shop_id, total_amount, payment_method_label, pickup_otp),
             )
 
             # 2. Insert Items and Decrement Stock Atomically (Race Condition / Concurrency Guard)
@@ -168,6 +167,9 @@ def place_order():
     except Exception as e:
         logger.error("Order placement error for customer_id=%s: %s: %s", customer_id, type(e).__name__, str(e))
         return jsonify({"success": False, "message": "Failed to process order. Please try again."}), 500
+
+    created_row = DB.get_one("SELECT created_at FROM orders WHERE id = %s", (order_id,))
+    created_at = str(created_row["created_at"]) if created_row and created_row.get("created_at") else None
 
     shop = DB.get_one("SELECT name FROM shops WHERE id = %s", (shop_id,))
     shop_name = shop["name"] if shop else "Food Court"
@@ -390,14 +392,12 @@ def cancel_order(order_id):
     if order["order_status"] == "cancelled":
         return jsonify({"success": False, "message": "Order is already cancelled."}), 400
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     try:
         with DB.transaction() as tx:
-            # 1. Update order status to cancelled
+            # 1. Update order status to cancelled using authoritative DB time.
             tx.execute(
-                "UPDATE orders SET order_status = 'cancelled', cancellation_time = %s WHERE id = %s",
-                (now_str, order_id)
+                "UPDATE orders SET order_status = 'cancelled', cancellation_time = UTC_TIMESTAMP() WHERE id = %s",
+                (order_id,)
             )
 
             # 2. Restore reserved stock for each item
