@@ -381,6 +381,19 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             activePendingOrder = order;
 
             document.getElementById('order-reference').textContent = order.order_reference;
+            const createdAtEl = document.getElementById('order-created-at');
+            if (createdAtEl) {
+                const raw = String(order.created_at || '').trim();
+                let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+                if (raw && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) normalized += 'Z';
+                const createdAt = raw ? new Date(normalized) : null;
+                createdAtEl.textContent = createdAt && !Number.isNaN(createdAt.getTime())
+                    ? new Intl.DateTimeFormat('en-IN', {
+                        timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+                    }).format(createdAt)
+                    : (order.created_at || '—');
+            }
             document.getElementById('bill-total').textContent = formatCurrency(order.total_amount || 0);
             document.getElementById('pickup-otp').textContent = order.pickup_otp;
             const shopEl = document.getElementById('order-shop');
