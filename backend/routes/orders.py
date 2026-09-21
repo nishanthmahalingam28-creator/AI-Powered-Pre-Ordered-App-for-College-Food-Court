@@ -596,7 +596,7 @@ def get_my_orders():
     for order in orders:
         order["total_amount"] = float(order.get("total_amount") or 0.0)
         items = DB.query(
-            "SELECT item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
+            "SELECT menu_item_id, item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
             (order["id"],),
         )
         for item in items:
