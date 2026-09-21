@@ -756,10 +756,10 @@ def update_menu_item(item_id):
 @role_required(["vendor", "admin"])
 def delete_menu_item(item_id):
     """
-    Deletes or deactivates a menu item.
-    Enforces strict stall ownership (IDOR prevention).
-    If item has historical orders, soft-deactivates to preserve order history.
-    Logs audit action.
+    Permanently removes a menu item from the vendor's menu.
+    Order history remains safe because order_items stores item_name,
+    price and quantity, while menu_item_id is nullable with ON DELETE SET NULL.
+    Vendor isolation is enforced before deletion.
     """
     item = DB.get_one("SELECT id, name, shop_id FROM menu_items WHERE id = %s", (item_id,))
     if not item:
@@ -772,7 +772,6 @@ def delete_menu_item(item_id):
             "message": "Forbidden: No active stall assigned or stall is currently deactivated."
         }), 403
 
-    # Strict isolation: Vendor cannot delete another stall's menu item
     if session.get("role") == "vendor" and item["shop_id"] != active_shop:
         return jsonify({
             "success": False,
@@ -780,25 +779,7 @@ def delete_menu_item(item_id):
         }), 403
 
     actor_id = session.get("user_id")
-
-    # Check if item exists in historical orders
-    historical_order = DB.get_one("SELECT id FROM order_items WHERE menu_item_id = %s LIMIT 1", (item_id,))
-    if historical_order:
-        # Safe soft-deactivation to preserve order history records
-        DB.execute("UPDATE menu_items SET is_available = 0, quantity = 0 WHERE id = %s", (item_id,))
-        AuditService.log_action(
-            actor_id=actor_id,
-            action="MENU_ITEM_ARCHIVED",
-            entity_type="menu_item",
-            entity_id=item_id,
-            details={"name": item["name"], "soft_delete": True}
-        )
-        return jsonify({
-            "success": True,
-            "message": f"'{item['name']}' archived and marked unavailable to preserve order history."
-        }), 200
-    else:
-        # No historical orders exist; safe to physically delete
+    try:
         DB.execute("DELETE FROM menu_items WHERE id = %s", (item_id,))
         AuditService.log_action(
             actor_id=actor_id,
@@ -811,6 +792,12 @@ def delete_menu_item(item_id):
             "success": True,
             "message": f"'{item['name']}' removed from menu."
         }), 200
+    except Exception as e:
+        logger.exception("Failed to delete menu item %s", item_id)
+        return jsonify({
+            "success": False,
+            "message": "Unable to delete this dish right now. Please try again."
+        }), 500
 
 
 # ============================================================================
