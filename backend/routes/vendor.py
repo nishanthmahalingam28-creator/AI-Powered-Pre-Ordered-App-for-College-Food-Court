@@ -786,11 +786,17 @@ def delete_menu_item(item_id):
         # Order history is preserved by nulling only order_items.menu_item_id;
         # item_name, price and quantity remain stored in the historical order.
         with DB.transaction() as tx:
-            # vendor_daily_menu_items has its own primary key, and
-            # morning_survey_votes.menu_item_id points to that key. Resolve
-            # those IDs first, remove the votes, then remove daily-menu rows.
+            # Clean survey votes for both schema generations:
+            # current schema stores the vendor_daily_menu_items.id in
+            # morning_survey_votes.menu_item_id, while some older databases
+            # may still store the original menu_items.id. Remove both forms
+            # before deleting the daily-menu rows.
             daily_items = tx.query(
                 "SELECT id FROM vendor_daily_menu_items WHERE menu_item_id = %s",
+                (item_id,),
+            )
+            tx.execute(
+                "DELETE FROM morning_survey_votes WHERE menu_item_id = %s",
                 (item_id,),
             )
             for daily_item in daily_items:
