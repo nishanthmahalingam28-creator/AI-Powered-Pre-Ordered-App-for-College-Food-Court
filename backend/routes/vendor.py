@@ -780,20 +780,51 @@ def delete_menu_item(item_id):
 
     actor_id = session.get("user_id")
     try:
-        # Clean up live references first so deletion also works with older
-        # production schemas that may still have restrictive foreign keys.
-        # Order history is preserved: order_items keeps its item_name/price/
-        # quantity, so only the nullable menu_item_id reference is cleared.
-        DB.execute("UPDATE order_items SET menu_item_id = NULL WHERE menu_item_id = %s", (item_id,))
-        DB.execute("DELETE FROM cart_items WHERE menu_item_id = %s", (item_id,))
-        DB.execute("DELETE FROM menu_items WHERE id = %s", (item_id,))
-        AuditService.log_action(
-            actor_id=actor_id,
-            action="MENU_ITEM_DELETED",
-            entity_type="menu_item",
-            entity_id=item_id,
-            details={"name": item["name"], "physical_delete": True}
-        )
+        # Delete every dependent record inside one transaction. This is
+        # important because production databases can have older FK rules
+        # (RESTRICT/NO ACTION) even when the current schema uses CASCADE.
+        # Order history is preserved by nulling only order_items.menu_item_id;
+        # item_name, price and quantity remain stored in the historical order.
+        with DB.transaction() as tx:
+            # vendor_daily_menu_items has its own primary key, and
+            # morning_survey_votes.menu_item_id points to that key. Resolve
+            # those IDs first, remove the votes, then remove daily-menu rows.
+            daily_items = tx.query(
+                "SELECT id FROM vendor_daily_menu_items WHERE menu_item_id = %s",
+                (item_id,),
+            )
+            for daily_item in daily_items:
+                tx.execute(
+                    "DELETE FROM morning_survey_votes WHERE menu_item_id = %s",
+                    (daily_item["id"],),
+                )
+
+            tx.execute(
+                "DELETE FROM vendor_daily_menu_items WHERE menu_item_id = %s",
+                (item_id,),
+            )
+            tx.execute(
+                "UPDATE order_items SET menu_item_id = NULL WHERE menu_item_id = %s",
+                (item_id,),
+            )
+            tx.execute(
+                "DELETE FROM cart_items WHERE menu_item_id = %s",
+                (item_id,),
+            )
+            tx.execute(
+                "DELETE FROM menu_items WHERE id = %s",
+                (item_id,),
+            )
+
+            AuditService.log_action(
+                actor_id=actor_id,
+                action="MENU_ITEM_DELETED",
+                entity_type="menu_item",
+                entity_id=item_id,
+                details={"name": item["name"], "physical_delete": True},
+                tx=tx,
+            )
+
         return jsonify({
             "success": True,
             "message": f"'{item['name']}' removed from menu."
