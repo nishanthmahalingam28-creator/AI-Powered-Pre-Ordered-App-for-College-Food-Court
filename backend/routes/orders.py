@@ -830,8 +830,11 @@ def verify_pickup_otp():
     except Exception as ne:
         logger.warning("Notification dispatch error in verify_pickup_otp (non-fatal): %s", ne)
 
+    completed_row = DB.get_one("SELECT completed_time FROM orders WHERE id = %s", (order["id"],))
+    completed_time = str(completed_row["completed_time"]) if completed_row and completed_row.get("completed_time") else None
+
     try:
-        emit_order_status(order, "completed", now_str)
+        emit_order_status(order, "completed", completed_time)
     except Exception as re:
         logger.warning("Realtime order-completed dispatch failed (non-fatal): %s", re)
 
@@ -844,7 +847,7 @@ def verify_pickup_otp():
             "status": "completed",
             "payment_status": "paid",
             "shop_name": order["shop_name"],
-            "completed_time": now_str
+            "completed_time": completed_time
         }
     }), 200
 
