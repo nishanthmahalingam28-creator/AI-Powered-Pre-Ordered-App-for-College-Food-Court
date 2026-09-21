@@ -131,8 +131,6 @@ async function reorderItems(order) {
 
         try {
             const body = { item_id: item.menu_item_id, quantity: Number(item.quantity || 1) };
-            if (i === 0) body.clear_conflicting_stall = true;
-
             const res = await fetch(`${API_BASE_URL}/cart`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -268,7 +266,7 @@ function renderOrderHistory(orders) {
                     <button onclick="viewOrderBill(${order.id})" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1">
                         <i class="fa-solid fa-receipt text-[11px]"></i> Bill
                     </button>
-                    ${order.payment_status === 'pending' && (order.payment_method || '').includes('Online') || order.payment_status === 'pending' && (order.payment_method || '').includes('UPI') ? `
+                    ${order.payment_status === 'pending' && ((order.payment_method || '').includes('Online') || (order.payment_method || '').includes('UPI')) ? `
                         <button onclick="payPendingOrder(${order.id})" class="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition-colors shadow-sm">Pay Now</button>` : ''}
                     ${order.order_status === 'pending' ? `
                         <button onclick="cancelOrder(${order.id})" class="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition-colors border border-red-200">Cancel Order</button>` : ''}
