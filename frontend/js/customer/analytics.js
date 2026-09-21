@@ -172,6 +172,80 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    let foodSpendingChart = null;
+
+    function renderFoodSpendingChart(expenses) {
+        const canvas = document.getElementById("food-spending-chart");
+        if (!canvas) return;
+
+        const byDay = {};
+        expenses.forEach(item => {
+            const date = expenseDate(item);
+            if (!date) return;
+            byDay[date] = (byDay[date] || 0) + (Number(item.amount) || 0);
+        });
+
+        const [start, end] = currentMonthRange();
+        const labels = [];
+        const values = [];
+        const cursor = new Date(start + "T00:00:00");
+        const last = new Date(end + "T00:00:00");
+
+        while (cursor <= last) {
+            const date = localDateString(cursor);
+            labels.push(String(cursor.getDate()));
+            values.push(Number(byDay[date] || 0));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        if (foodSpendingChart) foodSpendingChart.destroy();
+
+        if (typeof Chart === "undefined") {
+            console.warn("Chart.js is not available.");
+            return;
+        }
+
+        foodSpendingChart = new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: {
+                labels,
+                datasets: [{
+                    label: "Food Spending",
+                    data: values,
+                    borderWidth: 3,
+                    tension: 0.35,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true },
+                    tooltip: {
+                        callbacks: {
+                            label: context => " ₹" + Number(context.raw || 0).toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            })
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => "₹" + Number(value).toLocaleString("en-IN")
+                        }
+                    },
+                    x: {
+                        title: { display: true, text: "Day of month" }
+                    }
+                }
+            }
+        });
+    }
+
     function renderExpenses(expenses) {
         const body = document.getElementById("food-expenses-body");
         const empty = document.getElementById("expenses-empty");
@@ -238,6 +312,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 "Monthly food budget vs food expenses (" + monthStart.slice(0, 7) + ")";
 
             renderStatus(foodSpent, foodBudget);
+            renderFoodSpendingChart(monthlyFoodExpenses);
             renderExpenses(monthlyFoodExpenses);
 
             skeleton?.classList.add("hidden");
