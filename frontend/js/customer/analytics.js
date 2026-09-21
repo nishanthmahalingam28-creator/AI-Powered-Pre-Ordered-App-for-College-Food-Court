@@ -38,13 +38,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Chart.js Instances
     let monthlyTrendsChartInstance = null;
     let categoryExpenseChartInstance = null;
-    let incomeDistributionChartInstance = null;
     let budgetComparisonChartInstance = null;
 
     // State
     let currentUser = null;
-    let pendingDeleteTransaction = null;
-    let currentModalType = "expense";
 
     // -------------------------------------------------------------
     // 2. Authentication & Session Verification
@@ -168,13 +165,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     function renderAnalytics(data) {
         const summary = data.summary || {};
         const categoryExpenses = data.category_breakdown || [];
-        const categoryIncome = data.category_breakdown_income || [];
-        const monthlyTrends = data.monthly_trends || [];
+                const monthlyTrends = data.monthly_trends || [];
         const budgetComparisons = data.budget_comparisons || [];
         const goals = data.goals || [];
         const recentTransactions = data.recent_transactions || [];
 
-        const hasAnyData = (summary.total_income > 0) || (summary.total_expenses > 0) ||
+        const hasAnyData = (summary.total_expenses > 0) ||
                            (recentTransactions.length > 0) || (budgetComparisons.length > 0);
 
         const emptyBanner = document.getElementById("analytics-empty-state");
@@ -195,9 +191,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 3. Category Expenses Doughnut Chart
         renderCategoryExpenseChart(categoryExpenses, summary.total_expenses);
 
-        // 4. Income Sources Doughnut Chart
-        renderIncomeDistributionChart(categoryIncome, summary.total_income);
-
         // 5. Budget Comparison Chart
         renderBudgetComparisonChart(budgetComparisons, summary);
 
@@ -215,20 +208,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 6. Metric Cards Renderer
     // -------------------------------------------------------------
     function renderMetricCards(summary) {
-        const elTotalIncome = document.getElementById("metric-total-income");
-        const elIncomeCount = document.getElementById("metric-income-count");
-        const elAvgIncome = document.getElementById("metric-avg-income");
-
         const elTotalExpenses = document.getElementById("metric-total-expenses");
         const elExpenseCount = document.getElementById("metric-expense-count");
         const elAvgExpense = document.getElementById("metric-avg-expense");
-
-        const elNetBalance = document.getElementById("metric-net-balance");
-        const elCashflowStatus = document.getElementById("metric-cashflow-status");
-
-        const elSavingsRate = document.getElementById("metric-savings-rate");
-        const elSavingsRateLabel = document.getElementById("metric-savings-rate-label");
-
         const elBudgetPercent = document.getElementById("metric-budget-percent");
         const elBudgetCounts = document.getElementById("metric-budget-counts");
         const elBudgetStatusLabel = document.getElementById("metric-budget-status-label");
@@ -236,52 +218,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const elGoalsPercent = document.getElementById("metric-goals-percent");
         const elGoalsCounts = document.getElementById("metric-goals-counts");
         const elGoalsSavedTotal = document.getElementById("metric-goals-saved-total");
-
-        if (elTotalIncome) elTotalIncome.textContent = formatCurrency(summary.total_income || 0);
-        if (elIncomeCount) elIncomeCount.textContent = `${summary.counts?.income_entries || 0} deposits`;
-        if (elAvgIncome) elAvgIncome.textContent = `avg ${formatCurrency(summary.average_income || 0)}`;
-
         if (elTotalExpenses) elTotalExpenses.textContent = formatCurrency(summary.total_expenses || 0);
         if (elExpenseCount) elExpenseCount.textContent = `${summary.counts?.expense_entries || 0} purchases`;
-        if (elAvgExpense) elAvgExpense.textContent = `avg ${formatCurrency(summary.average_expense || 0)}`;
-
-        const net = Number(summary.net_balance || 0);
-        if (elNetBalance) {
-            elNetBalance.textContent = formatCurrency(net);
-            if (net < 0) {
-                elNetBalance.className = "text-2xl font-black text-rose-600 tracking-tight";
-                if (elCashflowStatus) {
-                    elCashflowStatus.textContent = "Deficit";
-                    elCashflowStatus.className = "text-rose-600 font-semibold";
-                }
-            } else {
-                elNetBalance.className = "text-2xl font-black text-teal-700 tracking-tight";
-                if (elCashflowStatus) {
-                    elCashflowStatus.textContent = "Surplus";
-                    elCashflowStatus.className = "text-teal-600 font-semibold";
-                }
-            }
-        }
-
-        const rate = Number(summary.savings_rate || 0);
-        if (elSavingsRate) elSavingsRate.textContent = `${rate.toFixed(1)}%`;
-        if (elSavingsRateLabel) {
-            if (rate >= 50) {
-                elSavingsRateLabel.textContent = "Excellent";
-                elSavingsRateLabel.className = "text-emerald-600 font-semibold";
-            } else if (rate >= 20) {
-                elSavingsRateLabel.textContent = "Healthy";
-                elSavingsRateLabel.className = "text-teal-600 font-semibold";
-            } else if (rate > 0) {
-                elSavingsRateLabel.textContent = "Modest";
-                elSavingsRateLabel.className = "text-amber-600 font-semibold";
-            } else {
-                elSavingsRateLabel.textContent = "No Savings";
-                elSavingsRateLabel.className = "text-slate-400 font-semibold";
-            }
-        }
-
-        const bPct = Number(summary.budget_percent_spent || 0);
+        if (elAvgExpense) elAvgExpense.textContent = `avg ${formatCurrency(summary.average_expense || 0)}`;const bPct = Number(summary.budget_percent_spent || 0);
         if (elBudgetPercent) elBudgetPercent.textContent = `${Math.round(bPct)}%`;
         if (elBudgetCounts) elBudgetCounts.textContent = `${summary.counts?.active_budgets || 0} active budgets`;
         if (elBudgetStatusLabel) {
@@ -328,9 +267,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             monthlyTrendsChartInstance.destroy();
         }
 
-        const labels = trends.map(t => t.label || t.month);
-        const incomeData = trends.map(t => t.income);
-        const expenseData = trends.map(t => t.expenses);
+        const labels = trends.map(t => t.label || t.month);        const expenseData = trends.map(t => t.expenses);
         const netData = trends.map(t => t.net_savings);
 
         const ctx = canvas.getContext("2d");
@@ -339,26 +276,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        type: "line",
-                        label: "Net Savings",
-                        data: netData,
-                        borderColor: "#0d9488",
-                        backgroundColor: "#0d9488",
-                        borderWidth: 3,
-                        pointBackgroundColor: "#0d9488",
-                        pointRadius: 4,
-                        tension: 0.3,
-                        order: 1
-                    },
-                    {
-                        type: "bar",
-                        label: "Income",
-                        data: incomeData,
-                        backgroundColor: "#10b981",
-                        borderRadius: 8,
-                        order: 2
-                    },
                     {
                         type: "bar",
                         label: "Expenses",
@@ -749,9 +666,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             const badgeClass = isExpense
                 ? "bg-rose-100 text-rose-800 border-rose-200"
                 : "bg-emerald-100 text-emerald-800 border-emerald-200";
-            const typeLabel = isExpense ? "Expense" : "Income";
+            const typeLabel = "Expense";
             const sign = isExpense ? "-" : "+";
-            const amountClass = isExpense ? "text-slate-900 font-black" : "text-emerald-700 font-black";
+            const amountClass = "text-slate-900 font-black";
 
             return `
                 <tr class="hover:bg-slate-50/75 transition-colors">
@@ -781,172 +698,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     // -------------------------------------------------------------
     // 14. Transaction Deletion Flow (Real-time update)
     // -------------------------------------------------------------
-    window.requestDeleteTransaction = function (type, id) {
-        pendingDeleteTransaction = { type, id };
-        const modal = document.getElementById("delete-confirm-modal");
-        if (modal) modal.classList.remove("hidden");
-    };
-
-    window.closeDeleteModal = function () {
-        pendingDeleteTransaction = null;
-        const modal = document.getElementById("delete-confirm-modal");
-        if (modal) modal.classList.add("hidden");
-    };
-
-    const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
-    if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener("click", async () => {
-            if (!pendingDeleteTransaction) return;
-
-            const { type, id } = pendingDeleteTransaction;
-            confirmDeleteBtn.disabled = true;
-            confirmDeleteBtn.textContent = "Deleting...";
-
-            try {
-                const endpoint = type === "expense" ? `/expenses/${id}` : `/income/${id}`;
-                const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-                    method: "DELETE",
-                    credentials: "include"
-                });
-
-                if (!res.ok) {
-                    throw new Error(`Failed with status ${res.status}`);
-                }
-
-                showAlert(`Successfully deleted ${type}. Analytics recalculating...`);
-                closeDeleteModal();
-                // Dynamic chart update immediately!
-                await loadAnalyticsData();
-            } catch (err) {
-                console.error("Delete failed:", err);
-                showAlert(`Failed to delete ${type}. Please try again.`, true);
-            } finally {
-                confirmDeleteBtn.disabled = false;
-                confirmDeleteBtn.textContent = "Delete Now";
-            }
-        });
-    }
-
-    // -------------------------------------------------------------
-    // 15. Quick Add Transaction Modal Flow (Real-time update)
-    // -------------------------------------------------------------
-    window.openAddTransactionModal = function (type = "expense") {
-        setModalType(type);
-        const modal = document.getElementById("add-transaction-modal");
-        const dateInput = document.getElementById("modal-date");
-        if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().slice(0, 10);
-        }
-        if (modal) modal.classList.remove("hidden");
-    };
-
-    window.closeAddTransactionModal = function () {
-        const modal = document.getElementById("add-transaction-modal");
-        if (modal) modal.classList.add("hidden");
-        const form = document.getElementById("modal-transaction-form");
-        if (form) form.reset();
-    };
-
-    window.setModalType = function (type) {
-        currentModalType = type;
-        const expBtn = document.getElementById("type-expense-btn");
-        const incBtn = document.getElementById("type-income-btn");
-        const catLabel = document.getElementById("modal-cat-label");
-        const catInput = document.getElementById("modal-category");
-        const modalTitle = document.getElementById("modal-title");
-
-        if (type === "expense") {
-            if (expBtn) expBtn.className = "py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer bg-rose-50 border-rose-400 text-rose-700 flex items-center justify-center gap-1.5 shadow-sm";
-            if (incBtn) incBtn.className = "py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer bg-slate-100 border-slate-200 text-slate-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5";
-            if (catLabel) catLabel.textContent = "Category";
-            if (catInput) catInput.placeholder = "e.g. Dining, Snacks, Beverages, Meals";
-            if (modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-circle-minus text-rose-600"></i> Record New Expense';
-        } else {
-            if (expBtn) expBtn.className = "py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer bg-slate-100 border-slate-200 text-slate-600 hover:bg-rose-50 flex items-center justify-center gap-1.5";
-            if (incBtn) incBtn.className = "py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer bg-emerald-50 border-emerald-400 text-emerald-700 flex items-center justify-center gap-1.5 shadow-sm";
-            if (catLabel) catLabel.textContent = "Income Source";
-            if (catInput) catInput.placeholder = "e.g. Allowance, Stipend, Cashback, Refund";
-            if (modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-circle-plus text-emerald-600"></i> Record New Income';
-        }
-    };
-
-    const modalForm = document.getElementById("modal-transaction-form");
-    if (modalForm) {
-        modalForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById("modal-submit-btn");
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-            }
-
-            const amount = parseFloat(document.getElementById("modal-amount").value);
-            const category = document.getElementById("modal-category").value.trim();
-            const date = document.getElementById("modal-date").value;
-            const description = document.getElementById("modal-description").value.trim();
-
-            try {
-                let endpoint, payload;
-                if (currentModalType === "expense") {
-                    endpoint = "/expenses";
-                    payload = { amount, category, date, description };
-                } else {
-                    endpoint = "/income";
-                    payload = { amount, source: category, date, description };
-                }
-
-                const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(payload)
-                });
-
-                const resData = await res.json();
-                if (!res.ok || !resData.success) {
-                    throw new Error(resData.message || "Failed to record transaction.");
-                }
-
-                showAlert(`Successfully recorded ${currentModalType}. Charts updating in real time!`);
-                closeAddTransactionModal();
-                // Dynamic chart update immediately!
-                await loadAnalyticsData();
-            } catch (err) {
-                console.error("Save error:", err);
-                showAlert(err.message || "Failed to save transaction.", true);
-            } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = "<span>Save & Sync</span>";
-                }
-            }
-        });
-    }
-
-    // Refresh button event listener
-    const refreshBtn = document.getElementById("refresh-analytics-btn");
-    if (refreshBtn) {
-        refreshBtn.addEventListener("click", () => {
-            loadAnalyticsData();
-        });
-    }
-
-    const openModalBtn = document.getElementById("open-add-transaction-modal-btn");
-    if (openModalBtn) {
-        openModalBtn.addEventListener("click", () => {
-            openAddTransactionModal("expense");
-        });
-    }
-
-    function escapeHtml(str) {
-        if (!str) return "";
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
 
     // -------------------------------------------------------------
     // 16. Initialize Flow
