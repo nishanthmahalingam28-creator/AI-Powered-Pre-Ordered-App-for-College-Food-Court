@@ -4,6 +4,19 @@ function formatCurrency(value) {
     return `₹${parseFloat(value || 0).toFixed(2)}`;
 }
 
+function formatOrderDateTime(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '—';
+    let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+    if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) normalized += 'Z';
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return raw;
+    return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+    }).format(date);
+}
+
 function closeBillModal() {
     const modal = document.getElementById('bill-modal');
     if (modal) modal.classList.add('hidden');
@@ -67,7 +80,7 @@ async function viewOrderBill(orderId) {
             if (timeVal) {
                 const row = document.createElement('div');
                 row.className = 'flex justify-between items-center';
-                row.innerHTML = `<span>${label}:</span> <span class="font-medium text-slate-700">${timeVal}</span>`;
+                row.innerHTML = `<span>${label}:</span> <span class="font-medium text-slate-700">${formatOrderDateTime(timeVal)}</span>`;
                 tsContainer.appendChild(row);
             }
         });
@@ -170,7 +183,7 @@ async function loadCustomerOrders() {
                     <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-3">
                         <div class="flex items-center gap-3">
                             <span>Total: <strong class="text-slate-900 font-bold">${formatCurrency(order.total_amount)}</strong> (${order.payment_method})</span>
-                            <span class="text-[11px] text-slate-400">${order.created_at || 'Recent'}</span>
+                            <span class="text-[11px] text-slate-400">Ordered: ${formatOrderDateTime(order.created_at)}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="viewOrderBill(${order.order_id})" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1">
