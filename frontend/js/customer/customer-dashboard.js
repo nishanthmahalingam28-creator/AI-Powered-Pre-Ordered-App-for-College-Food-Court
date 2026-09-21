@@ -1,3 +1,16 @@
+function formatOrderDateTime(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '—';
+    let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+    if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) normalized += 'Z';
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return raw;
+    return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+    }).format(date);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // The shared customer-workspace-mobile.js owns the 0-640px menu
     // on every customer/student workspace page.
@@ -360,7 +373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                                 <span>Total: <strong class="text-slate-800">₹${Number(order.total_amount || 0).toFixed(2)}</strong> (${order.payment_status})</span>
-                                <span class="text-[11px] text-slate-400">${order.created_at || 'Today'}</span>
+                                <span class="text-[11px] text-slate-400">Ordered: ${formatOrderDateTime(order.created_at)}</span>
                             </div>
                         `;
                         container.appendChild(card);
