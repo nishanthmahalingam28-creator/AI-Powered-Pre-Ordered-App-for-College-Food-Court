@@ -115,191 +115,61 @@ body.customer-workspace-page .customer-workspace-main code { max-width: 100%; ov
   .mobile-workspace-menu,.mobile-workspace-panel{display:none!important}
 }
 
-/* Final phone-only Student Dashboard menu visibility fix */
-@media screen and (max-width:480px){
-  body.customer-workspace-page .student-mobile-menu-toggle{
-    display:flex!important;
-    visibility:visible!important;
-    opacity:1!important;
-    position:relative!important;
-    width:44px!important;
-    min-width:44px!important;
-    height:44px!important;
-    min-height:44px!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    border-radius:12px!important;
-    align-items:center!important;
-    justify-content:center!important;
-    flex-direction:column!important;
-    gap:5px!important;
-    background:rgba(255,255,255,.10)!important;
-    cursor:pointer!important;
-    z-index:1002!important;
-  }
-  body.customer-workspace-page .student-mobile-menu-toggle span{
-    display:block!important;
-    width:21px!important;
-    height:2px!important;
-    min-height:2px!important;
-    padding:0!important;
-    margin:0!important;
-    background:#fff!important;
-    border-radius:99px!important;
-  }
-  body.customer-workspace-page .mobile-workspace-panel{
-    z-index:1003!important;
-  }
-}
-@media screen and (min-width:641px){
-  body.customer-workspace-page .student-mobile-menu-toggle,
-  body.customer-workspace-page .mobile-workspace-panel{
-    display:none!important;
-  }
-}
-
-/* GUARANTEED mobile Student Dashboard menu */
+/* Student Dashboard mobile UI/UX — one consistent design from 0px through 640px */
 @media screen and (max-width:640px){
+  body.customer-workspace-page .customer-workspace-sidebar{display:none!important;visibility:hidden!important}
   body.customer-workspace-page .customer-workspace-header{
-    overflow:visible!important;
+    left:0!important;height:70px!important;padding:0 12px!important;overflow:visible!important
   }
-
   body.customer-workspace-page .customer-workspace-header #customer-workspace-page-title,
-  body.customer-workspace-page .customer-workspace-header .customer-workspace-header-label{
-    display:none!important;
-  }
-
+  body.customer-workspace-page .customer-workspace-header .customer-workspace-header-label{display:none!important}
   body.customer-workspace-page .customer-workspace-header #mobile-workspace-menu{
-    display:flex!important;
-    visibility:visible!important;
-    opacity:1!important;
-    position:absolute!important;
-    left:12px!important;
-    top:50%!important;
-    transform:translateY(-50%)!important;
-    z-index:2001!important;
-    width:44px!important;
-    min-width:44px!important;
-    max-width:44px!important;
-    height:44px!important;
-    min-height:44px!important;
-    max-height:44px!important;
-    margin:0!important;
-    padding:0!important;
-    box-sizing:border-box!important;
-    align-items:center!important;
-    justify-content:center!important;
-    flex-direction:column!important;
-    gap:5px!important;
-    border:1px solid rgba(255,255,255,.15)!important;
-    border-radius:12px!important;
-    background:#163b7f!important;
-    box-shadow:0 4px 12px rgba(0,0,0,.25)!important;
-    appearance:none!important;
-    -webkit-appearance:none!important;
+    display:flex!important;visibility:visible!important;opacity:1!important;position:absolute!important;
+    left:12px!important;top:50%!important;transform:translateY(-50%)!important;z-index:2001!important;
+    width:44px!important;min-width:44px!important;max-width:44px!important;
+    height:44px!important;min-height:44px!important;max-height:44px!important;
+    margin:0!important;padding:0!important;box-sizing:border-box!important;
+    align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:5px!important;
+    border:1px solid rgba(255,255,255,.15)!important;border-radius:12px!important;
+    background:#163b7f!important;box-shadow:0 4px 12px rgba(0,0,0,.25)!important;
+    appearance:none!important;-webkit-appearance:none!important;cursor:pointer!important
   }
-
   body.customer-workspace-page .customer-workspace-header #mobile-workspace-menu span{
-    display:block!important;
-    visibility:visible!important;
-    opacity:1!important;
-    width:21px!important;
-    height:2px!important;
-    min-height:2px!important;
-    max-height:2px!important;
-    margin:0!important;
-    padding:0!important;
-    background:#ffffff!important;
-    border-radius:99px!important;
+    display:block!important;visibility:visible!important;opacity:1!important;
+    width:21px!important;height:2px!important;min-height:2px!important;max-height:2px!important;
+    margin:0!important;padding:0!important;background:#fff!important;border-radius:99px!important
   }
-
   body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel{
-    position:fixed!important;
-    top:70px!important;
-    left:12px!important;
-    width:min(235px,calc(100vw - 24px))!important;
-    z-index:2000!important;
+    display:none!important;position:fixed!important;top:70px!important;left:12px!important;
+    width:min(235px,calc(100vw - 24px))!important;padding:8px!important;box-sizing:border-box!important;
+    border-radius:15px!important;background:#0b2864!important;border:1px solid rgba(255,255,255,.14)!important;
+    box-shadow:0 16px 35px rgba(0,0,0,.35)!important;z-index:2000!important
   }
-
+  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel.open{display:block!important}
+  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel a{
+    display:block!important;padding:12px 13px!important;border-radius:9px!important;
+    color:#fff!important;text-decoration:none!important;font-size:12px!important;font-weight:800!important
+  }
+  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel a:hover,
+  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel a:active{
+    background:rgba(45,212,191,.14)!important;color:#5eead4!important
+  }
   body.customer-workspace-page .customer-workspace-header .customer-workspace-actions{
-    margin-left:auto!important;
+    margin-left:auto!important;gap:8px!important
+  }
+  body.customer-workspace-page .customer-workspace-role{
+    max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+  }
+  body.customer-workspace-page .customer-workspace-main{
+    margin-left:0!important;width:100%!important;padding-top:88px!important;
+    padding-left:10px!important;padding-right:10px!important
   }
 }
-
+@media screen and (max-width:360px){
+  body.customer-workspace-page .customer-workspace-role{display:none!important}
+  body.customer-workspace-page .customer-workspace-main{padding-left:8px!important;padding-right:8px!important}
+}
 @media screen and (min-width:641px){
   body.customer-workspace-page .customer-workspace-header #mobile-workspace-menu,
-  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel{
-    display:none!important;
-  }
-}
-
-
-/* Student Dashboard: keep the same hamburger behavior from 481px through 640px */
-@media screen and (min-width:481px) and (max-width:640px){
-  body.customer-workspace-page .customer-workspace-header #mobile-workspace-menu{
-    display:flex!important;
-    visibility:visible!important;
-    opacity:1!important;
-    position:absolute!important;
-    left:12px!important;
-    top:50%!important;
-    transform:translateY(-50%)!important;
-    z-index:2001!important;
-    width:44px!important;
-    min-width:44px!important;
-    max-width:44px!important;
-    height:44px!important;
-    min-height:44px!important;
-    max-height:44px!important;
-    margin:0!important;
-    padding:0!important;
-    box-sizing:border-box!important;
-    align-items:center!important;
-    justify-content:center!important;
-    flex-direction:column!important;
-    gap:5px!important;
-    border:1px solid rgba(255,255,255,.15)!important;
-    border-radius:12px!important;
-    background:#163b7f!important;
-    box-shadow:0 4px 12px rgba(0,0,0,.25)!important;
-    appearance:none!important;
-    -webkit-appearance:none!important;
-  }
-
-  body.customer-workspace-page .customer-workspace-header #mobile-workspace-menu span{
-    display:block!important;
-    visibility:visible!important;
-    opacity:1!important;
-    width:21px!important;
-    height:2px!important;
-    min-height:2px!important;
-    max-height:2px!important;
-    margin:0!important;
-    padding:0!important;
-    background:#fff!important;
-    border-radius:99px!important;
-  }
-
-  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel{
-    display:none;
-    position:fixed!important;
-    top:70px!important;
-    left:12px!important;
-    width:min(235px,calc(100vw - 24px))!important;
-    z-index:2000!important;
-  }
-
-  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel.open{
-    display:block!important;
-  }
-
-  body.customer-workspace-page .customer-workspace-header #customer-workspace-page-title,
-  body.customer-workspace-page .customer-workspace-header .customer-workspace-header-label{
-    display:none!important;
-  }
-
-  body.customer-workspace-page .customer-workspace-header{
-    overflow:visible!important;
-  }
+  body.customer-workspace-page .customer-workspace-header #mobile-workspace-panel{display:none!important}
 }
