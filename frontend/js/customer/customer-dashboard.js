@@ -2,18 +2,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobileWorkspaceMenu = document.getElementById('mobile-workspace-menu');
     const mobileWorkspacePanel = document.getElementById('mobile-workspace-panel');
     if (mobileWorkspaceMenu && mobileWorkspacePanel) {
+        // Student Dashboard mobile menu is active consistently through 640px.
+        const isMobileWorkspace = () => window.matchMedia('(max-width: 640px)').matches;
+        const closeMobileWorkspaceMenu = () => {
+            mobileWorkspacePanel.classList.remove('open');
+            mobileWorkspaceMenu.setAttribute('aria-expanded', 'false');
+        };
+
         mobileWorkspaceMenu.addEventListener('click', () => {
+            if (!isMobileWorkspace()) {
+                closeMobileWorkspaceMenu();
+                return;
+            }
             const open = mobileWorkspacePanel.classList.toggle('open');
             mobileWorkspaceMenu.setAttribute('aria-expanded', String(open));
         });
+
         mobileWorkspacePanel.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => mobileWorkspacePanel.classList.remove('open'));
+            link.addEventListener('click', () => closeMobileWorkspaceMenu());
         });
+
         document.addEventListener('click', (event) => {
             if (!mobileWorkspaceMenu.contains(event.target) && !mobileWorkspacePanel.contains(event.target)) {
-                mobileWorkspacePanel.classList.remove('open');
-                mobileWorkspaceMenu.setAttribute('aria-expanded', 'false');
+                closeMobileWorkspaceMenu();
             }
+        });
+
+        window.addEventListener('resize', () => {
+            if (!isMobileWorkspace()) closeMobileWorkspaceMenu();
         });
     }
     const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
