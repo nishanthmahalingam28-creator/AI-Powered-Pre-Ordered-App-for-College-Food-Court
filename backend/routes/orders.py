@@ -559,8 +559,12 @@ def get_order_bill(order_id):
 def get_my_orders():
     customer_id = session.get("user_id")
 
-    orders = DB.query(
-        """
+    status_filter = str(request.args.get("status") or "").strip().lower()
+    shop_filter = str(request.args.get("shop") or "").strip()
+    from_date = str(request.args.get("from") or "").strip()
+    to_date = str(request.args.get("to") or "").strip()
+
+    sql = """
         SELECT o.id, o.order_reference, o.total_amount, o.order_status, o.payment_status,
                o.payment_method, o.pickup_otp, o.created_at, o.payment_time, o.preparing_time,
                o.ready_time, o.completed_time, o.cancellation_time,
@@ -568,11 +572,25 @@ def get_my_orders():
         FROM orders o
         INNER JOIN shops s ON s.id = o.shop_id
         WHERE o.customer_id = %s
-        ORDER BY o.id DESC
-        LIMIT 25
-        """,
-        (customer_id,),
-    )
+    """
+    params = [customer_id]
+    allowed_statuses = {"pending", "preparing", "ready", "completed", "cancelled"}
+
+    if status_filter and status_filter in allowed_statuses:
+        sql += " AND o.order_status = %s"
+        params.append(status_filter)
+    if shop_filter:
+        sql += " AND LOWER(s.name) = LOWER(%s)"
+        params.append(shop_filter)
+    if from_date:
+        sql += " AND DATE(o.created_at) >= %s"
+        params.append(from_date)
+    if to_date:
+        sql += " AND DATE(o.created_at) <= %s"
+        params.append(to_date)
+
+    sql += " ORDER BY o.created_at DESC, o.id DESC LIMIT 100"
+    orders = DB.query(sql, tuple(params))
 
     # Attach order item summaries
     for order in orders:
@@ -959,6 +977,16 @@ def update_order_status(order_id):
     params.append(order_id)
 
     DB.execute(sql, tuple(params))
+    status_row = DB.get_one(
+        "SELECT preparing_time, ready_time FROM orders WHERE id = %s",
+        (order_id,),
+    )
+    event_time = None
+    if new_status == "preparing":
+        event_time = status_row.get("preparing_time") if status_row else None
+    elif new_status == "ready":
+        event_time = status_row.get("ready_time") if status_row else None
+    event_time = str(event_time) if event_time else None
 
     actor_id = session.get("user_id")
     AuditService.log_action(
@@ -993,7 +1021,7 @@ def update_order_status(order_id):
         logger.warning("Notification dispatch error in status change (non-fatal): %s", ne)
 
     try:
-        emit_order_status(order, new_status, now_str)
+        emit_order_status(order, new_status, event_time)
     except Exception as re:
         logger.warning("Realtime order-status dispatch failed (non-fatal): %s", re)
 
@@ -1001,6 +1029,6 @@ def update_order_status(order_id):
         "success": True,
         "message": f"Order status updated to {new_status}.",
         "status": new_status,
-        "updated_at": now_str
+        "updated_at": event_time
     }), 200
 
