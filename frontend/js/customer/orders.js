@@ -114,12 +114,182 @@ async function cancelOrder(orderId) {
     }
 }
 
+async function reorderItems(order) {
+    const items = Array.isArray(order.items) ? order.items : [];
+    if (!items.length) {
+        alert('This order has no item details available for reorder.');
+        return;
+    }
+
+    const ok = confirm(`Add all items from #${order.order_reference} to your cart?`);
+    if (!ok) return;
+
+    let added = 0;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item.menu_item_id) continue;
+
+        try {
+            const body = { item_id: item.menu_item_id, quantity: Number(item.quantity || 1) };
+            if (i === 0) body.clear_conflicting_stall = true;
+
+            const res = await fetch(`${API_BASE_URL}/cart`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok && data.success) {
+                added++;
+            } else if (res.status === 409 && i === 0) {
+                const retry = await fetch(`${API_BASE_URL}/cart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ...body, clear_conflicting_stall: true })
+                });
+                const retryData = await retry.json().catch(() => ({}));
+                if (retry.ok && retryData.success) added++;
+                else throw new Error(retryData.message || 'Unable to add item');
+            } else {
+                throw new Error(data.message || 'Unable to add item');
+            }
+        } catch (e) {
+            alert(`Could not add ${item.item_name || 'an item'}: ${e.message}`);
+            return;
+        }
+    }
+
+    alert(`✓ ${added} item(s) added to your cart. Review the cart before placing a new order.`);
+    window.location.href = 'preorder.html';
+}
+
+function getHistoryFilters() {
+    return {
+        status: document.getElementById('order-history-status')?.value || '',
+        shop: document.getElementById('order-history-shop')?.value || '',
+        from: document.getElementById('order-history-from')?.value || '',
+        to: document.getElementById('order-history-to')?.value || ''
+    };
+}
+
+function historyQueryString() {
+    const f = getHistoryFilters();
+    const params = new URLSearchParams();
+    if (f.status) params.set('status', f.status);
+    if (f.shop) params.set('shop', f.shop);
+    if (f.from) params.set('from', f.from);
+    if (f.to) params.set('to', f.to);
+    return params.toString();
+}
+
+async function populateHistoryShops() {
+    const select = document.getElementById('order-history-shop');
+    if (!select || select.dataset.loaded === '1') return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/shops`, { credentials: 'include' });
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.shops)) {
+            data.shops.forEach(shop => {
+                const option = document.createElement('option');
+                option.value = shop.name;
+                option.textContent = shop.name;
+                select.appendChild(option);
+            });
+        }
+        select.dataset.loaded = '1';
+    } catch (e) {
+        // Keep All Shops available if the shop list cannot be loaded.
+    }
+}
+
+function renderOrderHistory(orders) {
+    const container = document.getElementById('orders-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!orders.length) {
+        container.innerHTML = `
+            <div class="bg-white p-12 rounded-3xl border border-slate-200 text-center">
+                <i class="fa-solid fa-receipt text-4xl text-slate-300 mb-3"></i>
+                <h3 class="font-bold text-slate-800 text-lg">No matching orders</h3>
+                <p class="text-xs text-slate-400 mt-1">Try changing the filters or place a new food order.</p>
+                <a href="menu.html" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-teal-700 text-white font-bold text-xs hover:bg-teal-800 transition-all">Browse Menu →</a>
+            </div>`;
+        return;
+    }
+
+    orders.forEach(order => {
+        const statusStyles = {
+            pending: 'bg-amber-100 text-amber-800 border-amber-200',
+            preparing: 'bg-blue-100 text-blue-800 border-blue-200',
+            ready: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+            completed: 'bg-slate-100 text-slate-700 border-slate-200',
+            cancelled: 'bg-red-100 text-red-700 border-red-200'
+        };
+        const badge = statusStyles[order.order_status] || 'bg-slate-100 text-slate-700';
+        const payBadgeStyle = order.payment_status === 'paid'
+            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            : order.payment_status === 'pending'
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-red-100 text-red-700 border-red-200';
+
+        const card = document.createElement('article');
+        card.className = 'bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4';
+        const safeOrder = JSON.stringify(order).replace(/'/g, '&#39;');
+        card.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-black text-teal-700">#${order.order_reference}</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${badge}">${order.order_status}</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${payBadgeStyle}">Pay: ${order.payment_status}</span>
+                    </div>
+                    <h3 class="font-black text-slate-900 text-lg mt-1">${order.shop_name}</h3>
+                    <p class="text-xs text-slate-600 mt-0.5">${order.items_summary || 'Order Items'}</p>
+                    <p class="text-[11px] text-slate-400 mt-2"><i class="fa-regular fa-clock mr-1"></i>Ordered: ${formatOrderDateTime(order.created_at)}</p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center sm:text-right shrink-0">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Pickup OTP</span>
+                    <strong class="text-xl font-black text-slate-800 tracking-widest block">${order.pickup_otp}</strong>
+                    <span class="text-[10px] text-slate-500">${order.order_status === 'completed' ? 'Order Fulfilled ✓' : 'Show at stall'}</span>
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <span>Total: <strong class="text-slate-900 font-bold">${formatCurrency(order.total_amount)}</strong> (${order.payment_method})</span>
+                    ${order.completed_time ? `<span>Completed: ${formatOrderDateTime(order.completed_time)}</span>` : ''}
+                    ${order.cancellation_time ? `<span>Cancelled: ${formatOrderDateTime(order.cancellation_time)}</span>` : ''}
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="viewOrderBill(${order.id})" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-receipt text-[11px]"></i> Bill
+                    </button>
+                    ${order.payment_status === 'pending' && (order.payment_method || '').includes('Online') || order.payment_status === 'pending' && (order.payment_method || '').includes('UPI') ? `
+                        <button onclick="payPendingOrder(${order.id})" class="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition-colors shadow-sm">Pay Now</button>` : ''}
+                    ${order.order_status === 'pending' ? `
+                        <button onclick="cancelOrder(${order.id})" class="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition-colors border border-red-200">Cancel Order</button>` : ''}
+                    ${order.order_status === 'completed' || order.order_status === 'cancelled' ? `
+                        <button onclick='reorderItems(${safeOrder})' class="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold text-xs transition-colors border border-teal-200">
+                            <i class="fa-solid fa-rotate-right text-[11px]"></i> Reorder
+                        </button>` : ''}
+                </div>
+            </div>`;
+        container.appendChild(card);
+    });
+}
+
 async function loadCustomerOrders() {
     const container = document.getElementById('orders-container');
     if (!container) return;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/orders/my-orders`, { credentials: 'include' });
+        const query = historyQueryString();
+        const url = query ? `${API_BASE_URL}/orders/my-orders?${query}` : `${API_BASE_URL}/orders/my-orders`;
+        const res = await fetch(url, { credentials: 'include' });
         if (res.status === 401) {
             sessionStorage.removeItem('foodCourtUser');
             window.location.href = '../auth/login.html';
@@ -127,87 +297,29 @@ async function loadCustomerOrders() {
         }
         const data = await res.json();
 
-        if (data.success && data.orders) {
-            container.innerHTML = '';
-
-            if (data.orders.length === 0) {
-                container.innerHTML = `
-                    <div class="bg-white p-12 rounded-3xl border border-slate-200 text-center py-12">
-                        <i class="fa-solid fa-receipt text-4xl text-slate-300 mb-3"></i>
-                        <h3 class="font-bold text-slate-800 text-lg">No orders placed yet</h3>
-                        <p class="text-xs text-slate-400 mt-1">Explore our digital food court menu to place your first pre-order.</p>
-                        <a href="menu.html" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-teal-700 text-white font-bold text-xs hover:bg-teal-800 transition-all">Browse Menu →</a>
-                    </div>
-                `;
-                return;
-            }
-
-            data.orders.forEach(order => {
-                const statusStyles = {
-                    pending: 'bg-amber-100 text-amber-800 border-amber-200',
-                    preparing: 'bg-blue-100 text-blue-800 border-blue-200',
-                    ready: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                    completed: 'bg-slate-100 text-slate-700 border-slate-200',
-                    cancelled: 'bg-red-100 text-red-700 border-red-200',
-                };
-                const badge = statusStyles[order.order_status] || 'bg-slate-100 text-slate-700';
-
-                const payBadgeStyle = 
-                    order.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                    order.payment_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                    'bg-red-100 text-red-700 border-red-200';
-
-                const card = document.createElement('article');
-                card.className = 'bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4';
-                card.innerHTML = `
-                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                        <div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-black text-teal-700">#${order.order_reference}</span>
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${badge}">
-                                    ${order.order_status}
-                                </span>
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${payBadgeStyle}">
-                                    Pay: ${order.payment_status}
-                                </span>
-                            </div>
-                            <h3 class="font-black text-slate-900 text-lg mt-1">${order.shop_name}</h3>
-                            <p class="text-xs text-slate-600 mt-0.5">${order.items_summary || 'Order Items'}</p>
-                        </div>
-                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center sm:text-right shrink-0">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Pickup OTP</span>
-                            <strong class="text-xl font-black text-slate-800 tracking-widest block">${order.pickup_otp}</strong>
-                            <span class="text-[10px] text-slate-500">${order.order_status === 'completed' ? 'Order Fulfilled ✓' : 'Show at stall'}</span>
-                        </div>
-                    </div>
-                    <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-3">
-                        <div class="flex items-center gap-3">
-                            <span>Total: <strong class="text-slate-900 font-bold">${formatCurrency(order.total_amount)}</strong> (${order.payment_method})</span>
-                            <span class="text-[11px] text-slate-400">Ordered: ${formatOrderDateTime(order.created_at)}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="viewOrderBill(${order.order_id})" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1">
-                                <i class="fa-solid fa-receipt text-[11px]"></i> Bill
-                            </button>
-                            ${order.payment_status === 'pending' && (order.payment_method.includes('Online') || order.payment_method.includes('UPI')) ? `
-                                <button onclick="payPendingOrder(${order.order_id})" class="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition-colors shadow-sm">
-                                    Pay Now
-                                </button>
-                            ` : ''}
-                            ${order.order_status === 'pending' ? `
-                                <button onclick="cancelOrder(${order.order_id})" class="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition-colors border border-red-200">
-                                    Cancel Order
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+        if (data.success && Array.isArray(data.orders)) {
+            renderOrderHistory(data.orders);
+        } else {
+            container.innerHTML = '<p class="text-xs text-red-500 p-4 text-center">Unable to load order history right now.</p>';
         }
     } catch (e) {
-        container.innerHTML = '<p class="text-xs text-red-500 p-4 text-center">Unable to load orders right now.</p>';
+        container.innerHTML = '<p class="text-xs text-red-500 p-4 text-center">Unable to load order history right now.</p>';
     }
+}
+
+function bindHistoryFilters() {
+    ['order-history-status', 'order-history-shop', 'order-history-from', 'order-history-to'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', loadCustomerOrders);
+    });
+    const clear = document.getElementById('order-history-clear');
+    if (clear) clear.addEventListener('click', () => {
+        ['order-history-status', 'order-history-shop', 'order-history-from', 'order-history-to'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        loadCustomerOrders();
+    });
 }
 
 async function payPendingOrder(orderId) {
@@ -270,8 +382,13 @@ async function payPendingOrder(orderId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadCustomerOrders);
+document.addEventListener('DOMContentLoaded', async () => {
+    await populateHistoryShops();
+    bindHistoryFilters();
+    await loadCustomerOrders();
+});
 window.viewOrderBill = viewOrderBill;
 window.cancelOrder = cancelOrder;
 window.closeBillModal = closeBillModal;
 window.payPendingOrder = payPendingOrder;
+window.reorderItems = reorderItems;
