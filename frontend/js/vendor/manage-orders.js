@@ -1,3 +1,16 @@
+function formatOrderDateTime(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '—';
+  let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) normalized += 'Z';
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  }).format(date);
+}
+
 const MANAGE_ORDERS_API = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 let manageOrdersShopId = null;
 let selectedOrderStatus = 'all';
@@ -58,7 +71,7 @@ function renderOrders() {
       <div class="flex items-start justify-between gap-3">
         <div><div class="flex flex-wrap items-center gap-2"><span class="font-mono text-sm font-black text-blue-900">#${escapeHtml(order.order_reference)}</span><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${statusClass}">${status}</span></div>
         <p class="text-xs font-bold text-slate-700 mt-2">${escapeHtml(order.customer_name||'Customer')}</p>
-        <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(order.created_at||'')} · ${escapeHtml(order.payment_method||'')} · Payment: ${escapeHtml(order.payment_status||'')}</p></div>
+        <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(formatOrderDateTime(order.created_at))} · ${escapeHtml(order.payment_method||'')} · Payment: ${escapeHtml(order.payment_status||'')}</p></div>
         <strong class="text-lg font-black text-slate-900">₹${Number(order.total_amount||0).toFixed(2)}</strong>
       </div>
       <div class="mt-4 bg-slate-50 rounded-2xl p-3"><p class="text-[10px] font-black uppercase text-slate-400 mb-2">Items</p><ul class="space-y-1 text-xs text-slate-700">${items||'<li>No item details</li>'}</ul></div>
