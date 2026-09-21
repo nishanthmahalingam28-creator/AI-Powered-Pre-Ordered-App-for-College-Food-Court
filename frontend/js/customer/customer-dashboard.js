@@ -1,37 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const mobileWorkspaceMenu = document.getElementById('mobile-workspace-menu');
-    const mobileWorkspacePanel = document.getElementById('mobile-workspace-panel');
-    if (mobileWorkspaceMenu && mobileWorkspacePanel) {
-        // Student Dashboard mobile menu is active consistently through 640px.
-        const isMobileWorkspace = () => window.matchMedia('(max-width: 640px)').matches;
-        const closeMobileWorkspaceMenu = () => {
-            mobileWorkspacePanel.classList.remove('open');
-            mobileWorkspaceMenu.setAttribute('aria-expanded', 'false');
-        };
-
-        mobileWorkspaceMenu.addEventListener('click', () => {
-            if (!isMobileWorkspace()) {
-                closeMobileWorkspaceMenu();
-                return;
-            }
-            const open = mobileWorkspacePanel.classList.toggle('open');
-            mobileWorkspaceMenu.setAttribute('aria-expanded', String(open));
-        });
-
-        mobileWorkspacePanel.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => closeMobileWorkspaceMenu());
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!mobileWorkspaceMenu.contains(event.target) && !mobileWorkspacePanel.contains(event.target)) {
-                closeMobileWorkspaceMenu();
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            if (!isMobileWorkspace()) closeMobileWorkspaceMenu();
-        });
-    }
+    // The shared customer-workspace-mobile.js owns the 0-640px menu
+    // on every customer/student workspace page.
     const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
     // Purge legacy financial storage keys to guarantee zero localStorage reliance
