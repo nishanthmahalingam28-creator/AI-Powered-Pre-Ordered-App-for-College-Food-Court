@@ -668,6 +668,25 @@ def init_mysql():
                     UNIQUE KEY uq_shop_daily_survey_date (shop_id, survey_date)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """)
+            # Existing production databases need the new vendor-configurable Food Survey windows.
+            survey_time_columns = {
+                "breakfast_start": "TIME NOT NULL DEFAULT '06:00:00'",
+                "breakfast_end": "TIME NOT NULL DEFAULT '10:00:00'",
+                "lunch_start": "TIME NOT NULL DEFAULT '10:30:00'",
+                "lunch_end": "TIME NOT NULL DEFAULT '15:00:00'",
+                "dinner_start": "TIME NOT NULL DEFAULT '17:00:00'",
+                "dinner_end": "TIME NOT NULL DEFAULT '21:00:00'",
+            }
+            for column_name, definition in survey_time_columns.items():
+                cur.execute("""
+                    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'vendor_daily_surveys'
+                      AND COLUMN_NAME = %s
+                """, (db_name, column_name))
+                if int(cur.fetchone()[0] or 0) == 0:
+                    cur.execute(f"ALTER TABLE vendor_daily_surveys ADD COLUMN {column_name} {definition}")
+                    print(f"MySQL migration: added Food Survey time column {column_name}.")
+
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS vendor_daily_menu_items (
                     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
