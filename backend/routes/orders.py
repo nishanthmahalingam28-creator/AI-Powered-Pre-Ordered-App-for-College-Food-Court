@@ -719,6 +719,57 @@ def get_vendor_orders(shop_id):
 _failed_otp_attempts = {}
 
 
+@orders_bp.post("/lookup-otp")
+@role_required(["vendor", "admin"])
+def lookup_pickup_otp():
+    """Preview the ready order matched by a customer's pickup OTP without completing it."""
+    data = request.get_json(silent=True) or {}
+    otp = str(data.get("otp") or data.get("pickup_otp") or "").strip()
+    current_role = session.get("role")
+    current_shop_id = session.get("shop_id")
+
+    if not otp or not otp.isdigit() or len(otp) != 6:
+        return jsonify({"success": False, "message": "Enter a valid 6-digit pickup OTP."}), 400
+
+    shop_id = current_shop_id if current_role == "vendor" else (data.get("shop_id") or current_shop_id)
+    sql = """
+        SELECT o.id, o.order_reference, o.customer_id, o.shop_id, o.total_amount,
+               o.order_status, o.payment_status, o.payment_method, o.created_at,
+               cp.full_name AS customer_name
+        FROM orders o
+        LEFT JOIN customer_profiles cp ON cp.user_id = o.customer_id
+        WHERE o.pickup_otp = %s
+    """
+    params = [otp]
+    if shop_id:
+        sql += " AND o.shop_id = %s"
+        params.append(shop_id)
+
+    order = DB.get_one(sql, tuple(params))
+    if not order:
+        return jsonify({"success": False, "message": "No matching order found for this stall."}), 404
+
+    if str(order.get("order_status") or "").lower() != "ready":
+        status = str(order.get("order_status") or "unknown").replace("_", " ").title()
+        return jsonify({
+            "success": False,
+            "message": f"Order #{order['order_reference']} is currently {status}. OTP can be verified only when the order is Ready."
+        }), 400
+
+    items = DB.query(
+        "SELECT item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s ORDER BY id ASC",
+        (order["id"],)
+    )
+    order["items"] = items
+    order["total_amount"] = float(order.get("total_amount") or 0.0)
+
+    return jsonify({
+        "success": True,
+        "message": "Order found. Review the order details before verification.",
+        "order": order
+    }), 200
+
+
 @orders_bp.post("/verify-otp")
 @role_required(["vendor", "admin"])
 def verify_pickup_otp():
@@ -778,6 +829,12 @@ def verify_pickup_otp():
             "success": False,
             "message": "Invalid OTP. No matching order found for this stall."
         }), 404
+
+    if str(order.get("order_status") or "").lower() != "ready":
+        return jsonify({
+            "success": False,
+            "message": "Pickup OTP can only be verified when the order is Ready."
+        }), 400
 
     if order["order_status"] == "completed":
         return jsonify({
