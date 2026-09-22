@@ -140,60 +140,98 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!data.success) return;
 
             const surveys = Array.isArray(data.surveys) ? data.surveys : [];
-            const published = surveys.length > 0;
-            const completedCount = surveys.filter(s => Boolean(s.voted)).length;
-            const completed = published && completedCount === surveys.length;
+            const currentPeriod = data.current?.meal_period || null;
+            const periodLabel = currentPeriod
+                ? currentPeriod.charAt(0).toUpperCase() + currentPeriod.slice(1)
+                : 'Food';
 
-            if (!published) {
+            if (!surveys.length) {
                 if (bannerBadge) {
                     bannerBadge.textContent = 'Not Published';
                     bannerBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200';
                 }
-                if (bannerTitle) bannerTitle.textContent = 'Morning Survey Not Published Yet';
-                if (bannerSubtitle) bannerSubtitle.textContent = "Your food-court stalls have not published today's survey yet.";
+                if (bannerTitle) bannerTitle.textContent = 'Food Survey Not Published Yet';
+                if (bannerSubtitle) bannerSubtitle.textContent = "Your food-court stalls have not published today's Food Survey yet.";
                 if (bannerBtn) {
                     bannerBtn.href = 'morning-survey.html';
-                    bannerBtn.innerHTML = '<span>View Morning Survey</span><i class="fa-solid fa-arrow-right text-xs"></i>';
+                    bannerBtn.innerHTML = '<span>View Food Survey</span><i class="fa-solid fa-arrow-right text-xs"></i>';
                     bannerBtn.className = 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl border border-slate-300 transition-all flex items-center gap-2';
                 }
                 if (bannerIcon) {
                     bannerIcon.className = 'w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl font-bold shrink-0';
-                    bannerIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';
+                    bannerIcon.innerHTML = '<i class="fa-solid fa-clipboard-list"></i>';
                 }
                 return;
             }
 
+            // A shop is complete only when the student submitted the currently
+            // active meal period (or, outside meal hours, the next available period).
+            const periodForStatus = currentPeriod || ['breakfast', 'lunch', 'dinner'].find(function(period) {
+                return surveys.some(function(s) {
+                    return (s.meal_windows?.[period]?.status === 'upcoming');
+                });
+            }) || 'breakfast';
+
+            const completedCount = surveys.filter(function(s) {
+                const ids = s.voted_menu_item_ids_by_period?.[periodForStatus] || [];
+                return ids.length > 0;
+            }).length;
+            const completed = completedCount === surveys.length;
+            const isOpen = surveys.some(function(s) {
+                return s.meal_windows?.[periodForStatus]?.status === 'open';
+            });
+            const periodWindows = surveys.map(function(s) {
+                return s.meal_windows?.[periodForStatus];
+            }).filter(Boolean);
+            const firstWindow = periodWindows[0];
+
             if (bannerBadge) {
-                bannerBadge.textContent = completed ? 'Survey Completed ✓' : (completedCount + '/' + surveys.length + ' Shops Completed');
+                bannerBadge.textContent = completed
+                    ? periodLabel + ' Survey Completed ✓'
+                    : isOpen
+                        ? completedCount + '/' + surveys.length + ' Shops Completed'
+                        : periodLabel + ' Survey ' + (firstWindow?.status === 'upcoming' ? 'Upcoming' : 'Closed');
                 bannerBadge.className = completed
                     ? 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300';
+                    : isOpen
+                        ? 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300'
+                        : 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-300';
             }
-            if (bannerTitle) bannerTitle.textContent = completed ? "Today's Morning Survey Completed" : "Complete Today's Morning Survey";
+
+            if (bannerTitle) {
+                bannerTitle.textContent = completed
+                    ? "Today's " + periodLabel + ' Food Survey Completed'
+                    : isOpen
+                        ? 'Complete Today\'s ' + periodLabel + ' Food Survey'
+                        : 'View Today\'s Food Survey';
+            }
+
             if (bannerSubtitle) {
-                const remaining = surveys.length - completedCount;
                 bannerSubtitle.textContent = completed
-                    ? 'Your choices from ' + surveys.length + ' published shop surveys are now available to the AI recommendation engine.'
-                    : 'Submit your food choice for ' + remaining + ' remaining shop survey' + (remaining === 1 ? '' : 's') + '. Your choices will personalize recommendations.';
+                    ? 'Your ' + periodLabel.toLowerCase() + ' choices are saved and available to the AI recommendation engine.'
+                    : isOpen
+                        ? 'Choose one or more dishes for ' + completedCount + ' remaining shop' + (surveys.length - completedCount === 1 ? '' : 's') + '.'
+                        : 'The ' + periodLabel.toLowerCase() + ' Food Survey is not open right now. You can view the next survey window.';
             }
+
             if (bannerBtn) {
                 bannerBtn.href = 'morning-survey.html';
-                bannerBtn.innerHTML = '<span>' + (completed ? 'Review Survey' : 'Complete Morning Survey') + '</span><i class="fa-solid fa-arrow-right text-xs"></i>';
+                bannerBtn.innerHTML = '<span>' + (completed ? 'Review Food Survey' : 'Open Food Survey') + '</span><i class="fa-solid fa-arrow-right text-xs"></i>';
                 bannerBtn.className = completed
                     ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl border border-slate-300 transition-all flex items-center gap-2'
                     : 'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl shadow-md transition-all flex items-center gap-2';
             }
+
             if (bannerIcon) {
                 bannerIcon.className = completed
                     ? 'w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold shrink-0'
                     : 'w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold shrink-0';
-                bannerIcon.innerHTML = completed ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-sun"></i>';
+                bannerIcon.innerHTML = completed ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-clipboard-list"></i>';
             }
         } catch (e) {
-            console.warn('Morning survey status check failed:', e);
+            console.warn('Food Survey status check failed:', e);
         }
     }
-
 
     // When pickup OTP verification completes an order, refresh the financial cards immediately.
     window.addEventListener('foodcourt:order-status', function (event) {
