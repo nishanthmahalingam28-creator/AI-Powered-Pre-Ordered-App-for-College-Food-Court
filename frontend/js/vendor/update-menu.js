@@ -42,7 +42,7 @@ function renderMealSection(period) {
       </div>
       <div class="flex items-center justify-between mt-3">
         <div class="flex items-center gap-2"><button onclick="changeQty(${item.id},-1)" class="w-8 h-8 rounded-lg bg-slate-100 font-black">−</button><span class="text-xs font-black w-8 text-center">${item.quantity}</span><button onclick="changeQty(${item.id},1)" class="w-8 h-8 rounded-lg bg-slate-100 font-black">+</button></div>
-        <div class="flex items-center gap-2"><span class="text-[10px] font-bold ${item.is_available ? 'text-emerald-600':'text-rose-600'}">${item.is_available ? 'AVAILABLE':'UNAVAILABLE'}</span><button onclick="toggleAvailable(${item.id},${!!item.is_available})" class="w-8 h-8 rounded-lg bg-slate-100"><i class="fa-solid fa-power-off text-[10px]"></i></button><button onclick="removeItem(${item.id}, encodeURIComponent(item.name))" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600"><i class="fa-solid fa-trash text-[10px]"></i></button></div>
+        <div class="flex items-center gap-2"><span class="text-[10px] font-bold ${item.is_available ? 'text-emerald-600':'text-rose-600'}">${item.is_available ? 'AVAILABLE':'UNAVAILABLE'}</span><button onclick="toggleAvailable(${item.id},${!!item.is_available})" class="w-8 h-8 rounded-lg bg-slate-100"><i class="fa-solid fa-power-off text-[10px]"></i></button><button onclick="removeItem(${item.id})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600"><i class="fa-solid fa-trash text-[10px]"></i></button></div>
       </div>
     </article>`).join('') : '<div class="p-6 text-center text-xs text-slate-400 bg-white/60 rounded-2xl border border-dashed border-slate-200">No dishes in this section.</div>';
 }
@@ -55,8 +55,9 @@ async function changeQty(id, delta) { const item=updateMenuItems.find(x=>x.id===
 async function toggleAvailable(id, current) { await apiUpdate(id,{available:!current}); }
 async function editPrice(id,current) { const v=prompt('Enter new price (₹):',current); if(v===null)return; const n=Number(v); if(!n||n<=0){alert('Enter a valid price.');return;} await apiUpdate(id,{price:n}); }
 async function changePeriod(id,current) { const next=prompt('Enter meal section: breakfast, lunch, or dinner',current); if(next===null)return; const p=next.trim().toLowerCase(); if(!['breakfast','lunch','dinner'].includes(p)){alert('Use breakfast, lunch, or dinner.');return;} await apiUpdate(id,{meal_period:p}); }
-async function removeItem(id,name) {
-  name=decodeURIComponent(name);
+async function removeItem(id) {
+  const item = updateMenuItems.find(x => Number(x.id) === Number(id));
+  const name = item ? item.name : 'this dish';
   if(!confirm(`Remove "${name}" from the menu?`)) return;
 
   const buttons = document.querySelectorAll('button[onclick*="removeItem("]');
