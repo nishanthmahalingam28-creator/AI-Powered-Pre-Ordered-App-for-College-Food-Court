@@ -69,6 +69,7 @@ async function viewOrderBill(orderId) {
         const ts = bill.timestamps || {};
         const labels = [
             ['Order Placed', ts.created_at || ts.order_time],
+            ['Pickup Scheduled', bill.pickup_at],
             ['Payment Verified', ts.payment_time],
             ['Kitchen Preparing', ts.preparing_time],
             ['Ready for Pickup', ts.ready_time],
