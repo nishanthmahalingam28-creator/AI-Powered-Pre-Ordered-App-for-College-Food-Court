@@ -1,3 +1,4 @@
+function formatPickupTime(value) { const m=String(value||'').match(/(?:T|\s)(\d{2}):(\d{2})/); if(!m) return value||'—'; const d=new Date(); d.setHours(Number(m[1]),Number(m[2]),0,0); return new Intl.DateTimeFormat('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).format(d); }
 function formatOrderDateTime(value) {
   const raw = String(value || '').trim();
   if (!raw) return '—';
