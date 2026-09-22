@@ -1570,13 +1570,13 @@ def get_vendor_morning_vote_results():
         return jsonify({"success": True, "date": today, "survey": None, "total_votes": 0, "options": []}), 200
 
     rows = DB.query("""
-        SELECT d.menu_item_id, d.meal_period, d.item_name, d.price,
+        SELECT d.id AS daily_menu_item_id, d.menu_item_id, d.meal_period, d.item_name, d.price,
                COUNT(v.id) AS vote_count
         FROM vendor_daily_menu_items d
         LEFT JOIN morning_survey_votes v
-          ON v.survey_id = d.survey_id AND v.menu_item_id = d.menu_item_id
+          ON v.survey_id = d.survey_id AND v.menu_item_id = d.id
         WHERE d.survey_id = %s
-        GROUP BY d.menu_item_id, d.meal_period, d.item_name, d.price
+        GROUP BY d.id, d.menu_item_id, d.meal_period, d.item_name, d.price
         ORDER BY vote_count DESC, d.meal_period, d.item_name
     """, (survey["id"],))
     total = sum(int(r.get("vote_count") or 0) for r in rows)
@@ -1587,6 +1587,7 @@ def get_vendor_morning_vote_results():
         "total_votes": total,
         "options": [{
             "menu_item_id": r["menu_item_id"],
+            "daily_menu_item_id": r["daily_menu_item_id"],
             "meal_period": r["meal_period"],
             "item_name": r["item_name"],
             "price": float(r["price"]),
