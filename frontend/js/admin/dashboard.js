@@ -568,7 +568,7 @@ async function loadGlobalOrders() {
                         </span>
                     </td>
                     <td class="p-3 font-mono font-black text-slate-700 tracking-wider">${o.pickup_otp}</td>
-                    <td class="p-3 text-teal-700 font-bold text-[11px]">${o.pickup_at ? o.pickup_at.replace('T', ' ').slice(0, 16) : '—'}</td>
+                    <td class="p-3 text-teal-700 font-bold text-[11px]">${o.pickup_at ? new Date(o.pickup_at.replace(' ', 'T') + (o.pickup_at.includes('Z') ? '' : 'Z')).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}) : '—'}</td>
                     <td class="p-3 text-slate-400 text-[11px]">${o.created_at ? o.created_at.split('.')[0] : '—'}</td>
                 `;
                 tbody.appendChild(tr);
