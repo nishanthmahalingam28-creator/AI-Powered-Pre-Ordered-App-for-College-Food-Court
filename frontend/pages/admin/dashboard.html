@@ -10,15 +10,52 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../css/base/reset.css">
-    <script src="../../js/core/public-components.js" defer></script>
+    <link rel="stylesheet" href="../../css/pages/admin-workspace.css">
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden admin-workspace-page">
 
-    <!-- Header Navigation -->
-    <div id="navbar-container"></div>
+    <!-- Shared Admin Workspace -->
+    <div id="admin-workspace-container">
+      <aside class="admin-workspace-sidebar" aria-label="Admin navigation">
+        <div class="admin-workspace-brand"><div class="admin-workspace-brand-mark"><i class="fa-solid fa-shield-halved"></i></div><div><strong>KPRIET</strong><span>Admin Control Center</span></div></div>
+        <nav class="admin-workspace-nav">
+          <a href="#dashboard" data-admin-tab="dashboard"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
+          <a href="#shops" data-admin-tab="shops"><i class="fa-solid fa-shop"></i><span>Stalls & Operations</span></a>
+          <a href="#vendors" data-admin-tab="vendors"><i class="fa-solid fa-id-badge"></i><span>Vendors</span></a>
+          <a href="#customers" data-admin-tab="customers"><i class="fa-solid fa-users"></i><span>Customers</span></a>
+          <a href="#temporary" data-admin-tab="temporary"><i class="fa-solid fa-clock"></i><span>Temporary Accounts</span></a>
+          <a href="#orders" data-admin-tab="orders"><i class="fa-solid fa-receipt"></i><span>Global Orders</span></a>
+          <a href="#payments" data-admin-tab="payments"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a>
+          <a href="#audit" data-admin-tab="audit"><i class="fa-solid fa-clipboard-list"></i><span>Security Audit</span></a>
+        </nav>
+        <div class="admin-workspace-user"><div class="admin-workspace-avatar" id="admin-sidebar-avatar">A</div><div class="min-w-0"><strong id="admin-sidebar-name">Administrator</strong><span>Administrator</span></div><button class="admin-workspace-logout" id="admin-workspace-logout" title="Logout" aria-label="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></div>
+      </aside>
+      <header class="admin-workspace-header">
+        <div class="admin-workspace-header-left">
+          <button type="button" id="admin-mobile-workspace-menu" class="admin-mobile-menu-toggle" aria-label="Open admin menu" aria-expanded="false"><span></span><span></span><span></span></button>
+          <div class="admin-workspace-heading"><span class="admin-workspace-header-label">Central operations</span><h2 id="admin-workspace-page-title">Admin Dashboard</h2></div>
+          <nav id="admin-mobile-workspace-panel" class="admin-mobile-workspace-panel" aria-label="Mobile admin navigation">
+            <a href="#dashboard" data-admin-tab="dashboard" aria-label="Dashboard"><i class="fa-solid fa-table-cells-large"></i></a>
+            <a href="#shops" data-admin-tab="shops"><i class="fa-solid fa-shop"></i><span>Stalls & Operations</span></a>
+            <a href="#vendors" data-admin-tab="vendors"><i class="fa-solid fa-id-badge"></i><span>Vendors</span></a>
+            <a href="#customers" data-admin-tab="customers"><i class="fa-solid fa-users"></i><span>Customers</span></a>
+            <a href="#temporary" data-admin-tab="temporary"><i class="fa-solid fa-clock"></i><span>Temporary Accounts</span></a>
+            <a href="#orders" data-admin-tab="orders"><i class="fa-solid fa-receipt"></i><span>Global Orders</span></a>
+            <a href="#payments" data-admin-tab="payments"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a>
+            <a href="#audit" data-admin-tab="audit"><i class="fa-solid fa-clipboard-list"></i><span>Security Audit</span></a>
+          </nav>
+        </div>
+        <div class="admin-workspace-actions"><button class="admin-workspace-notification" id="admin-notification-trigger" title="Notifications" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span id="admin-notification-badge" class="admin-notification-badge hidden">0</span></button><span class="admin-workspace-role">Administrator</span><div class="admin-workspace-top-avatar" id="admin-top-avatar">A</div></div>
+      </header>
+      <div id="admin-notification-backdrop" class="admin-notification-backdrop hidden"></div>
+      <aside id="admin-notification-drawer" class="admin-notification-drawer" aria-label="Admin notifications" aria-hidden="true">
+        <div class="admin-notification-head"><div><span>Live updates</span><h3>Notifications</h3></div><div class="flex items-center gap-1"><button id="admin-mark-all-read" type="button" title="Mark all read" aria-label="Mark all notifications read"><i class="fa-solid fa-check-double"></i></button><button id="admin-notification-close" type="button" title="Close notifications" aria-label="Close notifications"><i class="fa-solid fa-xmark"></i></button></div></div>
+        <div id="admin-notification-list" class="admin-notification-list"><div class="admin-notification-empty">Loading notifications...</div></div>
+      </aside>
+    </div>
 
     <!-- Main Content Container -->
-    <main class="flex-grow py-8 pb-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
+    <main class="flex-grow py-8 pb-20 w-full max-w-7xl mx-auto px-4 sm:px-6 admin-workspace-main">
 
         <!-- Top Header & Role Badge -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -44,6 +81,8 @@
             </div>
         </div>
 
+        <!-- Admin Dashboard Overview -->
+        <div id="admin-dashboard-overview" class="admin-dashboard-overview">
         <!-- KPI Metrics Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -89,6 +128,7 @@
                     <span id="stat-users-breakdown" class="text-[10px] text-purple-700 font-semibold">0 Cust · 0 Vendors</span>
                 </div>
             </div>
+        </div>
         </div>
 
         <!-- Navigation Tabs -->
@@ -467,10 +507,8 @@
         </div>
     </div>
 
-    <!-- Footer Component -->
-    <div id="footer-container"></div>
-
     <script src="../../js/config.js"></script>
+    <script src="../../js/admin/admin-workspace.js"></script>
     <script src="../../js/admin/dashboard.js"></script>
 </body>
 </html>
