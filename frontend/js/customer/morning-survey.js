@@ -57,7 +57,7 @@ function renderSurvey(survey) {
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">${period}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     ${rows.map(option => {
-                        const selected = String(survey.voted_menu_item_id) === String(option.id);
+                        const selected = (survey.voted_menu_item_ids || []).map(String).includes(String(option.id));
                         return `
                             <label class="food-vote-option block cursor-pointer rounded-2xl border-2 ${selected ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-100' : 'border-slate-200 bg-white'} hover:border-teal-400 p-4 transition-all">
                                 <input type="checkbox"
