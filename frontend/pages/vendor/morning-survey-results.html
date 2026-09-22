@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Morning Survey User Results</title><script src="https://cdn.tailwindcss.com"></script>
+<title>Food Survey Results</title><script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="../../css/pages/dashboard.css"><script src="../../js/core/public-components.js" defer></script>
 <script src="../../js/vendor/vendor-workspace.js" defer></script><link rel="stylesheet" href="../../css/pages/customer-workspace.css">
 </head>
@@ -9,12 +9,12 @@
 <main class="customer-workspace-main" class="customer-workspace-main">
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
 <div class="flex items-center gap-3"><a href="morning-survey.html" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500"><i class="fa-solid fa-arrow-left"></i></a>
-<div><p class="text-[10px] font-black uppercase tracking-widest text-blue-600">Vendor Analytics</p><h1 class="text-2xl md:text-3xl font-black">Morning Survey User Results</h1><p id="results-date" class="text-sm text-slate-500 mt-1">Today's customer demand</p></div></div>
+<div><p class="text-[10px] font-black uppercase tracking-widest text-blue-600">Vendor Analytics</p><h1 class="text-2xl md:text-3xl font-black">Food Survey Results</h1><p id="results-date" class="text-sm text-slate-500 mt-1">Today's customer demand</p></div></div>
 <button onclick="loadResults()" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black"><i class="fa-solid fa-rotate mr-1"></i>Refresh</button></div>
 <div id="message" class="hidden mb-5 p-3 rounded-xl text-xs font-bold"></div>
 <section id="summary" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5"></section>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-<section class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><h2 class="font-black">🍽️ Meal Period Demand</h2><p class="text-[11px] text-slate-400 mb-4">Customers who plan to eat today.</p><div id="meal"></div></section>
+<section class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><h2 class="font-black">🍽️ Food Survey Demand</h2><p class="text-[11px] text-slate-400 mb-4">Customers who plan to eat today.</p><div id="meal"></div></section>
 <section class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><h2 class="font-black">❤️ Food Preferences</h2><p class="text-[11px] text-slate-400 mb-4">What customers are craving today.</p><div id="preferences"></div></section>
 <section class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><h2 class="font-black">🥗 Dietary Preferences</h2><div id="diet"></div></section>
 <section class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><h2 class="font-black">🔥 Hunger Levels</h2><div id="hunger"></div></section>
