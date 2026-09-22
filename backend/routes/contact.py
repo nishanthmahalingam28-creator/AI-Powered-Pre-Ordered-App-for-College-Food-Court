@@ -47,7 +47,7 @@ def get_contact_messages():
     # cannot become slow because of a large/legacy production table.
     limit = 100
 
-    sql = """SELECT id, full_name, email, subject, message, status, created_at, read_at, resolved_at
+    sql = """SELECT id, full_name, email, subject, message, status, created_at
              FROM contact_messages WHERE 1=1"""
     params = []
     if status in {"new", "read", "resolved"}:
