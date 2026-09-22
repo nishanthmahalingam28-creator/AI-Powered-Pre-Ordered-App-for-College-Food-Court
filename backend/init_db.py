@@ -731,6 +731,60 @@ def init_mysql():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """)
 
+            # Existing production databases may have vendor_daily_menu_items from an older
+            # Food Survey version without meal_period. Migrate that table before creating/
+            # backfilling morning_survey_votes, because the vote migration depends on d.meal_period.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'vendor_daily_menu_items'
+                  AND COLUMN_NAME = 'meal_period'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("""
+                    ALTER TABLE vendor_daily_menu_items
+                    ADD COLUMN meal_period VARCHAR(20) NULL DEFAULT 'lunch' AFTER menu_item_id
+                """)
+                print("MySQL migration: added vendor daily menu meal_period column.")
+
+            # Backfill old daily-menu rows from the master menu item when possible.
+            cur.execute("""
+                UPDATE vendor_daily_menu_items d
+                INNER JOIN menu_items m ON m.id = d.menu_item_id
+                SET d.meal_period = COALESCE(NULLIF(m.meal_period, ''), 'lunch')
+                WHERE d.meal_period IS NULL OR d.meal_period = ''
+            """)
+            cur.execute("""
+                UPDATE vendor_daily_menu_items
+                SET meal_period = 'lunch'
+                WHERE meal_period IS NULL OR meal_period = ''
+            """)
+            cur.execute("""
+                ALTER TABLE vendor_daily_menu_items
+                MODIFY COLUMN meal_period VARCHAR(20) NOT NULL DEFAULT 'lunch'
+            """)
+
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'vendor_daily_menu_items'
+                  AND INDEX_NAME = 'uq_vendor_daily_menu_slot'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("""
+                    ALTER TABLE vendor_daily_menu_items
+                    ADD UNIQUE KEY uq_vendor_daily_menu_slot (survey_id, menu_item_id, meal_period)
+                """)
+
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'vendor_daily_menu_items'
+                  AND INDEX_NAME = 'idx_vendor_daily_menu_shop_date'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("""
+                    ALTER TABLE vendor_daily_menu_items
+                    ADD INDEX idx_vendor_daily_menu_shop_date (shop_id, meal_period)
+                """)
+
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS morning_survey_votes (
                     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
