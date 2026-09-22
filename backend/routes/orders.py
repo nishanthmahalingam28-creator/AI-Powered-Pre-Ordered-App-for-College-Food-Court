@@ -720,8 +720,16 @@ _failed_otp_attempts = {}
 
 
 @orders_bp.post("/lookup-otp")
-@role_required(["vendor", "admin"])
+@login_required
 def lookup_pickup_otp():
+    """Preview a ready order by pickup OTP without completing it.
+
+    Vendor authorization is tied to the authenticated session's assigned shop.
+    Admins may preview by the supplied shop_id.
+    """
+    current_role = str(session.get("role") or "").strip().lower()
+    if current_role not in ("vendor", "admin"):
+        return jsonify({"success": False, "message": "Forbidden: Vendor or admin access required."}), 403
     """Preview the ready order matched by a customer's pickup OTP without completing it."""
     data = request.get_json(silent=True) or {}
     otp = str(data.get("otp") or data.get("pickup_otp") or "").strip()
@@ -731,7 +739,19 @@ def lookup_pickup_otp():
     if not otp or not otp.isdigit() or len(otp) != 6:
         return jsonify({"success": False, "message": "Enter a valid 6-digit pickup OTP."}), 400
 
-    shop_id = current_shop_id if current_role == "vendor" else (data.get("shop_id") or current_shop_id)
+    if current_role == "vendor":
+        if not current_shop_id:
+            return jsonify({"success": False, "message": "Forbidden: No assigned stall found for this vendor."}), 403
+        assigned_shop = DB.get_one(
+            "SELECT id, is_active FROM shops WHERE id = %s AND owner_user_id = %s LIMIT 1",
+            (current_shop_id, session.get("user_id")),
+        )
+        if not assigned_shop or not assigned_shop.get("is_active"):
+            return jsonify({"success": False, "message": "Forbidden: Your assigned stall is inactive or unavailable."}), 403
+        shop_id = current_shop_id
+    else:
+        shop_id = data.get("shop_id") or current_shop_id
+
     sql = """
         SELECT o.id, o.order_reference, o.customer_id, o.shop_id, o.total_amount,
                o.order_status, o.payment_status, o.payment_method, o.created_at,
