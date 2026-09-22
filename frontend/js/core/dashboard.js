@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Keep the vendor dashboard in sync while students submit votes.
         // This updates only the vote cards; it does not reload the dashboard.
         if (document.getElementById('dashboard-vote-results')) {
-            setInterval(loadMorningFoodVotes, 5000);
+            setInterval(loadMorningFoodVotes, 30000);
         }
     }
 });
@@ -648,7 +648,7 @@ let vendorNotifPollingTimer = null;
 async function initVendorNotifications() {
     await fetchVendorUnreadCount();
     if (vendorNotifPollingTimer) clearInterval(vendorNotifPollingTimer);
-    vendorNotifPollingTimer = setInterval(fetchVendorUnreadCount, 10000);
+    vendorNotifPollingTimer = setInterval(fetchVendorUnreadCount, 30000);
 }
 
 window.addEventListener('beforeunload', () => {
