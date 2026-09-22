@@ -972,6 +972,18 @@ def vote_morning_poll():
 
     now = datetime.now(FOOD_SURVEY_TIMEZONE)
     today = now.strftime("%Y-%m-%d")
+
+    survey = DB.get_one(
+        """SELECT id, shop_id, breakfast_start, breakfast_end,
+                  lunch_start, lunch_end, dinner_start, dinner_end
+           FROM vendor_daily_surveys
+           WHERE id=%s AND survey_date=%s AND is_serving_today=1
+           LIMIT 1""",
+        (survey_id, today),
+    )
+    if not survey:
+        return jsonify({"success": False, "message": "This Food Survey is not available today."}), 404
+
     survey_windows = _survey_windows_from_row(survey)
     start, end = survey_windows[meal_period]
     if not (start <= now.time() < end):
@@ -979,11 +991,6 @@ def vote_morning_poll():
             "success": False,
             "message": f"{meal_period.title()} Food Survey is available only from {start.strftime('%I:%M %p')} to {end.strftime('%I:%M %p')} IST."
         }), 403
-
-    survey = DB.get_one(
-        "SELECT id, shop_id FROM vendor_daily_surveys WHERE id=%s AND survey_date=%s AND is_serving_today=1 LIMIT 1",
-        (survey_id, today),
-    )
     if not survey:
         return jsonify({"success": False, "message": "This Food Survey is not available today."}), 404
 
