@@ -82,7 +82,7 @@ function renderOrders() {
       <div class="flex items-start justify-between gap-3">
         <div><div class="flex flex-wrap items-center gap-2"><span class="font-mono text-sm font-black text-blue-900">#${escapeHtml(order.order_reference)}</span><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${statusClass}">${status}</span></div>
         <p class="text-xs font-bold text-slate-700 mt-2">${escapeHtml(order.customer_name||'Customer')}</p>
-        <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(formatOrderDateTime(order.created_at))} · ${escapeHtml(order.payment_method||'')} · Payment: ${escapeHtml(order.payment_status||'')}</p></div>
+        <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(formatOrderDateTime(order.created_at))} · ${escapeHtml(order.payment_method||'')} · Payment: ${escapeHtml(order.payment_status||'')}</p>${order.pickup_at ? `<p class="text-[10px] text-teal-700 font-black mt-1"><i class="fa-solid fa-clock mr-1"></i>Pickup: ${escapeHtml(formatOrderDateTime(order.pickup_at))}</p>` : ""}</div>
         <strong class="text-lg font-black text-slate-900">₹${Number(order.total_amount||0).toFixed(2)}</strong>
       </div>
       <div class="mt-4 bg-slate-50 rounded-2xl p-3"><p class="text-[10px] font-black uppercase text-slate-400 mb-2">Items</p><ul class="space-y-1 text-xs text-slate-700">${items||'<li>No item details</li>'}</ul></div>
@@ -135,7 +135,7 @@ async function lookupPickupOtp() {
         <div>
           <div class="flex items-center gap-2"><span class="font-mono text-sm font-black text-blue-900">#${escapeHtml(order.order_reference)}</span><span class="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase">READY</span></div>
           <p class="text-xs font-bold text-slate-800 mt-2">${escapeHtml(order.customer_name||'Customer')}</p>
-          <p class="text-[10px] text-slate-500 mt-1">${escapeHtml(formatOrderDateTime(order.created_at))} · ${escapeHtml(order.payment_method||'')}</p>
+          <p class="text-[10px] text-slate-500 mt-1">${escapeHtml(formatOrderDateTime(order.created_at))} · ${escapeHtml(order.payment_method||'')}</p>${order.pickup_at ? `<p class="text-[10px] text-teal-700 font-black mt-1"><i class="fa-solid fa-clock mr-1"></i>Pickup: ${escapeHtml(formatOrderDateTime(order.pickup_at))}</p>` : ""}
         </div>
         <strong class="text-lg font-black text-slate-900">₹${Number(order.total_amount||0).toFixed(2)}</strong>
       </div>
