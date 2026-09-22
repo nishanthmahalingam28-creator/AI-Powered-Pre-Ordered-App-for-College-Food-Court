@@ -529,8 +529,11 @@ def get_vendor_kitchen_orders():
             WHEN 'pending' THEN 1
             WHEN 'preparing' THEN 2
             WHEN 'ready' THEN 3
-            ELSE 4 END,
-            o.id DESC
+            WHEN 'completed' THEN 4
+            WHEN 'cancelled' THEN 5
+            ELSE 6 END,
+            o.created_at ASC,
+            o.id ASC
         LIMIT 100
     """
 
