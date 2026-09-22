@@ -203,6 +203,57 @@ def get_budgets():
         return jsonify({"success": False, "message": "Failed to retrieve budgets."}), 500
 
 
+@budgets_bp.get("/summary")
+@login_required
+def get_budget_summary():
+    """
+    Returns the authenticated customer's current monthly food-budget snapshot
+    in one database query, avoiding separate budget and expense API requests.
+    """
+    user_id = session.get("user_id")
+
+    try:
+        row = DB.get_one(
+            """
+            SELECT
+                COALESCE((
+                    SELECT amount_limit
+                    FROM budgets
+                    WHERE user_id = %s AND LOWER(period) = 'monthly'
+                    ORDER BY id DESC
+                    LIMIT 1
+                ), 0) AS monthly_budget,
+                COALESCE((
+                    SELECT SUM(amount)
+                    FROM expenses
+                    WHERE user_id = %s
+                      AND LOWER(category) = 'food'
+                      AND expense_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
+                      AND expense_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
+                ), 0) AS food_spent
+            """,
+            (user_id, user_id)
+        )
+
+        budget = float((row or {}).get("monthly_budget") or 0)
+        spent = float((row or {}).get("food_spent") or 0)
+        remaining = max(0.0, budget - spent)
+
+        return jsonify({
+            "success": True,
+            "budget": round(budget, 2),
+            "spent": round(spent, 2),
+            "remaining": round(remaining, 2)
+        }), 200
+
+    except Exception as e:
+        logger.exception("Failed to fetch budget summary for user %s: %s", user_id, e)
+        return jsonify({
+            "success": False,
+            "message": "Failed to retrieve food budget summary."
+        }), 500
+
+
 @budgets_bp.get("/<int:budget_id>")
 @login_required
 def get_single_budget(budget_id: int):
