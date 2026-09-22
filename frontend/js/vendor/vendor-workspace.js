@@ -53,25 +53,14 @@ function build(){
 async function load(){
  var target=document.getElementById('vendor-workspace-container');
  if(!target){console.error('[Vendor Workspace] Missing vendor-workspace-container');return;}
- /* Render a built-in shell first so the vendor navigation is never blank while components load. */
- target.innerHTML=[fallbackSidebar(),fallbackNavbar(),fallbackNotifications()].join('');
- document.body.classList.add('customer-workspace-page','vendor-workspace-page');
+ /* Vendor navigation is embedded in every vendor page. Keep it static so profile, notifications and logout work reliably on every page. */
  build();
- try{
-  var files=['vendor-sidebar.html','vendor-navbar.html','vendor-notifications.html'];
-  var responses=await Promise.all(files.map(function(file){return fetch(componentUrl(file),{cache:'no-store',credentials:'same-origin'});}));
-  if(responses.every(function(r){return r.ok;})){
-   var html=await Promise.all(responses.map(function(r){return r.text();}));
-   if(html.length===3 && html.every(Boolean)){
-    target.innerHTML=html.join('');
-    build();
-   }
-  }
- }catch(e){console.warn('[Vendor Workspace] Shared component fetch failed; keeping built-in navigation.',e);}
- var notificationScript=document.createElement('script');
- notificationScript.src=new URL('../../js/vendor/vendor-notifications.js',document.baseURI).href+'?v=20260922';
- notificationScript.defer=false;
- document.body.appendChild(notificationScript);
+ if(!window.vendorNotificationsReady){
+  var notificationScript=document.createElement('script');
+  notificationScript.src=new URL('../../js/vendor/vendor-notifications.js',document.baseURI).href+'?v=20260922';
+  notificationScript.defer=false;
+  document.body.appendChild(notificationScript);
+ }
 }
 window.vendorWorkspaceReady=load();
 })();
