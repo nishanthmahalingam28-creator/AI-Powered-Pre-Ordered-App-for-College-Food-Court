@@ -137,8 +137,8 @@ def place_order():
             order_id = tx.execute(
                 """
                 INSERT INTO orders (order_reference, customer_id, shop_id, total_amount, order_status,
-                                    payment_status, payment_method, pickup_otp, created_at)
-                VALUES (%s, %s, %s, %s, 'pending', 'pending', %s, %s, UTC_TIMESTAMP())
+                                    payment_status, payment_method, pickup_otp, pickup_at, created_at)
+                VALUES (%s, %s, %s, %s, 'pending', 'pending', %s, %s, %s, UTC_TIMESTAMP())
                 """,
                 (order_ref, customer_id, shop_id, total_amount, payment_method_label, pickup_otp, pickup_at_db),
             )
