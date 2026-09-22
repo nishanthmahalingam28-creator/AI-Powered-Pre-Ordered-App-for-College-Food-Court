@@ -1194,7 +1194,12 @@ def save_vendor_daily_survey():
                          breakfast_start, breakfast_end, lunch_start, lunch_end, dinner_start, dinner_end)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
-                    (vendor_id, shop_id, today, 1 if is_serving_today else 0),
+                    (
+                        vendor_id, shop_id, today, 1 if is_serving_today else 0,
+                        survey_windows["breakfast"][0].strftime("%H:%M:%S"), survey_windows["breakfast"][1].strftime("%H:%M:%S"),
+                        survey_windows["lunch"][0].strftime("%H:%M:%S"), survey_windows["lunch"][1].strftime("%H:%M:%S"),
+                        survey_windows["dinner"][0].strftime("%H:%M:%S"), survey_windows["dinner"][1].strftime("%H:%M:%S"),
+                    ),
                 )
 
             if is_serving_today:
