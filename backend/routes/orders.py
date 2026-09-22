@@ -244,6 +244,7 @@ def place_order():
             "order_status": "pending",
             "payment_status": payment_result.get("status"),
             "items_count": sum(i["quantity"] for i in validated_items),
+            "pickup_at": pickup_at_db,
             "created_at": created_at,
         })
     except Exception as re:
