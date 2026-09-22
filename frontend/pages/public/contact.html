@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../../css/base/reset.css">
   <link rel="stylesheet" href="../../css/components/common.css">
   <link rel="stylesheet" href="../../css/pages/contact.css">
+  <script src="../../js/config.js"></script>
 
 </head>
 <body class="bg-slate-50 flex flex-col min-h-screen">
@@ -63,7 +64,7 @@
     <!-- Right Column: Contact Form -->
     <div class="contact-form-container">
       <h2>Send Us a Message</h2>
-      <form onsubmit="event.preventDefault(); alert('Thank you! Your message has been sent.');">
+      <form id="contact-form">
         <div class="form-group">
           <label for="name">Full Name</label>
           <input type="text" id="name" placeholder="Enter your name or ID" required>
@@ -88,6 +89,7 @@
           Send Message <i class="fa-solid fa-paper-plane"></i>
         </button>
       </form>
+      <p id="contact-form-status" class="mt-3 text-sm font-semibold" role="status" aria-live="polite"></p>
     </div>
   </main>
 
@@ -99,5 +101,6 @@
 
 
     <script src="../../js/core/public-components.js" defer></script>
+    <script src="../../js/public/contact.js" defer></script>
 </body>
 </html>
