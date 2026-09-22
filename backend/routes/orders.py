@@ -1,6 +1,7 @@
 import logging
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from flask import Blueprint, jsonify, request, session
 
 from db import DB
@@ -26,6 +27,28 @@ def place_order():
         return jsonify({"success": False, "message": "Cart is empty. Add items to place an order."}), 400
 
     customer_id = session.get("user_id")
+
+    # Customer-selected pickup date/time. The UI always sends this value; keep a
+    # backward-compatible default for older API clients/tests.
+    raw_pickup_at = data.get("pickup_at") or data.get("pickup_time")
+    pickup_tz = ZoneInfo("Asia/Kolkata")
+    now_ist = datetime.now(pickup_tz)
+    try:
+        if raw_pickup_at:
+            pickup_at = datetime.fromisoformat(str(raw_pickup_at).strip().replace("Z", "+00:00"))
+            if pickup_at.tzinfo is None:
+                pickup_at = pickup_at.replace(tzinfo=pickup_tz)
+            else:
+                pickup_at = pickup_at.astimezone(pickup_tz)
+        else:
+            pickup_at = now_ist + timedelta(minutes=15)
+        if pickup_at.date() != now_ist.date():
+            return jsonify({"success": False, "message": "Pickup must be scheduled for today."}), 400
+        if pickup_at < now_ist + timedelta(minutes=10):
+            return jsonify({"success": False, "message": "Please choose a pickup time at least 10 minutes from now."}), 400
+        pickup_at_db = pickup_at.strftime("%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Invalid pickup date/time."}), 400
 
     # Authoritative Item Validation & Single-Shop Enforcement
     validated_items = []
@@ -117,7 +140,7 @@ def place_order():
                                     payment_status, payment_method, pickup_otp, created_at)
                 VALUES (%s, %s, %s, %s, 'pending', 'pending', %s, %s, UTC_TIMESTAMP())
                 """,
-                (order_ref, customer_id, shop_id, total_amount, payment_method_label, pickup_otp),
+                (order_ref, customer_id, shop_id, total_amount, payment_method_label, pickup_otp, pickup_at_db),
             )
 
             # 2. Insert Items and Decrement Stock Atomically (Race Condition / Concurrency Guard)
@@ -186,7 +209,7 @@ def place_order():
             customer_id=customer_id,
             notif_type="ORDER_PLACED",
             title=f"Order Placed #{order_ref}",
-            message=f"Your order at {shop_name} for ₹{total_amount:.2f} has been placed successfully.",
+            message=f"Your order at {shop_name} for ₹{total_amount:.2f} is scheduled for pickup at {pickup_at.strftime('%I:%M %p') }.",
             order_id=order_id
         )
         NotificationService.notify_vendor(
@@ -237,6 +260,7 @@ def place_order():
             "shop_name": shop_name,
             "total_amount": total_amount,
             "pickup_otp": pickup_otp,
+            "pickup_at": pickup_at_db,
             "order_status": "pending",
             "payment_status": payment_result["status"],
             "payment_ref": payment_result.get("transaction_ref"),
@@ -516,6 +540,7 @@ def get_order_bill(order_id):
         "payment_status": order["payment_status"],
         "payment_method": order["payment_method"],
         "pickup_otp": order["pickup_otp"],
+        "pickup_at": str(order["pickup_at"]) if order.get("pickup_at") else None,
         "shop_id": order["shop_id"],
         "shop_name": order["shop_name"],
         "total_amount": total_amount,
@@ -566,7 +591,7 @@ def get_my_orders():
 
     sql = """
         SELECT o.id, o.order_reference, o.total_amount, o.order_status, o.payment_status,
-               o.payment_method, o.pickup_otp, o.created_at, o.payment_time, o.preparing_time,
+               o.payment_method, o.pickup_otp, o.pickup_at, o.created_at, o.payment_time, o.preparing_time,
                o.ready_time, o.completed_time, o.cancellation_time,
                s.name as shop_name, s.category as shop_category
         FROM orders o
@@ -668,7 +693,7 @@ def get_vendor_orders(shop_id):
 
     sql = """
         SELECT o.id, o.order_reference, o.customer_id, o.total_amount, o.order_status,
-               o.payment_status, o.payment_method, o.pickup_otp, o.created_at,
+               o.payment_status, o.payment_method, o.pickup_otp, o.pickup_at, o.created_at,
                o.payment_time, o.preparing_time, o.ready_time, o.completed_time, o.cancellation_time,
                cp.full_name as customer_name, cp.customer_type, cp.identifier
         FROM orders o
