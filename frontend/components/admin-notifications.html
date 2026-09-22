@@ -1,0 +1,14 @@
+<!-- Shared Admin Notification Center -->
+<div id="admin-notification-backdrop" class="admin-notification-backdrop hidden"></div>
+<aside id="admin-notification-drawer" class="admin-notification-drawer" aria-label="Admin notifications" aria-hidden="true">
+  <div class="admin-notification-head">
+    <div><span>Live updates</span><h3>Notifications</h3></div>
+    <div class="flex items-center gap-1">
+      <button id="admin-mark-all-read" type="button" title="Mark all read" aria-label="Mark all notifications read"><i class="fa-solid fa-check-double"></i></button>
+      <button id="admin-notification-close" type="button" title="Close notifications" aria-label="Close notifications"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+  <div id="admin-notification-list" class="admin-notification-list">
+    <div class="admin-notification-empty">Loading notifications...</div>
+  </div>
+</aside>
