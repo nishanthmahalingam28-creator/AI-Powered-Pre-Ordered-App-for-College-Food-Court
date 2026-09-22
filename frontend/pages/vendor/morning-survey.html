@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Morning Menu Survey | KPRIET Food Court</title>
+<title>Food Survey | KPRIET Food Court</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../../css/pages/dashboard.css">
@@ -14,14 +14,14 @@
 <div id="vendor-workspace-container"></div>
 <main class="customer-workspace-main" class="customer-workspace-main">
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-    <div class="flex items-center gap-3"><a href="dashboard.html" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-amber-600"><i class="fa-solid fa-arrow-left"></i></a><div><p class="text-[10px] font-black uppercase tracking-widest text-amber-600">Vendor Management</p><h1 class="text-2xl md:text-3xl font-black text-slate-900">Morning Menu Survey</h1><p id="survey-shop-name" class="text-sm text-slate-500 mt-1">Loading shop...</p></div></div>
+    <div class="flex items-center gap-3"><a href="dashboard.html" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-amber-600"><i class="fa-solid fa-arrow-left"></i></a><div><p class="text-[10px] font-black uppercase tracking-widest text-amber-600">Vendor Management</p><h1 class="text-2xl md:text-3xl font-black text-slate-900">Food Survey</h1><p id="survey-shop-name" class="text-sm text-slate-500 mt-1">Loading shop...</p></div></div>
     <span id="survey-date" class="px-4 py-2 rounded-xl bg-amber-50 text-amber-700 text-xs font-black"></span>
   </div>
   <div id="survey-message" class="hidden mb-5 p-3 rounded-xl text-xs font-bold"></div>
 
   <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mb-5">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div><h2 class="font-black text-slate-800">Today's Menu Survey</h2><p class="text-[11px] text-slate-400 mt-1">Publish exactly what this shop will serve today.</p></div>
+      <div><h2 class="font-black text-slate-800">Today's Food Survey</h2><p class="text-[11px] text-slate-400 mt-1">Publish the breakfast, lunch and dinner dishes your shop will serve today.</p></div>
       <label class="flex items-center gap-2 text-xs font-black"><input id="serving-today" type="checkbox" checked class="w-4 h-4 accent-emerald-600"> Serving food today</label>
     </div>
   </section>
@@ -33,13 +33,13 @@
   </div>
 
   <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mt-5">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="font-black text-slate-800">Today's Survey Result</h2><p class="text-[11px] text-slate-400 mt-1">This is the menu publication result saved for your shop today.</p></div><span id="survey-status" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase">Not Submitted</span></div>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="font-black text-slate-800">Today's Food Survey Publication</h2><p class="text-[11px] text-slate-400 mt-1">This is the menu publication result saved for your shop today.</p></div><span id="survey-status" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase">Not Submitted</span></div>
     <div id="result-summary" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4"></div>
   </section>
 
   <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mt-5">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div><h2 class="font-black text-slate-800">Student Food Voting Results</h2><p class="text-[11px] text-slate-400 mt-1">Live aggregate demand for today's published food choices.</p></div>
+      <div><h2 class="font-black text-slate-800">Student Food Survey Results</h2><p class="text-[11px] text-slate-400 mt-1">Live aggregate demand for today's published food choices.</p></div>
       <span id="vote-total" class="px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black">0 votes</span>
     </div>
     <div id="vote-results" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -47,7 +47,7 @@
     </div>
   </section>
 
-  <div class="mt-5 flex flex-col sm:flex-row justify-end gap-3"><a href="morning-survey-results.html" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black text-center"><i class="fa-solid fa-chart-column mr-1.5"></i>View User Survey Results</a><button id="publish-btn" onclick="saveSurvey()" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-lg shadow-amber-500/20"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Publish Today's Menu</button></div>
+  <div class="mt-5 flex flex-col sm:flex-row justify-end gap-3"><a href="morning-survey-results.html" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black text-center"><i class="fa-solid fa-chart-column mr-1.5"></i>View Food Survey Results</a><button id="publish-btn" onclick="saveSurvey()" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-lg shadow-amber-500/20"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Publish Today's Menu</button></div>
 </main>
 <div id="footer-container"></div>
 <script src="../../js/config.js"></script>
