@@ -78,13 +78,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Use the same dashboard experience for Student, Faculty, and Guest.
         // Guest accounts do not use the Food Budget feature.
         const foodBudgetSnapshot = document.getElementById('food-budget-snapshot');
-        const foodBudgetNav = document.querySelector('[data-workspace-link="budgets.html"]');
+        const foodBudgetNavs = document.querySelectorAll('[data-workspace-link="budgets.html"]');
         if (customerType === 'guest') {
             if (foodBudgetSnapshot) foodBudgetSnapshot.classList.add('hidden');
-            if (foodBudgetNav) foodBudgetNav.remove();
+            foodBudgetNavs.forEach(nav => nav.remove());
         } else {
             if (foodBudgetSnapshot) foodBudgetSnapshot.classList.remove('hidden');
-            if (foodBudgetNav) foodBudgetNav.classList.remove('hidden');
+            foodBudgetNavs.forEach(nav => nav.classList.remove('hidden'));
         }
 
         const workspaceLabel = document.querySelector('.customer-workspace-header-label');
