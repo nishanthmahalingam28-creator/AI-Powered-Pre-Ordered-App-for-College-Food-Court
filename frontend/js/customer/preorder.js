@@ -10,41 +10,51 @@ function formatCurrency(value) {
 function formatPickupForDisplay(value) {
     if (!value) return '—';
     const raw = String(value).trim();
-    const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
-    const date = new Date(normalized + (/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized) ? '' : 'Z'));
-    if (Number.isNaN(date.getTime())) return raw;
-    return new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
-    }).format(date);
+    const timeMatch = raw.match(/(?:T|\s)(\d{2}:\d{2})/);
+    if (timeMatch) {
+        const [hour, minute] = timeMatch[1].split(':').map(Number);
+        const d = new Date();
+        d.setHours(hour, minute, 0, 0);
+        return new Intl.DateTimeFormat('en-IN', {
+            hour: '2-digit', minute: '2-digit', hour12: true
+        }).format(d);
+    }
+    return raw;
 }
 
 function setupPickupTime() {
     const input = document.getElementById('pickup-at');
     const message = document.getElementById('pickup-at-message');
     if (!input) return;
-    const now = new Date();
-    const min = new Date(now.getTime() + 10 * 60 * 1000);
-    const localValue = new Date(min.getTime() - min.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    input.min = localValue;
-    if (!input.value) input.value = localValue;
+
+    const getISTNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const minTimeValue = () => {
+        const min = new Date(getISTNow().getTime() + 10 * 60 * 1000);
+        return String(min.getHours()).padStart(2, '0') + ':' + String(min.getMinutes()).padStart(2, '0');
+    };
+
+    input.min = minTimeValue();
+    if (!input.value) input.value = input.min;
+
     const updateMessage = () => {
         if (!message || !input.value) return;
-        const selected = new Date(input.value);
-        message.textContent = Number.isNaN(selected.getTime())
-            ? 'Choose a valid pickup time.'
-            : 'Selected: ' + new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).format(selected) + ' • Today • IST';
+        const [hour, minute] = input.value.split(':').map(Number);
+        const d = new Date();
+        d.setHours(hour, minute, 0, 0);
+        message.textContent = 'Selected: ' +
+            new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).format(d) +
+            ' • Today • IST';
     };
+
     input.addEventListener('change', updateMessage);
     input.addEventListener('input', updateMessage);
     updateMessage();
+
     setInterval(() => {
-        const freshNow = new Date();
-        const freshMin = new Date(freshNow.getTime() + 10 * 60 * 1000);
-        const freshLocal = new Date(freshMin.getTime() - freshMin.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        input.min = freshLocal;
-        if (input.value && input.value < freshLocal) {
-            input.value = freshLocal;
+        const freshMin = minTimeValue();
+        input.min = freshMin;
+        if (input.value && input.value < freshMin) {
+            input.value = freshMin;
             updateMessage();
         }
     }, 60000);
@@ -414,10 +424,12 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
         pickupInput?.focus();
         return;
     }
-    const pickupDate = new Date(pickupAt);
+    const [pickupHour, pickupMinute] = pickupAt.split(':').map(Number);
+    const pickupDate = new Date();
+    pickupDate.setHours(pickupHour, pickupMinute, 0, 0);
     const minPickup = new Date(Date.now() + 10 * 60 * 1000);
-    if (Number.isNaN(pickupDate.getTime()) || pickupDate < minPickup || pickupDate.toDateString() !== new Date().toDateString()) {
-        alert('Please choose a valid pickup time today, at least 10 minutes from now.');
+    if (!/^\d{2}:\d{2}$/.test(pickupAt) || Number.isNaN(pickupDate.getTime()) || pickupDate < minPickup) {
+        alert('Please choose a pickup time at least 10 minutes from now.');
         confirmBtn.disabled = false;
         confirmBtn.innerHTML = originalText;
         pickupInput?.focus();
