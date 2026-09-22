@@ -41,6 +41,17 @@
 
       <!-- Payment & Order Summary Aside -->
       <aside class="space-y-6">
+        <!-- Pickup Schedule -->
+        <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+          <h2 class="text-lg font-black text-slate-900 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-clock text-teal-600"></i> Pickup Date &amp; Time
+          </h2>
+          <p class="text-[11px] text-slate-500 mb-4">Choose when you plan to collect the order. Pickup must be scheduled at least 10 minutes from now.</p>
+          <label for="pickup-at" class="block text-xs font-black text-slate-700 mb-2">Pickup time</label>
+          <input id="pickup-at" type="datetime-local" required class="w-full min-h-12 px-3 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100">
+          <p id="pickup-at-message" class="mt-2 text-[10px] font-semibold text-slate-400">Today • local campus time (IST)</p>
+        </section>
+
         <!-- Payment Options -->
         <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
           <h2 class="text-lg font-black text-slate-900 mb-4">Payment Method</h2>
@@ -110,6 +121,11 @@
         <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border-2 border-emerald-300 text-center">
           <span class="text-[11px] font-extrabold text-emerald-800 block uppercase tracking-wider">Pickup OTP</span>
           <strong id="pickup-otp" class="mt-1 block text-2xl font-black text-emerald-900 tracking-widest">—</strong>
+        </div>
+
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-center">
+          <span class="text-[11px] font-bold text-slate-400 block uppercase">Pickup Time</span>
+          <strong id="order-pickup-at" class="mt-1 block text-sm font-black text-teal-700">—</strong>
         </div>
 
         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-center">
