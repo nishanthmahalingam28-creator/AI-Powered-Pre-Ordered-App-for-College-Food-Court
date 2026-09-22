@@ -1,5 +1,5 @@
 (function(){'use strict';
-var titles={'dashboard.html':'Dashboard','menu.html':'Order Food','preorder.html':'My Cart','orders.html':'My Orders','morning-survey.html':'Morning Survey','expenses.html':'Expenses','budgets.html':'Food Budget','analytics.html':'Analytics','assistant.html':'AI Assistant','profile.html':'Profile','income.html':'Income'};
+var titles={'dashboard.html':'Dashboard','menu.html':'Order Food','preorder.html':'My Cart','orders.html':'My Orders','morning-survey.html':'Food Survey','expenses.html':'Expenses','budgets.html':'Food Budget','analytics.html':'Analytics','assistant.html':'AI Assistant','profile.html':'Profile','income.html':'Income'};
 function pageName(){var p=decodeURIComponent(location.pathname).replace(/\\/g,'/');return(p.split('/').pop()||'dashboard.html').toLowerCase()}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
 function componentUrl(file){return new URL('../../components/'+file,document.baseURI).href}
@@ -38,7 +38,7 @@ async function loadWorkspace(){
   if(!target)return;
   try{
     var urls=[componentUrl('customer-sidebar.html'),componentUrl('customer-navbar.html'),componentUrl('customer-notifications.html')];
-    var responses=await Promise.all(urls.map(function(url){return fetch(url,{cache:'force-cache'})}));
+    var responses=await Promise.all(urls.map(function(url){return fetch(url+'?v=20260922',{cache:'no-store'})}));
     if(responses.some(function(response){return !response.ok}))throw new Error('Shared customer navigation component failed to load.');
     var html=await Promise.all(responses.map(function(response){return response.text()}));
     target.innerHTML=html[0]+html[1]+html[2];
