@@ -100,19 +100,91 @@ async function setOrderStatus(orderId,status) {
   } catch(e) { showOrdersMessage(e.message||'Order update failed.',false); }
 }
 
+async function lookupPickupOtp() {
+  const input=document.getElementById('verify-otp-input');
+  const box=document.getElementById('otp-message');
+  const preview=document.getElementById('otp-preview');
+  const actions=document.getElementById('otp-verify-actions');
+  const otp=(input.value||'').trim();
+
+  preview.classList.add('hidden');
+  actions.classList.add('hidden');
+
+  if(!/^\d{6}$/.test(otp)){
+    box.className='mt-3 p-3 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700';
+    box.textContent='Enter a valid 6-digit OTP.';
+    box.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res=await fetch(`${MANAGE_ORDERS_API}/orders/lookup-otp`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body:JSON.stringify({otp,shop_id:manageOrdersShopId})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.success) throw new Error(data.message||'No matching ready order found.');
+
+    const order=data.order;
+    const items=(order.items||[]).map(i=>`<div class="flex justify-between gap-3 text-xs py-1"><span>${escapeHtml(i.item_name)} × ${i.quantity}</span><strong>₹${Number(i.subtotal||0).toFixed(2)}</strong></div>`).join('');
+
+    preview.innerHTML=`<div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2"><span class="font-mono text-sm font-black text-blue-900">#${escapeHtml(order.order_reference)}</span><span class="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase">READY</span></div>
+          <p class="text-xs font-bold text-slate-800 mt-2">${escapeHtml(order.customer_name||'Customer')}</p>
+          <p class="text-[10px] text-slate-500 mt-1">${escapeHtml(formatOrderDateTime(order.created_at))} · ${escapeHtml(order.payment_method||'')}</p>
+        </div>
+        <strong class="text-lg font-black text-slate-900">₹${Number(order.total_amount||0).toFixed(2)}</strong>
+      </div>
+      <div class="mt-3 rounded-xl bg-white border border-emerald-100 p-3">
+        <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Items</p>
+        ${items||'<p class="text-xs text-slate-500">No item details.</p>'}
+      </div>
+      <p class="mt-3 text-[11px] font-bold text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i>Order found. Review the details, then click Verify & Complete.</p>
+    </div>`;
+    preview.classList.remove('hidden');
+    actions.classList.remove('hidden');
+    box.classList.add('hidden');
+  } catch(e) {
+    box.className='mt-3 p-3 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700';
+    box.textContent='✗ '+(e.message||'Unable to find the order.');
+    box.classList.remove('hidden');
+  }
+}
+
+function clearPickupOtpPreview(){
+  const input=document.getElementById('verify-otp-input');
+  const preview=document.getElementById('otp-preview');
+  const actions=document.getElementById('otp-verify-actions');
+  const box=document.getElementById('otp-message');
+  if(input) input.value='';
+  if(preview){preview.innerHTML='';preview.classList.add('hidden');}
+  if(actions) actions.classList.add('hidden');
+  if(box) box.classList.add('hidden');
+}
+
 async function verifyPickupOtp() {
   const input=document.getElementById('verify-otp-input'), box=document.getElementById('otp-message');
+  const preview=document.getElementById('otp-preview'), actions=document.getElementById('otp-verify-actions');
   const otp=(input.value||'').trim();
   if(!/^\d{6}$/.test(otp)){ box.className='mt-3 p-3 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700'; box.textContent='Enter a valid 6-digit OTP.'; box.classList.remove('hidden'); return; }
+  if(preview.classList.contains('hidden')){
+    box.className='mt-3 p-3 rounded-xl text-xs font-bold bg-amber-50 border border-amber-200 text-amber-700';
+    box.textContent='Show the matching order first, then verify.';
+    box.classList.remove('hidden');
+    return;
+  }
   try {
     const res=await fetch(`${MANAGE_ORDERS_API}/orders/verify-otp`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({otp,shop_id:manageOrdersShopId})});
     const data=await res.json();
     box.className='mt-3 p-3 rounded-xl text-xs font-bold '+(data.success?'bg-emerald-50 border border-emerald-200 text-emerald-700':'bg-rose-50 border border-rose-200 text-rose-700');
     box.textContent=(data.success?'✓ ':'✗ ')+(data.message||'OTP verification failed.');
     box.classList.remove('hidden');
-    if(data.success){input.value='';await loadOrders();}
+    if(data.success){input.value='';preview.innerHTML='';preview.classList.add('hidden');actions.classList.add('hidden');await loadOrders();}
   } catch(e){ box.className='mt-3 p-3 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700';box.textContent='Connection error while verifying OTP.';box.classList.remove('hidden'); }
 }
-
 function showOrdersMessage(message,success){const el=document.getElementById('orders-message');if(!el)return;el.className='mb-5 p-3 rounded-xl text-xs font-bold '+(success?'bg-emerald-50 border border-emerald-200 text-emerald-700':'bg-rose-50 border border-rose-200 text-rose-700');el.textContent=message;el.classList.remove('hidden');}
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
