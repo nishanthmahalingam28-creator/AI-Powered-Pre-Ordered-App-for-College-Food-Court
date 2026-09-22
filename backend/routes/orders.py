@@ -592,16 +592,25 @@ def get_my_orders():
     sql += " ORDER BY o.created_at DESC, o.id DESC LIMIT 100"
     orders = DB.query(sql, tuple(params))
 
-    # Attach order item summaries
-    for order in orders:
-        order["total_amount"] = float(order.get("total_amount") or 0.0)
-        items = DB.query(
-            "SELECT menu_item_id, item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
-            (order["id"],),
+    # Fetch all order items in one query instead of one query per order.
+    # This keeps order history fast as the number of returned orders grows.
+    item_map = {}
+    if orders:
+        order_ids = [order["id"] for order in orders]
+        placeholders = ", ".join(["%s"] * len(order_ids))
+        item_rows = DB.query(
+            f"SELECT order_id, menu_item_id, item_name, quantity, unit_price, subtotal "
+            f"FROM order_items WHERE order_id IN ({placeholders}) ORDER BY order_id DESC, id ASC",
+            tuple(order_ids),
         )
-        for item in items:
+        for item in item_rows:
             item["unit_price"] = float(item.get("unit_price") or 0.0)
             item["subtotal"] = float(item.get("subtotal") or 0.0)
+            item_map.setdefault(item["order_id"], []).append(item)
+
+    for order in orders:
+        order["total_amount"] = float(order.get("total_amount") or 0.0)
+        items = item_map.get(order["id"], [])
         order["items"] = items
         order["items_summary"] = ", ".join(f"{i['quantity']}x {i['item_name']}" for i in items)
 
