@@ -189,7 +189,13 @@ function escapeHtmlDashboard(value) {
 // Load Vendor Analytics
 async function loadAnalytics() {
     try {
-        const res = await fetch(`${API_BASE_URL}/vendor/analytics?shop_id=${currentShopId}&shop=${encodeURIComponent(currentShopName)}`, { credentials: 'include' });
+        // Start vendor analytics and AI demand requests together to reduce total wait time.
+        const analyticsPromise = fetch(`${API_BASE_URL}/vendor/analytics?shop_id=${currentShopId}&shop=${encodeURIComponent(currentShopName)}`, { credentials: 'include' });
+        const aiPromise = currentShopId
+            ? fetch(`${API_BASE_URL}/ai/analytics/shop/${currentShopId}`, { credentials: 'include' })
+            : null;
+
+        const res = await analyticsPromise;
         const data = await res.json();
         if (data.success && data.analytics) {
             const a = data.analytics;
@@ -218,7 +224,8 @@ async function loadAnalytics() {
         // Fetch AI Demand Intelligence
         if (currentShopId) {
             try {
-                const aiRes = await fetch(`${API_BASE_URL}/ai/analytics/shop/${currentShopId}`, { credentials: 'include' });
+                if (!aiPromise) return;
+                const aiRes = await aiPromise;
                 const aiData = await aiRes.json();
                 if (aiData.success) {
                     const topItemsContainer = document.getElementById('ai-top-items-list');
