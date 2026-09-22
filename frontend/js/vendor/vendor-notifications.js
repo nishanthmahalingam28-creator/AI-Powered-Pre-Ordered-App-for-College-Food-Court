@@ -5,7 +5,7 @@ function api(){return window.FOOD_COURT_API_BASE||(typeof window.getApiUrl==='fu
 function els(){return {drawer:document.getElementById('vendor-notif-drawer'),backdrop:document.getElementById('vendor-notif-backdrop'),items:document.getElementById('vendor-notif-items')};}
 async function fetchCount(){
  try{var r=await fetch(api()+'/notifications/unread-count',{credentials:'include'});if(!r.ok)return;var d=await r.json();if(!d.success)return;
-  var n=Number(d.unread_count)||0;document.querySelectorAll('#vendor-notif-badge').forEach(function(b){b.textContent=n>99?'99+':n;b.classList.toggle('hidden',n===0);});
+  var n=Number(d.unread_count)||0;document.querySelectorAll('#vendor-notif-badge,#vendor-sidebar-notif-badge').forEach(function(b){b.textContent=n>99?'99+':n;b.classList.toggle('hidden',n===0);});
  }catch(e){console.debug('Vendor notification count:',e);}
 }
 async function load(){
