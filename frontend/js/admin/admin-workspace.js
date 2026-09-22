@@ -57,7 +57,7 @@ function init(){
  var trigger=document.getElementById('admin-notification-trigger'),close=document.getElementById('admin-notification-close'),back=document.getElementById('admin-notification-backdrop'),mark=document.getElementById('admin-mark-all-read');
  if(trigger)trigger.addEventListener('click',function(){openNotif(true)});if(close)close.addEventListener('click',function(){openNotif(false)});if(back)back.addEventListener('click',function(){openNotif(false)});
  if(mark)mark.addEventListener('click',async function(){try{await fetch(apiBase()+'/notifications/read-all',{method:'PUT',credentials:'include'});await loadNotifications();}catch(e){}});
- setActive(currentTab());refreshUnread();setInterval(refreshUnread,30000);
+ var initialTab=currentTab();switchAdminTab(initialTab,false);refreshUnread();setInterval(refreshUnread,30000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
