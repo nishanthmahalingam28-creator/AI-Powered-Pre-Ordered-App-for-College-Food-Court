@@ -39,12 +39,14 @@ async function load(){
  try{
   var responses=await Promise.all([
    fetch(componentUrl('vendor-sidebar.html'),{cache:'force-cache'}),
-   fetch(componentUrl('vendor-navbar.html'),{cache:'force-cache'})
+   fetch(componentUrl('vendor-navbar.html'),{cache:'force-cache'}),
+   fetch(componentUrl('vendor-notifications.html'),{cache:'force-cache'})
   ]);
   if(responses.some(function(r){return !r.ok}))throw new Error('Vendor workspace components failed to load');
   var html=await Promise.all(responses.map(function(r){return r.text()}));
-  target.innerHTML=html[0]+html[1];
+  target.innerHTML=html[0]+html[1]+html[2];
   build();
+  var notificationScript=document.createElement('script'); notificationScript.src=new URL('../../js/vendor/vendor-notifications.js',document.baseURI).href; notificationScript.defer=false; document.body.appendChild(notificationScript);
  }catch(e){console.error('[Vendor Workspace]',e);target.innerHTML='<div class="p-4 text-center text-rose-600 text-xs font-bold">Unable to load vendor navigation.</div>'}
 }
 window.vendorWorkspaceReady=load();
