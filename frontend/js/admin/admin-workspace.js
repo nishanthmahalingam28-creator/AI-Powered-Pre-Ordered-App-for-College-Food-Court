@@ -12,6 +12,9 @@ function switchAdminTab(tab,updateHash){
  tab=titles[tab]?tab:'dashboard';
  if(updateHash!==false && location.hash!=='#'+tab) history.replaceState(null,'','#'+tab);
  setActive(tab);
+ var overview=document.getElementById('admin-dashboard-overview');
+ document.querySelectorAll('[id^="section-"]').forEach(function(sec){sec.classList.toggle('hidden',tab!=='dashboard' && sec.id!=='section-'+tab);});
+ if(overview)overview.classList.toggle('hidden',tab!=='dashboard');
  if(tab==='dashboard'){window.scrollTo({top:0,behavior:'smooth'});return;}
  if(typeof window.switchTab==='function'){window.switchTab(tab);var sec=document.getElementById('section-'+tab);if(sec)setTimeout(function(){sec.scrollIntoView({behavior:'smooth',block:'start'}),40);}
  }
