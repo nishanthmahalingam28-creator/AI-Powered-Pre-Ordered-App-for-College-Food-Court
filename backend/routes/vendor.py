@@ -1,5 +1,7 @@
 import re
 import logging
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request, session
 from db import DB
@@ -860,6 +862,24 @@ def delete_menu_item(item_id):
 # ============================================================================
 
 DAILY_MEAL_PERIODS = ("breakfast", "lunch", "dinner")
+FOOD_SURVEY_TIMEZONE = ZoneInfo("Asia/Kolkata")
+FOOD_SURVEY_WINDOWS = {
+    "breakfast": (time(6, 0), time(10, 0)),
+    "lunch": (time(10, 30), time(15, 0)),
+    "dinner": (time(17, 0), time(21, 0)),
+}
+
+
+def _food_survey_windows_payload():
+    now = datetime.now(FOOD_SURVEY_TIMEZONE)
+    payload = {}
+    for period, (start, end) in FOOD_SURVEY_WINDOWS.items():
+        payload[period] = {
+            "start_time": start.strftime("%H:%M"),
+            "end_time": end.strftime("%H:%M"),
+            "status": "open" if start <= now.time() < end else ("upcoming" if now.time() < start else "closed"),
+        }
+    return payload
 
 
 def _today_str():
@@ -946,6 +966,8 @@ def get_vendor_daily_survey():
             "updated_at": str(survey["updated_at"]) if survey else None,
         },
         "meal_periods": DAILY_MEAL_PERIODS,
+        "meal_windows": _food_survey_windows_payload(),
+        "timezone": "Asia/Kolkata",
         "menu_catalog": catalog,
         "selected": selected,
     }), 200
