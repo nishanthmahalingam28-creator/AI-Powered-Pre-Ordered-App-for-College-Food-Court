@@ -43,7 +43,9 @@ def submit_contact_message():
 def get_contact_messages():
     status = str(request.args.get("status") or "").strip().lower()
     search = str(request.args.get("q") or "").strip().lower()
-    limit = max(1, min(100, int(request.args.get("limit", 100) or 100)))
+    # Keep this admin list intentionally simple and bounded so Contact Reports
+    # cannot become slow because of a large/legacy production table.
+    limit = 100
 
     sql = """SELECT id, full_name, email, subject, message, status, created_at, read_at, resolved_at
              FROM contact_messages WHERE 1=1"""
@@ -55,8 +57,7 @@ def get_contact_messages():
         pattern = f"%{search}%"
         sql += " AND (LOWER(full_name) LIKE %s OR LOWER(email) LIKE %s OR LOWER(subject) LIKE %s OR LOWER(message) LIKE %s)"
         params.extend([pattern, pattern, pattern, pattern])
-    sql += " ORDER BY id DESC LIMIT %s"
-    params.append(limit)
+    sql += " ORDER BY id DESC LIMIT 100"
 
     rows = DB.query(sql, tuple(params))
     return jsonify({"success": True, "messages": rows}), 200
