@@ -683,7 +683,7 @@ def get_admin_orders():
 
     sql = """
         SELECT o.id, o.order_reference, o.customer_id, o.shop_id, o.total_amount,
-               o.order_status, o.payment_status, o.payment_method, o.pickup_otp,
+               o.order_status, o.payment_status, o.payment_method, o.pickup_otp, o.pickup_at,
                o.created_at, o.payment_time, o.preparing_time, o.ready_time,
                o.completed_time, o.cancellation_time,
                s.name as shop_name, s.slug as shop_slug,
