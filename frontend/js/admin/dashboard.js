@@ -533,7 +533,7 @@ async function loadGlobalOrders() {
         if (data.success && data.orders) {
             tbody.innerHTML = '';
             if (data.orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">No orders match criteria.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-slate-400">No orders match criteria.</td></tr>';
                 return;
             }
 
@@ -568,6 +568,7 @@ async function loadGlobalOrders() {
                         </span>
                     </td>
                     <td class="p-3 font-mono font-black text-slate-700 tracking-wider">${o.pickup_otp}</td>
+                    <td class="p-3 text-teal-700 font-bold text-[11px]">${o.pickup_at ? o.pickup_at.replace('T', ' ').slice(0, 16) : '—'}</td>
                     <td class="p-3 text-slate-400 text-[11px]">${o.created_at ? o.created_at.split('.')[0] : '—'}</td>
                 `;
                 tbody.appendChild(tr);
