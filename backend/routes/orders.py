@@ -693,11 +693,22 @@ def get_vendor_orders(shop_id):
 
     orders = DB.query(sql, tuple(params))
 
-    for order in orders:
-        items = DB.query(
-            "SELECT item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
-            (order["id"],),
+    # Fetch all order items in one query instead of one query per order.
+    # Vendor orders are already capped at 50, so the item query remains bounded.
+    item_map = {}
+    if orders:
+        order_ids = [order["id"] for order in orders]
+        placeholders = ", ".join(["%s"] * len(order_ids))
+        item_rows = DB.query(
+            f"SELECT order_id, item_name, quantity, unit_price, subtotal "
+            f"FROM order_items WHERE order_id IN ({placeholders}) ORDER BY order_id DESC, id ASC",
+            tuple(order_ids),
         )
+        for item in item_rows:
+            item_map.setdefault(item["order_id"], []).append(item)
+
+    for order in orders:
+        items = item_map.get(order["id"], [])
         order["items"] = items
         order["items_summary"] = ", ".join(f"{i['quantity']}x {i['item_name']}" for i in items)
 
