@@ -248,7 +248,7 @@ function renderOrderHistory(orders) {
                     </div>
                     <h3 class="font-black text-slate-900 text-lg mt-1">${order.shop_name}</h3>
                     <p class="text-xs text-slate-600 mt-0.5">${order.items_summary || 'Order Items'}</p>
-                    <p class="text-[11px] text-slate-400 mt-2"><i class="fa-regular fa-clock mr-1"></i>Ordered: ${formatOrderDateTime(order.created_at)}</p>
+                    <p class="text-[11px] text-slate-400 mt-2"><i class="fa-regular fa-clock mr-1"></i>Ordered: ${formatOrderDateTime(order.created_at)}</p>${order.pickup_at ? `<p class="text-[11px] text-teal-700 font-bold mt-1"><i class="fa-solid fa-person-walking mr-1"></i>Pickup: ${formatOrderDateTime(order.pickup_at)}</p>` : ""}
                 </div>
                 <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center sm:text-right shrink-0">
                     <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Pickup OTP</span>
