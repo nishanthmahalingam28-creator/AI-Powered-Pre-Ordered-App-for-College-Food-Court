@@ -52,7 +52,18 @@ async function loadOrders() {
 
 function renderOrders() {
   const container = document.getElementById('orders-list');
-  const orders = selectedOrderStatus === 'all' ? cachedOrders : cachedOrders.filter(o => String(o.order_status).toLowerCase() === selectedOrderStatus);
+  const orders = (selectedOrderStatus === 'all' ? cachedOrders : cachedOrders.filter(o => String(o.order_status).toLowerCase() === selectedOrderStatus))
+    .slice()
+    .sort((a, b) => {
+      const statusRank = {pending: 1, preparing: 2, ready: 3, completed: 4, cancelled: 5};
+      const sa = statusRank[String(a.order_status || '').toLowerCase()] || 6;
+      const sb = statusRank[String(b.order_status || '').toLowerCase()] || 6;
+      if (sa !== sb) return sa - sb;
+      const da = new Date(String(a.created_at || '').replace(' ', 'T') + (String(a.created_at || '').includes('Z') ? '' : 'Z')).getTime();
+      const db = new Date(String(b.created_at || '').replace(' ', 'T') + (String(b.created_at || '').includes('Z') ? '' : 'Z')).getTime();
+      if (Number.isFinite(da) && Number.isFinite(db) && da !== db) return da - db;
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
   if (!orders.length) {
     container.innerHTML='<div class="col-span-full p-12 text-center bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 text-xs"><i class="fa-regular fa-folder-open text-2xl mb-2"></i><p>No orders in this section.</p></div>';
     return;
