@@ -1,5 +1,6 @@
 import logging
-from datetime import datetime
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from flask import Blueprint, jsonify, request, session
 from security import hash_password, verify_password
 from db import DB
@@ -812,13 +813,49 @@ def update_morning_survey():
         return jsonify({"success": False, "message": "Failed to update morning survey."}), 500
 
 
+FOOD_SURVEY_TIMEZONE = ZoneInfo("Asia/Kolkata")
+FOOD_SURVEY_WINDOWS = {
+    "breakfast": (time(6, 0), time(10, 0)),
+    "lunch": (time(10, 30), time(15, 0)),
+    "dinner": (time(17, 0), time(21, 0)),
+}
+
+
+def _food_survey_status(now=None):
+    now = now or datetime.now(FOOD_SURVEY_TIMEZONE)
+    current = now.time()
+    for period, (start, end) in FOOD_SURVEY_WINDOWS.items():
+        if start <= current < end:
+            return {
+                "meal_period": period,
+                "status": "open",
+                "start_time": start.strftime("%H:%M"),
+                "end_time": end.strftime("%H:%M"),
+            }
+    next_period = None
+    for period, (start, end) in FOOD_SURVEY_WINDOWS.items():
+        if current < start:
+            next_period = period
+            break
+    return {
+        "meal_period": None,
+        "status": "closed",
+        "next_meal_period": next_period,
+        "start_time": None,
+        "end_time": None,
+    }
+
+
 @customer_bp.get("/morning-poll/today")
 @login_required
 @role_required(["customer"])
 def get_today_morning_poll():
-    """Return vendor-published morning surveys and choices for student voting."""
+    """Return today's Food Survey choices with breakfast/lunch/dinner time windows."""
     user_id = session.get("user_id")
-    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now(FOOD_SURVEY_TIMEZONE)
+    today = now.strftime("%Y-%m-%d")
+    current = _food_survey_status(now)
+
     surveys = DB.query("""
         SELECT v.id AS survey_id, v.shop_id, s.name AS shop_name, v.survey_date
         FROM vendor_daily_surveys v
@@ -834,17 +871,38 @@ def get_today_morning_poll():
             WHERE survey_id = %s AND is_available = 1
             ORDER BY FIELD(meal_period,'breakfast','lunch','dinner'), item_name
         """, (survey["survey_id"],))
+
         voted_rows = DB.query(
-            "SELECT menu_item_id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s ORDER BY id",
+            """SELECT menu_item_id, meal_period
+               FROM morning_survey_votes
+               WHERE survey_id=%s AND student_user_id=%s
+               ORDER BY id""",
             (survey["survey_id"], user_id),
         )
+        voted_by_period = {}
+        for row in voted_rows:
+            voted_by_period.setdefault(str(row["meal_period"]), []).append(int(row["menu_item_id"]))
+
         result.append({
             "survey_id": survey["survey_id"],
             "shop_id": survey["shop_id"],
             "shop_name": survey["shop_name"],
             "date": str(survey["survey_date"]),
+            "current_meal_period": current.get("meal_period"),
+            "survey_status": current.get("status"),
             "voted": bool(voted_rows),
             "voted_menu_item_ids": [int(row["menu_item_id"]) for row in voted_rows],
+            "voted_menu_item_ids_by_period": voted_by_period,
+            "meal_windows": {
+                period: {
+                    "start_time": start.strftime("%H:%M"),
+                    "end_time": end.strftime("%H:%M"),
+                    "status": "open" if current.get("meal_period") == period else (
+                        "upcoming" if now.time() < start else "closed"
+                    ),
+                }
+                for period, (start, end) in FOOD_SURVEY_WINDOWS.items()
+            },
             "options": [{
                 "id": row["id"],
                 "menu_item_id": row["menu_item_id"],
@@ -854,21 +912,30 @@ def get_today_morning_poll():
                 "quantity": int(row["quantity"] or 0),
             } for row in options]
         })
-    return jsonify({"success": True, "date": today, "surveys": result}), 200
+    return jsonify({
+        "success": True,
+        "date": today,
+        "timezone": "Asia/Kolkata",
+        "current": current,
+        "surveys": result,
+    }), 200
 
 
 @customer_bp.post("/morning-poll/vote")
 @login_required
 @role_required(["customer"])
 def vote_morning_poll():
-    """Record one submission containing one or more food choices for today's survey."""
+    """Record one Food Survey submission for the currently open meal period."""
     user_id = session.get("user_id")
     data = request.get_json(silent=True) or {}
-
     try:
         survey_id = int(data.get("survey_id"))
     except (TypeError, ValueError):
         return jsonify({"success": False, "message": "Survey is required."}), 400
+
+    meal_period = str(data.get("meal_period") or "").strip().lower()
+    if meal_period not in FOOD_SURVEY_WINDOWS:
+        return jsonify({"success": False, "message": "A valid meal period is required."}), 400
 
     raw_items = data.get("menu_item_ids")
     if raw_items is None and data.get("menu_item_id") is not None:
@@ -886,45 +953,57 @@ def vote_morning_poll():
     if len(menu_item_ids) > 20:
         return jsonify({"success": False, "message": "You can select up to 20 food items."}), 400
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now(FOOD_SURVEY_TIMEZONE)
+    today = now.strftime("%Y-%m-%d")
+    start, end = FOOD_SURVEY_WINDOWS[meal_period]
+    if not (start <= now.time() < end):
+        return jsonify({
+            "success": False,
+            "message": f"{meal_period.title()} Food Survey is available only from {start.strftime('%I:%M %p')} to {end.strftime('%I:%M %p')} IST."
+        }), 403
+
     survey = DB.get_one(
         "SELECT id, shop_id FROM vendor_daily_surveys WHERE id=%s AND survey_date=%s AND is_serving_today=1 LIMIT 1",
         (survey_id, today),
     )
     if not survey:
-        return jsonify({"success": False, "message": "This morning survey is not available today."}), 404
+        return jsonify({"success": False, "message": "This Food Survey is not available today."}), 404
 
     placeholders = ",".join(["%s"] * len(menu_item_ids))
     options = DB.query(
         f"""SELECT id FROM vendor_daily_menu_items
-            WHERE id IN ({placeholders}) AND survey_id=%s AND is_available=1""",
-        tuple(menu_item_ids) + (survey_id,),
+            WHERE id IN ({placeholders}) AND survey_id=%s
+              AND meal_period=%s AND is_available=1""",
+        tuple(menu_item_ids) + (survey_id, meal_period),
     )
     valid_ids = {int(row["id"]) for row in options}
     if len(valid_ids) != len(menu_item_ids):
-        return jsonify({"success": False, "message": "One or more selected foods are not part of this morning survey."}), 400
+        return jsonify({"success": False, "message": f"All selected foods must belong to the {meal_period} Food Survey."}), 400
 
     existing = DB.get_one(
-        "SELECT id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s LIMIT 1",
-        (survey_id, user_id),
+        "SELECT id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s AND meal_period=%s LIMIT 1",
+        (survey_id, user_id, meal_period),
     )
     if existing:
-        return jsonify({"success": False, "message": "You have already submitted your vote for this morning survey."}), 409
+        return jsonify({"success": False, "message": f"You have already submitted the {meal_period} Food Survey."}), 409
 
     try:
         with DB.transaction() as tx:
             for menu_item_id in menu_item_ids:
                 tx.execute(
-                    "INSERT INTO morning_survey_votes (survey_id, menu_item_id, student_user_id) VALUES (%s,%s,%s)",
-                    (survey_id, menu_item_id, user_id),
+                    """INSERT INTO morning_survey_votes
+                       (survey_id, menu_item_id, student_user_id, meal_period)
+                       VALUES (%s,%s,%s,%s)""",
+                    (survey_id, menu_item_id, user_id, meal_period),
                 )
         return jsonify({
             "success": True,
-            "message": f"Your vote has been recorded for {len(menu_item_ids)} food item(s).",
+            "message": f"Your {meal_period} Food Survey has been recorded.",
+            "meal_period": meal_period,
             "vote_count": len(menu_item_ids),
         }), 201
     except Exception as e:
         if "UNIQUE" in str(e).upper() or "uq_msv_student_survey" in str(e).lower():
-            return jsonify({"success": False, "message": "You have already submitted your vote for this morning survey."}), 409
-        logger.exception("Failed to save morning survey vote for user %s", user_id)
-        return jsonify({"success": False, "message": "Unable to record your vote."}), 500
+            return jsonify({"success": False, "message": f"You have already submitted the {meal_period} Food Survey."}), 409
+        logger.exception("Failed to save food survey vote for user %s", user_id)
+        return jsonify({"success": False, "message": "Unable to record your Food Survey."}), 500
