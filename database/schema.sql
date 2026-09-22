@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS orders (
     payment_status ENUM('pending', 'paid', 'failed', 'cancelled', 'refunded') NOT NULL DEFAULT 'pending',
     payment_method VARCHAR(50) NOT NULL DEFAULT 'Campus Wallet',
     pickup_otp VARCHAR(10) NOT NULL,
+    pickup_at DATETIME NULL,
     payment_time DATETIME NULL,
     preparing_time DATETIME NULL,
     ready_time DATETIME NULL,
