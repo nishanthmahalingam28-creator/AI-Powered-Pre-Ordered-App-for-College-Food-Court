@@ -755,13 +755,11 @@ def update_menu_item(item_id):
 @vendor_bp.delete("/menu/item/<int:item_id>")
 @role_required(["vendor", "admin"])
 def delete_menu_item(item_id):
-    """
-    Permanently removes a menu item from the vendor's menu.
-    Order history remains safe because order_items stores item_name,
-    price and quantity, while menu_item_id is nullable with ON DELETE SET NULL.
-    Vendor isolation is enforced before deletion.
-    """
-    item = DB.get_one("SELECT id, name, shop_id FROM menu_items WHERE id = %s", (item_id,))
+    """Permanently remove a vendor menu item while preserving order history."""
+    item = DB.get_one(
+        "SELECT id, name, shop_id FROM menu_items WHERE id = %s",
+        (item_id,),
+    )
     if not item:
         return jsonify({"success": False, "message": "Dish not found."}), 404
 
@@ -772,7 +770,7 @@ def delete_menu_item(item_id):
             "message": "Forbidden: No active stall assigned or stall is currently deactivated."
         }), 403
 
-    if session.get("role") == "vendor" and item["shop_id"] != active_shop:
+    if session.get("role") == "vendor" and int(item["shop_id"]) != int(active_shop):
         return jsonify({
             "success": False,
             "message": "Forbidden: You cannot delete dishes belonging to another stall."
@@ -780,62 +778,73 @@ def delete_menu_item(item_id):
 
     actor_id = session.get("user_id")
     try:
-        # Delete every dependent record inside one transaction. This is
-        # important because production databases can have older FK rules
-        # (RESTRICT/NO ACTION) even when the current schema uses CASCADE.
-        # Order history is preserved by nulling only order_items.menu_item_id;
-        # item_name, price and quantity remain stored in the historical order.
         with DB.transaction() as tx:
-            # Clean survey votes for both schema generations:
-            # current schema stores the vendor_daily_menu_items.id in
-            # morning_survey_votes.menu_item_id, while some older databases
-            # may still store the original menu_items.id. Remove both forms
-            # before deleting the daily-menu rows.
+            # Remove dependent survey votes first. Production databases may
+            # contain rows created by either the current or legacy survey schema.
             daily_items = tx.query(
                 "SELECT id FROM vendor_daily_menu_items WHERE menu_item_id = %s",
                 (item_id,),
             )
+            daily_ids = [int(row["id"]) for row in daily_items]
+
+            # Current schema: votes reference vendor_daily_menu_items.id.
+            if daily_ids:
+                placeholders = ",".join(["%s"] * len(daily_ids))
+                tx.execute(
+                    f"DELETE FROM morning_survey_votes WHERE menu_item_id IN ({placeholders})",
+                    tuple(daily_ids),
+                )
+
+            # Legacy schema compatibility: older deployments stored the
+            # original menu_items.id in morning_survey_votes.menu_item_id.
             tx.execute(
                 "DELETE FROM morning_survey_votes WHERE menu_item_id = %s",
                 (item_id,),
             )
-            for daily_item in daily_items:
-                tx.execute(
-                    "DELETE FROM morning_survey_votes WHERE menu_item_id = %s",
-                    (daily_item["id"],),
-                )
 
+            # Remove today's/daily survey copies before deleting the permanent
+            # menu item. This also handles older RESTRICT foreign-key rules.
             tx.execute(
                 "DELETE FROM vendor_daily_menu_items WHERE menu_item_id = %s",
                 (item_id,),
             )
-            tx.execute(
-                "UPDATE order_items SET menu_item_id = NULL WHERE menu_item_id = %s",
-                (item_id,),
-            )
+
+            # A cart cannot keep a reference to a permanently deleted item.
             tx.execute(
                 "DELETE FROM cart_items WHERE menu_item_id = %s",
                 (item_id,),
             )
+
+            # Keep historical orders: order_items stores its own item_name,
+            # unit_price and quantity, so only the nullable menu_item_id link
+            # is cleared.
             tx.execute(
-                "DELETE FROM menu_items WHERE id = %s",
+                "UPDATE order_items SET menu_item_id = NULL WHERE menu_item_id = %s",
                 (item_id,),
             )
+
+            deleted = tx.execute_update(
+                "DELETE FROM menu_items WHERE id = %s AND shop_id = %s",
+                (item_id, active_shop),
+            )
+            if deleted != 1:
+                raise RuntimeError("Menu item could not be deleted.")
 
             AuditService.log_action(
                 actor_id=actor_id,
                 action="MENU_ITEM_DELETED",
                 entity_type="menu_item",
                 entity_id=item_id,
-                details={"name": item["name"], "physical_delete": True},
+                details={"name": item["name"], "shop_id": active_shop, "physical_delete": True},
                 tx=tx,
             )
 
         return jsonify({
             "success": True,
-            "message": f"'{item['name']}' removed from menu."
+            "message": f"'{item['name']}' removed from menu.",
+            "item_id": item_id,
         }), 200
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to delete menu item %s", item_id)
         return jsonify({
             "success": False,
