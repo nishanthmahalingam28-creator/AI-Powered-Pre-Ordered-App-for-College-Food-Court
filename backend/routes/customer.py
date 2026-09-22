@@ -882,18 +882,31 @@ def get_today_morning_poll():
     for survey in surveys:
         survey_windows = _survey_windows_from_row(survey)
         survey_current = _food_survey_status(now, survey_windows)
+        # Read meal period from the master menu item instead of requiring the
+        # production daily-menu/vote migration to have completed. This keeps the
+        # customer Food Survey page compatible with older production databases.
         options = DB.query("""
-            SELECT id, menu_item_id, meal_period, item_name, price, quantity, is_available
-            FROM vendor_daily_menu_items
-            WHERE survey_id = %s AND is_available = 1
-            ORDER BY FIELD(meal_period,'breakfast','lunch','dinner'), item_name
+            SELECT d.id, d.menu_item_id, m.meal_period, d.item_name, d.price, d.quantity, d.is_available
+            FROM vendor_daily_menu_items d
+            INNER JOIN menu_items m ON m.id = d.menu_item_id
+            WHERE d.survey_id = %s AND d.is_available = 1
+            ORDER BY
+                CASE m.meal_period
+                    WHEN 'breakfast' THEN 1
+                    WHEN 'lunch' THEN 2
+                    WHEN 'dinner' THEN 3
+                    ELSE 4
+                END,
+                d.item_name
         """, (survey["survey_id"],))
 
         voted_rows = DB.query(
-            """SELECT menu_item_id, meal_period
-               FROM morning_survey_votes
-               WHERE survey_id=%s AND student_user_id=%s
-               ORDER BY id""",
+            """SELECT v.menu_item_id, m.meal_period
+               FROM morning_survey_votes v
+               INNER JOIN vendor_daily_menu_items d ON d.id = v.menu_item_id
+               INNER JOIN menu_items m ON m.id = d.menu_item_id
+               WHERE v.survey_id=%s AND v.student_user_id=%s
+               ORDER BY v.id""",
             (survey["survey_id"], user_id),
         )
         voted_by_period = {}
@@ -923,7 +936,7 @@ def get_today_morning_poll():
             "options": [{
                 "id": row["id"],
                 "menu_item_id": row["menu_item_id"],
-                "meal_period": row["meal_period"],
+                "meal_period": str(row.get("meal_period") or "lunch").lower(),
                 "item_name": row["item_name"],
                 "price": float(row["price"]),
                 "quantity": int(row["quantity"] or 0),
