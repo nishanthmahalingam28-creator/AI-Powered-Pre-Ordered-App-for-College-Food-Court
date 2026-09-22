@@ -11,7 +11,7 @@ var titles={
 };
 function pageName(){return (decodeURIComponent(location.pathname).replace(/\\/g,'/').split('/').pop()||'dashboard.html').toLowerCase();}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
-function componentUrl(file){return new URL('../../components/'+file,document.baseURI).href}
+function componentUrl(file){return new URL('../../components/'+file,document.baseURI).href+'?v=20260922'}
 function build(){
  document.body.classList.add('customer-workspace-page','vendor-workspace-page');
  var page=pageName(),u=userInfo(),name=u.full_name||u.name||'Vendor',shop=u.shop_name||u.shop||'Vendor',initial=(String(name).trim().charAt(0)||'V').toUpperCase();
@@ -44,16 +44,17 @@ function build(){
  }
 }
 async function load(){
- var target=document.getElementById('vendor-workspace-container');if(!target)return;
+ var target=document.getElementById('vendor-workspace-container');if(!target){console.error('[Vendor Workspace] Missing vendor-workspace-container');return;}
  try{
   var responses=await Promise.all([
-   fetch(componentUrl('vendor-sidebar.html'),{cache:'force-cache'}),
-   fetch(componentUrl('vendor-navbar.html'),{cache:'force-cache'}),
-   fetch(componentUrl('vendor-notifications.html'),{cache:'force-cache'})
+   fetch(componentUrl('vendor-sidebar.html'),{cache:'no-store'}),
+   fetch(componentUrl('vendor-navbar.html'),{cache:'no-store'}),
+   fetch(componentUrl('vendor-notifications.html'),{cache:'no-store'})
   ]);
   if(responses.some(function(r){return !r.ok}))throw new Error('Vendor workspace components failed to load');
   var html=await Promise.all(responses.map(function(r){return r.text()}));
   target.innerHTML=html[0]+html[1]+html[2];
+  document.body.classList.add('customer-workspace-page','vendor-workspace-page');
   build();
   var notificationScript=document.createElement('script'); notificationScript.src=new URL('../../js/vendor/vendor-notifications.js',document.baseURI).href; notificationScript.defer=false; document.body.appendChild(notificationScript);
  }catch(e){console.error('[Vendor Workspace]',e);target.innerHTML='<div class="p-4 text-center text-rose-600 text-xs font-bold">Unable to load vendor navigation.</div>'}
