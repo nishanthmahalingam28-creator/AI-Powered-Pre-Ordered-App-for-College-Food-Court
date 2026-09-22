@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var titles={dashboard:'Admin Dashboard',shops:'Stalls & Operations',vendors:'Vendors & Assignments',customers:'Customer Management',temporary:'Temporary Accounts',orders:'Global Orders',payments:'Payment Monitoring',audit:'Security Audit Trail'};
+var titles={dashboard:'Admin Dashboard',shops:'Stalls & Operations',vendors:'Vendors & Assignments',customers:'Customer Management',temporary:'Temporary Accounts',orders:'Global Orders',payments:'Payment Monitoring',audit:'Security Audit Trail',contacts:'Contact Reports'};
 function apiBase(){return window.FOOD_COURT_API_BASE||(typeof window.getApiUrl==='function'?window.getApiUrl('').replace(/\/$/,''):'https://college-food-court-api.onrender.com/api');}
 function currentTab(){var h=String(location.hash||'#dashboard').replace('#','').toLowerCase();return titles[h]?h:'dashboard';}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
