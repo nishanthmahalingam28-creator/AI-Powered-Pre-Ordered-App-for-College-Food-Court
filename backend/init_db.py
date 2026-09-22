@@ -699,6 +699,29 @@ def init_mysql():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """)
 
+            # Morning survey votes: one submission per user, but multiple food
+            # choices are allowed. Replace the old survey-wide unique key safely.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'morning_survey_votes'
+                  AND INDEX_NAME = 'uq_msv_student_survey'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) > 0:
+                cur.execute("ALTER TABLE morning_survey_votes DROP INDEX uq_msv_student_survey")
+                print("MySQL migration: removed single-choice morning survey constraint.")
+
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'morning_survey_votes'
+                  AND INDEX_NAME = 'uq_msv_student_survey_item'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("""
+                    ALTER TABLE morning_survey_votes
+                    ADD UNIQUE KEY uq_msv_student_survey_item (survey_id, student_user_id, menu_item_id)
+                """)
+                print("MySQL migration: enabled multiple food choices per survey submission.")
+
             # Preserve the existing production YPR shop as Admin-created.
             cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
 
