@@ -565,6 +565,56 @@ def init_mysql():
                 cur.execute("ALTER TABLE users ADD COLUMN account_expires_at DATETIME NULL AFTER is_temporary")
                 print("MySQL migration: added users.account_expires_at.")
 
+            # Contact Reports migration for existing production databases.
+            # Older deployments may already have contact_messages without the newer
+            # read/resolution timestamp columns.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS contact_messages (
+                    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    full_name VARCHAR(120) NOT NULL,
+                    email VARCHAR(180) NOT NULL,
+                    subject VARCHAR(180) NOT NULL,
+                    message TEXT NOT NULL,
+                    status ENUM('new','read','resolved') NOT NULL DEFAULT 'new',
+                    read_at DATETIME NULL,
+                    resolved_at DATETIME NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_contact_status_created (status, created_at),
+                    INDEX idx_contact_email (email)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """)
+
+            contact_columns = {
+                "read_at": "DATETIME NULL",
+                "resolved_at": "DATETIME NULL",
+            }
+            for column_name, definition in contact_columns.items():
+                cur.execute("""
+                    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = %s
+                      AND TABLE_NAME = 'contact_messages'
+                      AND COLUMN_NAME = %s
+                """, (db_name, column_name))
+                if int(cur.fetchone()[0] or 0) == 0:
+                    cur.execute(f"ALTER TABLE contact_messages ADD COLUMN {column_name} {definition}")
+                    print(f"MySQL migration: added contact_messages.{column_name}.")
+
+            # Ensure status supports all Contact Reports workflow states.
+            cur.execute("""
+                SELECT COLUMN_TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s
+                  AND TABLE_NAME = 'contact_messages'
+                  AND COLUMN_NAME = 'status'
+            """, (db_name,))
+            status_row = cur.fetchone()
+            if status_row and "resolved" not in str(status_row[0]).lower():
+                cur.execute("""
+                    ALTER TABLE contact_messages
+                    MODIFY COLUMN status ENUM('new','read','resolved') NOT NULL DEFAULT 'new'
+                """)
+                print("MySQL migration: updated contact_messages.status workflow.")
+
             # Performance indexes for the most frequent customer/vendor API queries.
             # Check INFORMATION_SCHEMA first so this migration is safe for existing databases.
             performance_indexes = [
