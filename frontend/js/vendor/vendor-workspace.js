@@ -6,7 +6,8 @@ var titles={
  'update-menu.html':'Update Menu',
  'morning-survey.html':'Morning Survey',
  'sales-analytics.html':'Sales Analytics',
- 'workers.html':'Workers'
+ 'workers.html':'Workers',
+ 'profile.html':'Profile'
 };
 function pageName(){return (decodeURIComponent(location.pathname).replace(/\\/g,'/').split('/').pop()||'dashboard.html').toLowerCase();}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
@@ -21,9 +22,17 @@ function build(){
  ['vendor-sidebar-avatar','vendor-top-avatar'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=initial});
  document.querySelectorAll('[data-vendor-link]').forEach(function(a){a.classList.toggle('active',a.getAttribute('data-vendor-link')===page)});
  var top=document.getElementById('vendor-top-avatar');
- if(top){top.title=shop+' Vendor';top.style.cursor='default'}
+ if(top){top.title='Open Vendor Profile';top.style.cursor='pointer';top.addEventListener('click',function(){location.href='profile.html'});top.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();location.href='profile.html'}})}
  var logout=document.getElementById('vendor-workspace-logout');
- if(logout)logout.addEventListener('click',function(){if(typeof handleVendorLogout==='function')handleVendorLogout();});
+ if(logout)logout.addEventListener('click',async function(){
+  if(!confirm('Are you sure you want to sign out?')) return;
+  try{
+    var api=(window.FOOD_COURT_API_BASE||(typeof window.getApiUrl==='function'?window.getApiUrl('').replace(/\\/$/,''):'https://college-food-court-api.onrender.com/api'));
+    await fetch(api+'/auth/logout',{method:'POST',credentials:'include'});
+  }catch(e){console.warn('[Vendor Logout]',e)}
+  sessionStorage.removeItem('foodCourtUser'); localStorage.removeItem('foodCourtUser');
+  location.href='login.html';
+});
  var notify=document.getElementById('vendor-sidebar-notifications');
  if(notify)notify.addEventListener('click',function(e){e.preventDefault();if(typeof toggleVendorNotifDrawer==='function')toggleVendorNotifDrawer(true)});
  var menu=document.getElementById('mobile-workspace-menu'),panel=document.getElementById('mobile-workspace-panel');
