@@ -822,14 +822,43 @@ DEFAULT_FOOD_SURVEY_WINDOWS = {
 
 
 def _survey_windows_from_row(row):
+    """Convert MySQL TIME values into Python time objects safely.
+
+    MySQL connectors can return TIME columns as datetime.timedelta values.
+    Converting those values directly to a string and slicing the first five
+    characters can produce malformed values and raise ValueError.
+    """
     def parse(v, fallback):
-        raw = str(v or fallback.strftime("%H:%M"))[:5]
-        h, m = [int(x) for x in raw.split(":")]
-        return time(h, m)
+        if v is None:
+            return fallback
+
+        if isinstance(v, time):
+            return time(v.hour, v.minute)
+
+        # MySQL TIME values may be returned as datetime.timedelta.
+        if hasattr(v, "total_seconds"):
+            try:
+                total_seconds = int(v.total_seconds()) % 86400
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                return time(hours, minutes)
+            except (TypeError, ValueError, OverflowError):
+                return fallback
+
+        raw = str(v).strip()
+        parts = raw.split(":")
+        if len(parts) >= 2:
+            try:
+                return time(int(parts[0]), int(parts[1]))
+            except (TypeError, ValueError, OverflowError):
+                pass
+
+        return fallback
+
     return {
-        "breakfast": (parse(row.get("breakfast_start"), time(6,0)), parse(row.get("breakfast_end"), time(10,0))),
-        "lunch": (parse(row.get("lunch_start"), time(10,30)), parse(row.get("lunch_end"), time(15,0))),
-        "dinner": (parse(row.get("dinner_start"), time(17,0)), parse(row.get("dinner_end"), time(21,0))),
+        "breakfast": (parse(row.get("breakfast_start"), time(6, 0)), parse(row.get("breakfast_end"), time(10, 0))),
+        "lunch": (parse(row.get("lunch_start"), time(10, 30)), parse(row.get("lunch_end"), time(15, 0))),
+        "dinner": (parse(row.get("dinner_start"), time(17, 0)), parse(row.get("dinner_end"), time(21, 0))),
     }
 
 
