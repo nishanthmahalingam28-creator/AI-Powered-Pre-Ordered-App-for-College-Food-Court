@@ -276,44 +276,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // default/current Monthly period and only counts Food expenses in this month.
     async function loadFoodBudgetSnapshot() {
         try {
-            const [budgetRes, expenseRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/budgets`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/expenses`, { credentials: 'include' })
-            ]);
+            // Use one lightweight server-side summary instead of downloading
+            // all budgets and expenses separately.
+            const res = await fetch(`${API_BASE_URL}/budgets/summary`, { credentials: 'include' });
+            if (!res.ok) return;
 
-            if (!budgetRes.ok || !expenseRes.ok) return;
+            const data = await res.json();
+            if (!data.success) return;
 
-            const budgetData = await budgetRes.json();
-            const expenseData = await expenseRes.json();
-            if (!budgetData.success) return;
-
-            const budgets = Array.isArray(budgetData.budgets) ? budgetData.budgets : [];
-            const monthlyBudget = budgets.find(
-                b => String(b.period || '').toLowerCase() === 'monthly'
-            );
-            const budget = Number(monthlyBudget?.amount_limit || 0);
-
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-            const toDate = value => {
-                const d = new Date(String(value || '').slice(0, 10) + 'T00:00:00');
-                return Number.isNaN(d.getTime()) ? null : d;
-            };
-
-            const expenses = Array.isArray(expenseData.expenses) ? expenseData.expenses : [];
-            const spent = expenses
-                .filter(expense => {
-                    const category = String(expense.category || '').trim().toLowerCase();
-                    const date = toDate(expense.expense_date || expense.date);
-                    return category === 'food' &&
-                        date &&
-                        date >= monthStart &&
-                        date < nextMonthStart;
-                })
-                .reduce((total, expense) => total + Number(expense.amount || 0), 0);
-
-            const remaining = Math.max(0, budget - spent);
+            const budget = Number(data.budget || 0);
+            const spent = Number(data.spent || 0);
+            const remaining = Number(data.remaining || 0);
             const money = value => `₹${Number(value || 0).toFixed(2)}`;
 
             const budgetEl = document.getElementById('dashboard-food-budget');
