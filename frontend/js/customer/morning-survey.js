@@ -5,6 +5,7 @@ const API_BASE = window.FOOD_COURT_API_BASE ||
 
 let foodSurveyData = null;
 let foodSurveyTimer = null;
+let lastOpenMeal = null;
 
 async function loadFoodSurvey() {
     try {
@@ -225,6 +226,11 @@ function startFoodSurveyClock() {
             const start = a[0] * 3600 + a[1] * 60;
             const end = b[0] * 3600 + b[1] * 60;
             if (seconds >= start && seconds < end) {
+                if (lastOpenMeal !== period) {
+                    lastOpenMeal = period;
+                    loadFoodSurvey();
+                    return;
+                }
                 document.querySelectorAll('[data-period-status="' + period + '"]').forEach(function(el) {
                     if (el.textContent.toLowerCase() !== 'submitted') el.textContent = 'Open Now';
                 });
