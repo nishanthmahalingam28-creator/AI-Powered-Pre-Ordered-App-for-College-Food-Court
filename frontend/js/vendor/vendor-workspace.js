@@ -26,7 +26,7 @@ function build(){
  if(logout)logout.addEventListener('click',function(){if(typeof handleVendorLogout==='function')handleVendorLogout();});
  var notify=document.getElementById('vendor-sidebar-notifications');
  if(notify)notify.addEventListener('click',function(e){e.preventDefault();if(typeof toggleVendorNotifDrawer==='function')toggleVendorNotifDrawer(true)});
- var menu=document.getElementById('vendor-mobile-workspace-menu'),panel=document.getElementById('vendor-mobile-workspace-panel');
+ var menu=document.getElementById('mobile-workspace-menu'),panel=document.getElementById('mobile-workspace-panel');
  if(menu&&panel){
   var close=function(){panel.classList.remove('open');menu.setAttribute('aria-expanded','false')};
   menu.addEventListener('click',function(){var open=panel.classList.toggle('open');menu.setAttribute('aria-expanded',String(open))});
