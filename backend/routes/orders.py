@@ -34,21 +34,25 @@ def place_order():
     pickup_tz = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(pickup_tz)
     try:
-        if raw_pickup_at:
-            pickup_at = datetime.fromisoformat(str(raw_pickup_at).strip().replace("Z", "+00:00"))
+        raw_time = str(raw_pickup_at or "").strip()
+        # UI sends only HH:MM. The backend attaches today's IST date.
+        if len(raw_time) == 5:
+            pickup_time = datetime.strptime(raw_time, "%H:%M").time()
+            pickup_at = datetime.combine(now_ist.date(), pickup_time, tzinfo=pickup_tz)
+        else:
+            # Backward-compatible support for older clients that still send a datetime.
+            pickup_at = datetime.fromisoformat(raw_time.replace("Z", "+00:00")) if raw_time else now_ist + timedelta(minutes=15)
             if pickup_at.tzinfo is None:
                 pickup_at = pickup_at.replace(tzinfo=pickup_tz)
             else:
                 pickup_at = pickup_at.astimezone(pickup_tz)
-        else:
-            pickup_at = now_ist + timedelta(minutes=15)
         if pickup_at.date() != now_ist.date():
-            return jsonify({"success": False, "message": "Pickup must be scheduled for today."}), 400
+            return jsonify({"success": False, "message": "Pickup time must be for today."}), 400
         if pickup_at < now_ist + timedelta(minutes=10):
             return jsonify({"success": False, "message": "Please choose a pickup time at least 10 minutes from now."}), 400
         pickup_at_db = pickup_at.strftime("%Y-%m-%d %H:%M:%S")
     except (TypeError, ValueError):
-        return jsonify({"success": False, "message": "Invalid pickup date/time."}), 400
+        return jsonify({"success": False, "message": "Invalid pickup time. Please choose a valid time."}), 400
 
     # Authoritative Item Validation & Single-Shop Enforcement
     validated_items = []
