@@ -923,8 +923,7 @@ def _survey_windows_from_row(row):
 
 
 def _today_str():
-    from datetime import datetime
-    return datetime.now().strftime("%Y-%m-%d")
+    return datetime.now(FOOD_SURVEY_TIMEZONE).strftime("%Y-%m-%d")
 
 
 @vendor_bp.get("/daily-survey/today")
