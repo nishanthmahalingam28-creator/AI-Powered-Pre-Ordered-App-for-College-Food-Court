@@ -26,6 +26,22 @@ def submit_contact_message():
     if not message or len(message) > 5000:
         return jsonify({"success": False, "message": "Message must contain between 1 and 5000 characters."}), 400
 
+    # Guarantee the storage table exists even if a production deployment
+    # started before the Contact Reports migration ran.
+    DB.execute("""
+        CREATE TABLE IF NOT EXISTS contact_messages (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            full_name VARCHAR(120) NOT NULL,
+            email VARCHAR(180) NOT NULL,
+            subject VARCHAR(180) NOT NULL,
+            message TEXT NOT NULL,
+            status ENUM('new','read','resolved') NOT NULL DEFAULT 'new',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_contact_status_created (status, created_at),
+            INDEX idx_contact_email (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
+
     contact_id = DB.execute(
         """INSERT INTO contact_messages (full_name, email, subject, message, status)
            VALUES (%s, %s, %s, %s, 'new')""",
@@ -75,11 +91,8 @@ def update_contact_message_status(message_id):
     if not row:
         return jsonify({"success": False, "message": "Contact message not found."}), 404
 
-    if status == "new":
-        DB.execute("UPDATE contact_messages SET status='new', read_at=NULL, resolved_at=NULL WHERE id=%s", (message_id,))
-    elif status == "read":
-        DB.execute("UPDATE contact_messages SET status='read', read_at=COALESCE(read_at, CURRENT_TIMESTAMP), resolved_at=NULL WHERE id=%s", (message_id,))
-    else:
-        DB.execute("UPDATE contact_messages SET status='resolved', read_at=COALESCE(read_at, CURRENT_TIMESTAMP), resolved_at=CURRENT_TIMESTAMP WHERE id=%s", (message_id,))
+    # Status is the core workflow field; keep it compatible with older
+    # production contact_messages tables that do not have timestamp columns.
+    DB.execute("UPDATE contact_messages SET status=%s WHERE id=%s", (status, message_id))
 
     return jsonify({"success": True, "status": status}), 200
