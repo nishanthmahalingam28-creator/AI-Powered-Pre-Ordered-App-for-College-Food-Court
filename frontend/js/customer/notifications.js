@@ -1,12 +1,13 @@
 /**
  * Customer Notifications Controller
- * Provides real-time notification drawer, unread count polling (10s), and read management.
+ * Provides notification drawer, visibility-aware unread refresh, and read management.
  */
 
 (function () {
     const API_BASE = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
     let pollingTimer = null;
-    const POLLING_INTERVAL_MS = 10000; // 10 seconds
+    let unreadRequestInFlight = false;
+    const POLLING_INTERVAL_MS = 30000; // 30 seconds while the page is visible
 
     // Icon mapping per notification type
     const NOTIF_ICONS = {
@@ -22,6 +23,8 @@
     };
 
     async function fetchUnreadCount() {
+        if (unreadRequestInFlight || document.visibilityState === 'hidden') return;
+        unreadRequestInFlight = true;
         try {
             const res = await fetch(`${API_BASE}/notifications/unread-count`, { credentials: 'include' });
             if (!res.ok) {
@@ -34,6 +37,8 @@
             }
         } catch (e) {
             console.debug('Notification poll error:', e);
+        } finally {
+            unreadRequestInFlight = false;
         }
     }
 
@@ -182,6 +187,7 @@
 
     function startPolling() {
         stopPolling();
+        if (document.visibilityState === 'hidden') return;
         fetchUnreadCount();
         pollingTimer = setInterval(fetchUnreadCount, POLLING_INTERVAL_MS);
     }
@@ -248,6 +254,19 @@
 
         // Start controlled polling
         startPolling();
+    });
+
+    // Pause polling in background tabs and refresh immediately when the page is visible again.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            startPolling();
+        } else {
+            stopPolling();
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        if (document.visibilityState === 'visible') fetchUnreadCount();
     });
 
     // Cleanup on page unload
