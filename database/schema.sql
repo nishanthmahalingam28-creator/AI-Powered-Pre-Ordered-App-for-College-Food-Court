@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS menu_items (
         FOREIGN KEY (shop_id) REFERENCES shops(id)
         ON DELETE CASCADE,
     INDEX idx_menu_category (category),
-    INDEX idx_menu_shop (shop_id)
+    INDEX idx_menu_shop (shop_id),
+    INDEX idx_menu_shop_availability (shop_id, is_available, quantity)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. Orders Table
@@ -105,7 +106,9 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_order_status (order_status),
     INDEX idx_order_payment_status (payment_status),
     INDEX idx_order_customer (customer_id),
-    INDEX idx_order_shop (shop_id)
+    INDEX idx_order_shop (shop_id),
+    INDEX idx_order_shop_status_payment (shop_id, order_status, payment_status),
+    INDEX idx_order_customer_status (customer_id, order_status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Order Items
@@ -123,7 +126,9 @@ CREATE TABLE IF NOT EXISTS order_items (
         ON DELETE CASCADE,
     CONSTRAINT fk_item_menu
         FOREIGN KEY (menu_item_id) REFERENCES menu_items(id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
+    INDEX idx_order_item_order (order_id),
+    INDEX idx_order_item_menu (menu_item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Payments Record
