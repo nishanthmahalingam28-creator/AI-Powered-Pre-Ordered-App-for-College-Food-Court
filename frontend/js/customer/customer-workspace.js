@@ -6,10 +6,15 @@ function componentUrl(file){return new URL('../../components/'+file,document.bas
 function build(){
   document.body.classList.add('customer-workspace-page');
   var page=pageName(),u=userInfo(),name=u.full_name||u.name||'Student',role=u.customer_type||u.user_type||u.role||'Student',initial=(String(name).trim().charAt(0)||'S').toUpperCase();
+  var roleKey=String(role).toLowerCase();
+  var roleLabel=roleKey==='faculty'?'Faculty':roleKey==='guest'?'Guest':'Student';
+
   var t=document.getElementById('customer-workspace-page-title');if(t)t.textContent=titles[page]||'Customer Workspace';
+  var workspaceLabel=document.querySelector('.customer-workspace-header-label');if(workspaceLabel)workspaceLabel.textContent=roleLabel+' workspace';
+  var budgetLinks=document.querySelectorAll('[data-workspace-link="budgets.html"]');if(roleKey==='guest')budgetLinks.forEach(function(el){el.classList.add('hidden')});
   var ne=document.getElementById('sidebar-user-name');if(ne)ne.textContent=name;
   var re=document.getElementById('sidebar-user-type');if(re)re.textContent=role;
-  var tr=document.getElementById('topbar-customer-type');if(tr)tr.textContent=role;
+  var tr=document.getElementById('topbar-customer-type');if(tr)tr.textContent=roleLabel;
   ['sidebar-avatar','topbar-avatar'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=initial});
   var topAvatar=document.getElementById('topbar-avatar');
   if(topAvatar){topAvatar.style.cursor='pointer';topAvatar.setAttribute('role','button');topAvatar.setAttribute('tabindex','0');topAvatar.setAttribute('aria-label','Open profile');
