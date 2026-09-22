@@ -389,7 +389,26 @@
             </div>
         </section>
 
-    </main>
+    
+        <!-- CONTACT REPORTS -->
+        <section id="section-contacts" class="hidden mt-6 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-envelope-open-text text-purple-600 mr-2"></i>Contact Reports</h2>
+              <p class="text-xs text-slate-500 mt-1">Messages submitted from the public Contact Us page.</p>
+            </div>
+            <div class="flex gap-2">
+              <input id="contact-report-search" type="search" placeholder="Search reports..." class="border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-purple-200">
+              <select id="contact-report-status" class="border border-slate-200 rounded-lg px-3 py-2 text-xs bg-white">
+                <option value="">All</option><option value="new">New</option><option value="read">Read</option><option value="resolved">Resolved</option>
+              </select>
+            </div>
+          </div>
+          <div id="contact-reports-list" class="divide-y divide-slate-100">
+            <div class="p-8 text-center text-sm text-slate-400">Loading contact reports...</div>
+          </div>
+        </section>
+</main>
 
     <!-- ADD STALL MODAL -->
     <div id="add-shop-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
