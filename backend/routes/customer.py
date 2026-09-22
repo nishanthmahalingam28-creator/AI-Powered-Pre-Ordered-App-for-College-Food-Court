@@ -814,17 +814,30 @@ def update_morning_survey():
 
 
 FOOD_SURVEY_TIMEZONE = ZoneInfo("Asia/Kolkata")
-FOOD_SURVEY_WINDOWS = {
+DEFAULT_FOOD_SURVEY_WINDOWS = {
     "breakfast": (time(6, 0), time(10, 0)),
     "lunch": (time(10, 30), time(15, 0)),
     "dinner": (time(17, 0), time(21, 0)),
 }
 
 
-def _food_survey_status(now=None):
+def _survey_windows_from_row(row):
+    def parse(v, fallback):
+        raw = str(v or fallback.strftime("%H:%M"))[:5]
+        h, m = [int(x) for x in raw.split(":")]
+        return time(h, m)
+    return {
+        "breakfast": (parse(row.get("breakfast_start"), time(6,0)), parse(row.get("breakfast_end"), time(10,0))),
+        "lunch": (parse(row.get("lunch_start"), time(10,30)), parse(row.get("lunch_end"), time(15,0))),
+        "dinner": (parse(row.get("dinner_start"), time(17,0)), parse(row.get("dinner_end"), time(21,0))),
+    }
+
+
+def _food_survey_status(now=None, windows=None):
     now = now or datetime.now(FOOD_SURVEY_TIMEZONE)
     current = now.time()
-    for period, (start, end) in FOOD_SURVEY_WINDOWS.items():
+    windows = windows or DEFAULT_FOOD_SURVEY_WINDOWS
+    for period, (start, end) in windows.items():
         if start <= current < end:
             return {
                 "meal_period": period,
@@ -833,7 +846,7 @@ def _food_survey_status(now=None):
                 "end_time": end.strftime("%H:%M"),
             }
     next_period = None
-    for period, (start, end) in FOOD_SURVEY_WINDOWS.items():
+    for period, (start, end) in windows.items():
         if current < start:
             next_period = period
             break
@@ -857,7 +870,9 @@ def get_today_morning_poll():
     current = _food_survey_status(now)
 
     surveys = DB.query("""
-        SELECT v.id AS survey_id, v.shop_id, s.name AS shop_name, v.survey_date
+        SELECT v.id AS survey_id, v.shop_id, s.name AS shop_name, v.survey_date,
+               v.breakfast_start, v.breakfast_end, v.lunch_start, v.lunch_end,
+               v.dinner_start, v.dinner_end
         FROM vendor_daily_surveys v
         INNER JOIN shops s ON s.id = v.shop_id
         WHERE v.survey_date = %s AND v.is_serving_today = 1
@@ -865,6 +880,8 @@ def get_today_morning_poll():
     """, (today,))
     result = []
     for survey in surveys:
+        survey_windows = _survey_windows_from_row(survey)
+        survey_current = _food_survey_status(now, survey_windows)
         options = DB.query("""
             SELECT id, menu_item_id, meal_period, item_name, price, quantity, is_available
             FROM vendor_daily_menu_items
@@ -888,8 +905,8 @@ def get_today_morning_poll():
             "shop_id": survey["shop_id"],
             "shop_name": survey["shop_name"],
             "date": str(survey["survey_date"]),
-            "current_meal_period": current.get("meal_period"),
-            "survey_status": current.get("status"),
+            "current_meal_period": survey_current.get("meal_period"),
+            "survey_status": survey_current.get("status"),
             "voted": bool(voted_rows),
             "voted_menu_item_ids": [int(row["menu_item_id"]) for row in voted_rows],
             "voted_menu_item_ids_by_period": voted_by_period,
@@ -897,11 +914,11 @@ def get_today_morning_poll():
                 period: {
                     "start_time": start.strftime("%H:%M"),
                     "end_time": end.strftime("%H:%M"),
-                    "status": "open" if current.get("meal_period") == period else (
+                    "status": "open" if survey_current.get("meal_period") == period else (
                         "upcoming" if now.time() < start else "closed"
                     ),
                 }
-                for period, (start, end) in FOOD_SURVEY_WINDOWS.items()
+                for period, (start, end) in survey_windows.items()
             },
             "options": [{
                 "id": row["id"],
@@ -955,7 +972,8 @@ def vote_morning_poll():
 
     now = datetime.now(FOOD_SURVEY_TIMEZONE)
     today = now.strftime("%Y-%m-%d")
-    start, end = FOOD_SURVEY_WINDOWS[meal_period]
+    survey_windows = _survey_windows_from_row(survey)
+    start, end = survey_windows[meal_period]
     if not (start <= now.time() < end):
         return jsonify({
             "success": False,
