@@ -38,11 +38,16 @@
 
   <section class="bg-white rounded-3xl border border-blue-100 shadow-sm p-5 mb-5">
     <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-      <div class="flex-1"><h2 class="font-black text-slate-800">Pickup OTP Verification</h2><p class="text-[11px] text-slate-400 mt-1">Enter the customer's 6-digit pickup OTP to complete a ready order.</p></div>
-      <input id="verify-otp-input" maxlength="6" inputmode="numeric" placeholder="6-digit OTP" class="w-full sm:w-40 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-black tracking-widest">
-      <button onclick="verifyPickupOtp()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black"><i class="fa-solid fa-qrcode mr-1"></i>Verify & Complete</button>
+      <div class="flex-1"><h2 class="font-black text-slate-800">Pickup OTP Verification</h2><p class="text-[11px] text-slate-400 mt-1">Enter the customer's 6-digit pickup OTP. The matching ready order will appear first; verify only after reviewing it.</p></div>
+      <input id="verify-otp-input" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit OTP" class="w-full sm:w-40 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-black tracking-widest">
+      <button onclick="lookupPickupOtp()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-black"><i class="fa-solid fa-magnifying-glass mr-1"></i>Show Order</button>
     </div>
     <div id="otp-message" class="hidden mt-3 p-3 rounded-xl text-xs font-bold"></div>
+    <div id="otp-preview" class="hidden mt-4"></div>
+    <div id="otp-verify-actions" class="hidden mt-4 flex justify-end gap-2">
+      <button onclick="clearPickupOtpPreview()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-black">Clear</button>
+      <button onclick="verifyPickupOtp()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black"><i class="fa-solid fa-circle-check mr-1"></i>Verify & Complete</button>
+    </div>
   </section>
 
   <section id="orders-list" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
