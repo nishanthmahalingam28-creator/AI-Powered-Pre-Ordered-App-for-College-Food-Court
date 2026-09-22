@@ -10,37 +10,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="../../css/base/reset.css">
   <link rel="stylesheet" href="../../css/pages/customer.css">
-  <script src="../../js/core/public-components.js" defer></script>
-    <link rel="stylesheet" href="../../css/pages/customer-workspace.css">
+<link rel="stylesheet" href="../../css/pages/customer-workspace.css">
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden customer-workspace-page">
 
-<!-- STATIC CUSTOMER WORKSPACE -->
-<aside class="customer-workspace-sidebar" aria-label="Customer navigation">
-  <div class="customer-workspace-brand"><div class="customer-workspace-brand-mark"><i class="fa-solid fa-utensils"></i></div><div><strong>KPRIET</strong><span>Smart Food Court</span></div></div>
-  <nav class="customer-workspace-nav">
-    <a href="dashboard.html" data-workspace-link="dashboard.html"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
-    <a href="menu.html" data-workspace-link="menu.html"><i class="fa-solid fa-utensils"></i><span>Order Food</span></a>
-    <a href="preorder.html" data-workspace-link="preorder.html"><i class="fa-solid fa-basket-shopping"></i><span>My Cart</span></a>
-    <a href="orders.html" data-workspace-link="orders.html"><i class="fa-solid fa-receipt"></i><span>My Orders</span></a>
-    <a href="morning-survey.html" data-workspace-link="morning-survey.html"><i class="fa-solid fa-sun"></i><span>Morning Survey</span></a>
-    <a href="expenses.html" data-workspace-link="expenses.html"><i class="fa-solid fa-wallet"></i><span>Expenses</span></a>
-    <a href="budgets.html" data-workspace-link="budgets.html"><i class="fa-solid fa-chart-pie"></i><span>Food Budget</span></a>
-    <a href="assistant.html" data-workspace-link="assistant.html"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Assistant</span></a>
-    <a href="profile.html" data-workspace-link="profile.html"><i class="fa-solid fa-user"></i><span>Profile</span></a>
-  </nav>
-  <div class="customer-workspace-user"><div class="customer-workspace-avatar" id="sidebar-avatar">S</div><div class="min-w-0"><strong id="sidebar-user-name">Student</strong><span id="sidebar-user-type">Student</span></div><button class="customer-workspace-logout" id="customer-workspace-logout" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></div>
-</aside>
-<header class="customer-workspace-header">
-  <div><span class="customer-workspace-header-label">Student workspace</span><h2 id="customer-workspace-page-title">Customer Workspace</h2></div>
-  <div class="customer-workspace-actions"><button class="customer-workspace-notification notification-bell-trigger" title="Notifications"><i class="fa-regular fa-bell"></i><span class="notification-badge hidden">0</span></button><span class="customer-workspace-role" id="topbar-customer-type">Student</span><div class="customer-workspace-top-avatar" id="topbar-avatar">S</div></div>
-</header>
+<div id="customer-workspace-container"></div>
 
-
-  <!-- Shared Header Navbar -->
-  <div id="navbar-container"></div>
-
-  <main class="customer-shell py-8 pb-28 max-w-7xl mx-auto px-4 sm:px-6 w-full customer-workspace-main">
+<!-- Shared Header Navbar -->
+<main class="customer-shell py-8 pb-28 max-w-7xl mx-auto px-4 sm:px-6 w-full customer-workspace-main">
     
     <!-- Title & Search Hero Header -->
     <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -104,15 +81,12 @@
   </main>
 
   <!-- Shared Footer -->
-  <div id="footer-container"></div>
-
-  <!-- Menu Controller Script -->
+<!-- Menu Controller Script -->
    <script src="../../js/config.js"></script>
   <script src="../../js/customer/menu.js"></script>
   
   
 
   <script src="../../js/customer/customer-workspace.js"></script>
-<script src="../../js/customer/customer-workspace-mobile.js"></script>
 </body>
 </html>
