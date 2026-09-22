@@ -863,23 +863,63 @@ def delete_menu_item(item_id):
 
 DAILY_MEAL_PERIODS = ("breakfast", "lunch", "dinner")
 FOOD_SURVEY_TIMEZONE = ZoneInfo("Asia/Kolkata")
-FOOD_SURVEY_WINDOWS = {
+DEFAULT_FOOD_SURVEY_WINDOWS = {
     "breakfast": (time(6, 0), time(10, 0)),
     "lunch": (time(10, 30), time(15, 0)),
     "dinner": (time(17, 0), time(21, 0)),
 }
 
 
-def _food_survey_windows_payload():
-    now = datetime.now(FOOD_SURVEY_TIMEZONE)
+def _parse_survey_time(value, field):
+    raw = str(value or "").strip()
+    try:
+        hour, minute = [int(x) for x in raw.split(":")[:2]]
+        if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+            raise ValueError
+        return time(hour, minute)
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid {field}. Use HH:MM.")
+
+
+def _validate_survey_windows(raw_windows=None):
+    raw_windows = raw_windows or {}
+    result = {}
+    for period, (default_start, default_end) in DEFAULT_FOOD_SURVEY_WINDOWS.items():
+        incoming = raw_windows.get(period) or {}
+        start = _parse_survey_time(incoming.get("start_time") or default_start.strftime("%H:%M"), f"{period} start time")
+        end = _parse_survey_time(incoming.get("end_time") or default_end.strftime("%H:%M"), f"{period} end time")
+        if start >= end:
+            raise ValueError(f"{period.title()} start time must be before its end time.")
+        result[period] = (start, end)
+
+    # Prevent overlapping meal survey windows.
+    ordered = [(p, result[p][0], result[p][1]) for p in DEFAULT_FOOD_SURVEY_WINDOWS]
+    for i, (p1, s1, e1) in enumerate(ordered):
+        for p2, s2, e2 in ordered[i + 1:]:
+            if s1 < e2 and s2 < e1:
+                raise ValueError(f"{p1.title()} and {p2.title()} Food Survey times cannot overlap.")
+    return result
+
+
+def _food_survey_windows_payload(windows=None):
+    windows = windows or DEFAULT_FOOD_SURVEY_WINDOWS
+    now = datetime.now(FOOD_SURVEY_TIMEZONE).time()
     payload = {}
-    for period, (start, end) in FOOD_SURVEY_WINDOWS.items():
+    for period, (start, end) in windows.items():
         payload[period] = {
             "start_time": start.strftime("%H:%M"),
             "end_time": end.strftime("%H:%M"),
-            "status": "open" if start <= now.time() < end else ("upcoming" if now.time() < start else "closed"),
+            "status": "open" if start <= now < end else ("upcoming" if now < start else "closed"),
         }
     return payload
+
+
+def _survey_windows_from_row(row):
+    return _validate_survey_windows({
+        "breakfast": {"start_time": str(row.get("breakfast_start") or "06:00")[:5], "end_time": str(row.get("breakfast_end") or "10:00")[:5]},
+        "lunch": {"start_time": str(row.get("lunch_start") or "10:30")[:5], "end_time": str(row.get("lunch_end") or "15:00")[:5]},
+        "dinner": {"start_time": str(row.get("dinner_start") or "17:00")[:5], "end_time": str(row.get("dinner_end") or "21:00")[:5]},
+    })
 
 
 def _today_str():
@@ -900,7 +940,8 @@ def get_vendor_daily_survey():
     survey = DB.get_one(
         """
         SELECT id, vendor_user_id, shop_id, survey_date, is_serving_today,
-               submitted_at, updated_at
+               breakfast_start, breakfast_end, lunch_start, lunch_end,
+               dinner_start, dinner_end, submitted_at, updated_at
         FROM vendor_daily_surveys
         WHERE vendor_user_id = %s AND shop_id = %s AND survey_date = %s
         LIMIT 1
@@ -954,6 +995,7 @@ def get_vendor_daily_survey():
             "is_available": bool(item.get("is_available")),
         })
 
+    windows = _survey_windows_from_row(survey) if survey else DEFAULT_FOOD_SURVEY_WINDOWS
     return jsonify({
         "success": True,
         "date": today,
@@ -966,7 +1008,7 @@ def get_vendor_daily_survey():
             "updated_at": str(survey["updated_at"]) if survey else None,
         },
         "meal_periods": DAILY_MEAL_PERIODS,
-        "meal_windows": _food_survey_windows_payload(),
+        "meal_windows": _food_survey_windows_payload(windows),
         "timezone": "Asia/Kolkata",
         "menu_catalog": catalog,
         "selected": selected,
@@ -1084,6 +1126,10 @@ def save_vendor_daily_survey():
     today = _today_str()
     is_serving_today = bool(data.get("is_serving_today", True))
     meals = data.get("meals") or {}
+    try:
+        survey_windows = _validate_survey_windows(data.get("meal_windows"))
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
 
     if not isinstance(meals, dict):
         return jsonify({"success": False, "message": "Invalid meal menu data."}), 400
@@ -1112,10 +1158,20 @@ def save_vendor_daily_survey():
                 tx.execute(
                     """
                     UPDATE vendor_daily_surveys
-                    SET is_serving_today = %s, updated_at = CURRENT_TIMESTAMP
+                    SET is_serving_today = %s,
+                        breakfast_start = %s, breakfast_end = %s,
+                        lunch_start = %s, lunch_end = %s,
+                        dinner_start = %s, dinner_end = %s,
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                     """,
-                    (1 if is_serving_today else 0, survey_id),
+                    (
+                        1 if is_serving_today else 0,
+                        survey_windows["breakfast"][0].strftime("%H:%M:%S"), survey_windows["breakfast"][1].strftime("%H:%M:%S"),
+                        survey_windows["lunch"][0].strftime("%H:%M:%S"), survey_windows["lunch"][1].strftime("%H:%M:%S"),
+                        survey_windows["dinner"][0].strftime("%H:%M:%S"), survey_windows["dinner"][1].strftime("%H:%M:%S"),
+                        survey_id,
+                    ),
                 )
                 # Never delete daily-menu rows after students may have voted.
                 # morning_survey_votes has an FK to these rows with ON DELETE CASCADE,
@@ -1134,8 +1190,9 @@ def save_vendor_daily_survey():
                 survey_id = tx.execute(
                     """
                     INSERT INTO vendor_daily_surveys
-                        (vendor_user_id, shop_id, survey_date, is_serving_today)
-                    VALUES (%s, %s, %s, %s)
+                        (vendor_user_id, shop_id, survey_date, is_serving_today,
+                         breakfast_start, breakfast_end, lunch_start, lunch_end, dinner_start, dinner_end)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (vendor_id, shop_id, today, 1 if is_serving_today else 0),
                 )
