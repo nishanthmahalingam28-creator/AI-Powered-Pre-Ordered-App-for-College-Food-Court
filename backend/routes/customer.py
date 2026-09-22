@@ -951,7 +951,7 @@ def vote_morning_poll():
         return jsonify({"success": False, "message": "Survey is required."}), 400
 
     meal_period = str(data.get("meal_period") or "").strip().lower()
-    if meal_period not in FOOD_SURVEY_WINDOWS:
+    if meal_period not in DEFAULT_FOOD_SURVEY_WINDOWS:
         return jsonify({"success": False, "message": "A valid meal period is required."}), 400
 
     raw_items = data.get("menu_item_ids")
