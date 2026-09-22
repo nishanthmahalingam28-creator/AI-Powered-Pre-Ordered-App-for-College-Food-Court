@@ -1,0 +1,29 @@
+<!-- Shared Admin Workspace Navbar -->
+<header class="admin-workspace-header">
+  <div class="admin-workspace-header-left">
+    <button type="button" id="admin-mobile-workspace-menu" class="admin-mobile-menu-toggle" aria-label="Open admin menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="admin-workspace-heading">
+      <span class="admin-workspace-header-label">Central operations</span>
+      <h2 id="admin-workspace-page-title">Admin Dashboard</h2>
+    </div>
+    <nav id="admin-mobile-workspace-panel" class="admin-mobile-workspace-panel" aria-label="Mobile admin navigation">
+      <a href="#dashboard" data-admin-tab="dashboard"><i class="fa-solid fa-table-cells-large"></i></a>
+      <a href="#shops" data-admin-tab="shops"><i class="fa-solid fa-shop"></i><span>Stalls & Operations</span></a>
+      <a href="#vendors" data-admin-tab="vendors"><i class="fa-solid fa-id-badge"></i><span>Vendors</span></a>
+      <a href="#customers" data-admin-tab="customers"><i class="fa-solid fa-users"></i><span>Customers</span></a>
+      <a href="#temporary" data-admin-tab="temporary"><i class="fa-solid fa-clock"></i><span>Temporary Accounts</span></a>
+      <a href="#orders" data-admin-tab="orders"><i class="fa-solid fa-receipt"></i><span>Global Orders</span></a>
+      <a href="#payments" data-admin-tab="payments"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a>
+      <a href="#audit" data-admin-tab="audit"><i class="fa-solid fa-clipboard-list"></i><span>Security Audit</span></a>
+    </nav>
+  </div>
+  <div class="admin-workspace-actions">
+    <button class="admin-workspace-notification" id="admin-notification-trigger" title="Notifications" aria-label="Notifications">
+      <i class="fa-regular fa-bell"></i><span id="admin-notification-badge" class="admin-notification-badge hidden">0</span>
+    </button>
+    <span class="admin-workspace-role">Administrator</span>
+    <div class="admin-workspace-top-avatar" id="admin-top-avatar" aria-label="Administrator profile">A</div>
+  </div>
+</header>
