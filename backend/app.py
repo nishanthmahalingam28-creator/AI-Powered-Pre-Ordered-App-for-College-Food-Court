@@ -21,6 +21,7 @@ from routes.expenses import expenses_bp
 from routes.income import income_bp
 from routes.budgets import budgets_bp
 from routes.goals import goals_bp
+from routes.contact import contact_bp
 from realtime import socketio
 
 # Load local .env only if not explicitly in production mode
@@ -127,6 +128,7 @@ app.register_blueprint(expenses_bp, url_prefix="/api/expenses")
 app.register_blueprint(income_bp, url_prefix="/api/income")
 app.register_blueprint(budgets_bp, url_prefix="/api/budgets")
 app.register_blueprint(goals_bp, url_prefix="/api/goals")
+app.register_blueprint(contact_bp, url_prefix="/api/contact")
 app.register_blueprint(goals_bp, url_prefix="/api/financial-goals", name="financial_goals")
 
 # Automatic Administrator Account Bootstrapping (Render production & dev environments)
