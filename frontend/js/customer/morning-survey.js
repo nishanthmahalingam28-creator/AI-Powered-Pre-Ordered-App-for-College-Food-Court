@@ -60,11 +60,10 @@ function renderSurvey(survey) {
                         const selected = String(survey.voted_menu_item_id) === String(option.id);
                         return `
                             <label class="food-vote-option block cursor-pointer rounded-2xl border-2 ${selected ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-100' : 'border-slate-200 bg-white'} hover:border-teal-400 p-4 transition-all">
-                                <input
-                                    type="radio"
+                                <input type="checkbox"
                                     name="food-choice-${survey.survey_id}"
                                     value="${option.id}"
-                                    class="food-vote-radio w-5 h-5 accent-teal-600 flex-none cursor-pointer"
+                                    class="food-vote-checkbox w-5 h-5 accent-teal-600 flex-none cursor-pointer"
                                     ${selected ? 'checked' : ''}
                                     ${survey.voted ? 'disabled' : ''}
                                 >
@@ -90,10 +89,10 @@ function renderSurvey(survey) {
                 <div>
                     <p class="text-[10px] font-black uppercase tracking-widest text-teal-600">Today's Food Vote</p>
                     <h2 class="text-xl font-black text-slate-900 mt-1">${escapeHtml(survey.shop_name || 'Food Court')}</h2>
-                    <p class="text-xs text-slate-400 mt-1">Click one food item, then press Submit Food Vote.</p>
+                    <p class="text-xs text-slate-400 mt-1">Select one or more food items, then press Submit Food Vote. You can submit only once.</p>
                 </div>
                 <span class="px-3 py-1.5 rounded-full text-[10px] font-black ${survey.voted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
-                    ${survey.voted ? '✓ Vote Recorded' : 'Choose One Food'}
+                    ${survey.voted ? '✓ Vote Recorded' : 'Choose Food'}
                 </span>
             </div>
 
@@ -111,16 +110,24 @@ function renderSurvey(survey) {
 }
 
 function attachFoodChoiceHandlers() {
-    document.querySelectorAll('.food-vote-radio').forEach(radio => {
-        radio.addEventListener('change', function () {
+    document.querySelectorAll('.food-vote-checkbox').forEach(input => {
+        input.addEventListener('change', function () {
             const name = this.name;
-            document.querySelectorAll('input[name="' + name + '"]').forEach(input => {
-                const card = input.closest('.food-vote-option');
+            document.querySelectorAll('input[name="' + name + '"]').forEach(option => {
+                const card = option.closest('.food-vote-option');
                 if (!card) return;
-                card.classList.toggle('border-teal-500', input.checked);
-                card.classList.toggle('bg-teal-50', input.checked);
-                card.classList.toggle('border-slate-200', !input.checked);
-                card.classList.toggle('bg-white', !input.checked);
+                card.classList.toggle('border-teal-500', option.checked);
+                card.classList.toggle('bg-teal-50', option.checked);
+                card.classList.toggle('border-slate-200', !option.checked);
+                card.classList.toggle('bg-white', !option.checked);
+                const check = card.querySelector('.food-vote-check');
+                if (check) {
+                    check.classList.toggle('border-teal-600', option.checked);
+                    check.classList.toggle('bg-teal-600', option.checked);
+                    check.classList.toggle('text-white', option.checked);
+                    check.classList.toggle('border-slate-300', !option.checked);
+                    check.classList.toggle('text-transparent', !option.checked);
+                }
             });
         });
     });
@@ -132,10 +139,12 @@ function attachFoodChoiceHandlers() {
     });
 }
 async function submitFoodVote(surveyId) {
-    const selected = document.querySelector(`input[name="food-choice-${surveyId}"]:checked`);
+    const selected = Array.from(
+        document.querySelectorAll(`input[name="food-choice-${surveyId}"]:checked`)
+    );
 
-    if (!selected) {
-        showPollMessage('Please click a food item before voting.', false);
+    if (!selected.length) {
+        showPollMessage('Please select at least one food item before voting.', false);
         return;
     }
 
@@ -152,7 +161,7 @@ async function submitFoodVote(surveyId) {
             credentials: 'include',
             body: JSON.stringify({
                 survey_id: Number(surveyId),
-                menu_item_id: Number(selected.value)
+                menu_item_ids: selected.map(input => Number(input.value))
             })
         });
 
