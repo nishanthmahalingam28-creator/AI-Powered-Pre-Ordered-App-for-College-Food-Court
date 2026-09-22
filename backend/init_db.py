@@ -543,6 +543,27 @@ def init_mysql():
                 cur.execute("ALTER TABLE users ADD COLUMN account_expires_at DATETIME NULL AFTER is_temporary")
                 print("MySQL migration: added users.account_expires_at.")
 
+            # Performance indexes for the most frequent customer/vendor API queries.
+            # Check INFORMATION_SCHEMA first so this migration is safe for existing databases.
+            performance_indexes = [
+                ("menu_items", "idx_menu_shop_availability", "ALTER TABLE menu_items ADD INDEX idx_menu_shop_availability (shop_id, is_available, quantity)"),
+                ("orders", "idx_order_shop_status_payment", "ALTER TABLE orders ADD INDEX idx_order_shop_status_payment (shop_id, order_status, payment_status)"),
+                ("orders", "idx_order_customer_status", "ALTER TABLE orders ADD INDEX idx_order_customer_status (customer_id, order_status, created_at)"),
+                ("order_items", "idx_order_item_order", "ALTER TABLE order_items ADD INDEX idx_order_item_order (order_id)"),
+                ("order_items", "idx_order_item_menu", "ALTER TABLE order_items ADD INDEX idx_order_item_menu (menu_item_id)")
+            ]
+            for table_name, index_name, alter_sql in performance_indexes:
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM INFORMATION_SCHEMA.STATISTICS
+                    WHERE TABLE_SCHEMA = %s
+                      AND TABLE_NAME = %s
+                      AND INDEX_NAME = %s
+                """, (db_name, table_name, index_name))
+                if int(cur.fetchone()[0] or 0) == 0:
+                    cur.execute(alter_sql)
+                    print(f"MySQL migration: added {index_name}.")
+            
             # Expenses migration for databases created before order-linked food expenses.
             # CREATE TABLE IF NOT EXISTS does not modify an existing expenses table.
             cur.execute("""
