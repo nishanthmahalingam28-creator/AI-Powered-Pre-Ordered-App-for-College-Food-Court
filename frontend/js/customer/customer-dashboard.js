@@ -12,8 +12,9 @@ function formatOrderDateTime(value) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // The shared customer-workspace-mobile.js owns the 0-640px menu
-    // on every customer/student workspace page.
+    // Wait for the shared workspace component so identity/navigation elements exist
+    // before dashboard initialization. This also keeps one menu/sidebar implementation.
+    if (window.customerWorkspaceReady) await window.customerWorkspaceReady;
     const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 
     // Purge legacy financial storage keys to guarantee zero localStorage reliance
