@@ -17,10 +17,31 @@ async function loadSurvey(){
   surveyCatalog=data.menu_catalog||[]; currentSurvey=data.survey||null;
   document.getElementById('survey-shop-name').textContent=(data.shop&&data.shop.name)||'Assigned Shop';
   document.getElementById('survey-date').textContent=data.date||'Today';
+  renderSurveyWindows(data.meal_windows||{});
   const serving=document.getElementById('serving-today'); if(serving)serving.checked=currentSurvey?currentSurvey.is_serving_today!==false:true;
   ['breakfast','lunch','dinner'].forEach(p=>renderMeal(p,(data.selected&&data.selected[p])||[]));
   renderResult(data);
   await loadVoteResults();
+}
+
+function renderSurveyWindows(windows){
+  const el=document.getElementById('food-survey-windows');
+  if(!el)return;
+  const icons={breakfast:'🍳',lunch:'🍛',dinner:'🌙'};
+  const periods=['breakfast','lunch','dinner'];
+  el.innerHTML=periods.map(function(p){
+    const w=windows[p]||{};
+    const status=w.status||'closed';
+    const label=status==='open'?'OPEN NOW':status==='upcoming'?'UPCOMING':'CLOSED';
+    const cls=status==='open'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='upcoming'?'bg-blue-50 border-blue-200 text-blue-700':'bg-slate-50 border-slate-200 text-slate-500';
+    return '<div class="rounded-2xl border '+cls+' p-4"><div class="flex items-center justify-between gap-2"><span class="font-black text-slate-800">'+icons[p]+' '+p.charAt(0).toUpperCase()+p.slice(1)+'</span><span class="text-[9px] font-black uppercase">'+label+'</span></div><p class="text-xs font-bold mt-2">'+formatSurveyTime(w.start_time)+' – '+formatSurveyTime(w.end_time)+' IST</p></div>';
+  }).join('');
+}
+function formatSurveyTime(value){
+  if(!value)return '—';
+  const a=String(value).split(':').map(Number),d=new Date();
+  d.setHours(a[0],a[1],0,0);
+  return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 }
 
 function renderMeal(period,selectedRows){
