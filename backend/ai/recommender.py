@@ -212,30 +212,41 @@ class FoodCourtRecommender:
                 scored_candidates.sort(key=lambda x: x["score"], reverse=True)
 
             # 7. AUTHORITATIVE AVAILABILITY & INTEGRITY FILTER (Mandatory Step 7)
-            # Re-verifies every candidate against real-time database before dispatching
-            final_recommendations = []
-            seen_item_ids = set()
-
+            # Verify all candidates in one database query instead of one query per
+            # candidate. This removes the N+1 query pattern from the dashboard.
+            candidate_ids = []
             for entry in scored_candidates:
-                candidate = entry["item"]
-                item_id = candidate["id"]
+                item_id = int(entry["item"]["id"])
+                if item_id not in candidate_ids:
+                    candidate_ids.append(item_id)
 
-                if item_id in seen_item_ids:
-                    continue
-
-                # Live Authoritative Verification
-                auth_check = DB.get_one(
-                    """
+            auth_by_id = {}
+            if candidate_ids:
+                placeholders = ",".join(["%s"] * len(candidate_ids))
+                auth_rows = DB.query(
+                    f"""
                     SELECT m.id, m.name, m.price, m.quantity, m.is_available, m.category,
                            s.id as shop_id, s.name as shop_name, s.is_active as shop_is_active,
                            s.operational_status as shop_operational_status
                     FROM menu_items m
                     INNER JOIN shops s ON s.id = m.shop_id
-                    WHERE m.id = %s
+                    WHERE m.id IN ({placeholders})
                     """,
-                    (item_id,)
+                    tuple(candidate_ids),
                 )
+                auth_by_id = {int(row["id"]): row for row in auth_rows}
 
+            final_recommendations = []
+            seen_item_ids = set()
+
+            for entry in scored_candidates:
+                candidate = entry["item"]
+                item_id = int(candidate["id"])
+
+                if item_id in seen_item_ids:
+                    continue
+
+                auth_check = auth_by_id.get(item_id)
                 if not auth_check:
                     continue
 
