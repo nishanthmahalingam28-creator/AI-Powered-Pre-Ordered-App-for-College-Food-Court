@@ -55,7 +55,44 @@ async function changeQty(id, delta) { const item=updateMenuItems.find(x=>x.id===
 async function toggleAvailable(id, current) { await apiUpdate(id,{available:!current}); }
 async function editPrice(id,current) { const v=prompt('Enter new price (₹):',current); if(v===null)return; const n=Number(v); if(!n||n<=0){alert('Enter a valid price.');return;} await apiUpdate(id,{price:n}); }
 async function changePeriod(id,current) { const next=prompt('Enter meal section: breakfast, lunch, or dinner',current); if(next===null)return; const p=next.trim().toLowerCase(); if(!['breakfast','lunch','dinner'].includes(p)){alert('Use breakfast, lunch, or dinner.');return;} await apiUpdate(id,{meal_period:p}); }
-async function removeItem(id,name) { name=decodeURIComponent(name); if(!confirm(`Remove "${name}" from the menu?`))return; const res=await fetch(`${UPDATE_MENU_API}/vendor/menu/item/${id}`,{method:'DELETE',credentials:'include'}); const data=await res.json(); if(data.success) await loadUpdateMenu(); else alert(data.message||'Delete failed.'); }
+async function removeItem(id,name) {
+  name=decodeURIComponent(name);
+  if(!confirm(`Remove "${name}" from the menu?`)) return;
+
+  const buttons = document.querySelectorAll('button[onclick*="removeItem("]');
+  buttons.forEach(button => {
+    if (button.getAttribute('onclick')?.includes(`removeItem(${id},`)) {
+      button.disabled = true;
+      button.classList.add('opacity-50','pointer-events-none');
+    }
+  });
+
+  try {
+    const res = await fetch(`${UPDATE_MENU_API}/vendor/menu/item/${id}`, {
+      method:'DELETE',
+      credentials:'include',
+      headers:{'Accept':'application/json'}
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Delete failed (HTTP ${res.status}).`);
+    }
+
+    await loadUpdateMenu();
+    showMenuMessage(data.message || 'Dish deleted successfully.', true);
+  } catch (error) {
+    console.error('Menu delete error:', error);
+    alert(error.message || 'Unable to delete this dish. Please try again.');
+  } finally {
+    buttons.forEach(button => {
+      if (button.getAttribute('onclick')?.includes(`removeItem(${id},`)) {
+        button.disabled = false;
+        button.classList.remove('opacity-50','pointer-events-none');
+      }
+    });
+  }
+}
 async function addMenuItem(e) { e.preventDefault(); const body={name:document.getElementById('menu-name').value.trim(),description:document.getElementById('menu-description').value.trim(),price:Number(document.getElementById('menu-price').value),quantity:Number(document.getElementById('menu-quantity').value),category:document.getElementById('menu-category').value,meal_period:document.getElementById('menu-meal-period').value,available:document.getElementById('menu-available').checked}; try { const res=await fetch(`${UPDATE_MENU_API}/vendor/menu/item`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body)}); const data=await res.json(); if(!data.success){alert(data.message||'Add failed.');return;} closeAddMenuModal(); e.target.reset(); await loadUpdateMenu(); } catch(err){alert('Failed to connect to server.');} }
 function openAddMenuModal(){const x=document.getElementById('add-menu-modal');x.classList.remove('hidden');x.classList.add('flex');}
 function closeAddMenuModal(){const x=document.getElementById('add-menu-modal');x.classList.add('hidden');x.classList.remove('flex');}
