@@ -7,6 +7,49 @@ function formatCurrency(value) {
     return `₹${parseFloat(value || 0).toFixed(2)}`;
 }
 
+function formatPickupForDisplay(value) {
+    if (!value) return '—';
+    const raw = String(value).trim();
+    const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+    const date = new Date(normalized + (/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized) ? '' : 'Z'));
+    if (Number.isNaN(date.getTime())) return raw;
+    return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true
+    }).format(date);
+}
+
+function setupPickupTime() {
+    const input = document.getElementById('pickup-at');
+    const message = document.getElementById('pickup-at-message');
+    if (!input) return;
+    const now = new Date();
+    const min = new Date(now.getTime() + 10 * 60 * 1000);
+    const localValue = new Date(min.getTime() - min.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    input.min = localValue;
+    if (!input.value) input.value = localValue;
+    const updateMessage = () => {
+        if (!message || !input.value) return;
+        const selected = new Date(input.value);
+        message.textContent = Number.isNaN(selected.getTime())
+            ? 'Choose a valid pickup time.'
+            : 'Selected: ' + new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).format(selected) + ' • Today • IST';
+    };
+    input.addEventListener('change', updateMessage);
+    input.addEventListener('input', updateMessage);
+    updateMessage();
+    setInterval(() => {
+        const freshNow = new Date();
+        const freshMin = new Date(freshNow.getTime() + 10 * 60 * 1000);
+        const freshLocal = new Date(freshMin.getTime() - freshMin.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        input.min = freshLocal;
+        if (input.value && input.value < freshLocal) {
+            input.value = freshLocal;
+            updateMessage();
+        }
+    }, 60000);
+}
+
 async function fetchCartAndRender() {
     const cartContainer = document.getElementById('cart-items');
     const emptyState = document.getElementById('empty-cart');
@@ -362,6 +405,24 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
     confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Placing Order...';
 
     const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'Pay at Counter';
+    const pickupInput = document.getElementById('pickup-at');
+    const pickupAt = pickupInput?.value || '';
+    if (!pickupAt) {
+        alert('Please choose your pickup time before placing the order.');
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalText;
+        pickupInput?.focus();
+        return;
+    }
+    const pickupDate = new Date(pickupAt);
+    const minPickup = new Date(Date.now() + 10 * 60 * 1000);
+    if (Number.isNaN(pickupDate.getTime()) || pickupDate < minPickup || pickupDate.toDateString() !== new Date().toDateString()) {
+        alert('Please choose a valid pickup time today, at least 10 minutes from now.');
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalText;
+        pickupInput?.focus();
+        return;
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -370,7 +431,8 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             credentials: 'include',
             body: JSON.stringify({
                 items: serverCart.map(item => ({ id: item.item_id || item.id, quantity: item.quantity || 1 })),
-                payment_method: selectedPayment
+                payment_method: selectedPayment,
+                pickup_at: pickupAt
             })
         });
 
@@ -398,6 +460,8 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             document.getElementById('pickup-otp').textContent = order.pickup_otp;
             const shopEl = document.getElementById('order-shop');
             if (shopEl) shopEl.textContent = order.shop_name;
+            const pickupEl = document.getElementById('order-pickup-at');
+            if (pickupEl) pickupEl.textContent = formatPickupForDisplay(order.pickup_at || pickupAt);
 
             updatePaymentUI(order);
 
@@ -408,7 +472,8 @@ document.getElementById('confirm-order').addEventListener('click', async () => {
             await loadGeneratedBill(order.order_id);
 
             // Refresh cart from server (which was automatically cleared upon order placement)
-            await fetchCartAndRender();
+            await setupPickupTime();
+fetchCartAndRender();
 
             // If UPI / Online was selected, launch the Razorpay Checkout modal
             if (selectedPayment === 'UPI / Online' && order.payment_status === 'pending') {
