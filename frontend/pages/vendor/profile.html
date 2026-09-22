@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vendor Profile | KPRIET Food Court</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="../../css/pages/dashboard.css">
+<link rel="stylesheet" href="../../css/pages/customer-workspace.css">
+<script src="../../js/core/public-components.js" defer></script>
+<script src="../../js/vendor/vendor-workspace.js" defer></script>
+<script src="../../js/vendor/vendor-profile.js" defer></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 customer-workspace-page vendor-workspace-page">
+<div id="vendor-workspace-container"></div>
+<main class="customer-workspace-main">
+  <div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+      <p class="text-[10px] font-black uppercase tracking-widest text-blue-600">Vendor Account</p>
+      <h1 class="text-2xl md:text-3xl font-black text-slate-900">Profile</h1>
+      <p class="text-sm text-slate-500 mt-1">View your vendor account and assigned stall details.</p>
+    </div>
+    <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8">
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+        <div id="vendor-profile-avatar" class="w-20 h-20 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-3xl font-black">V</div>
+        <div class="text-center sm:text-left">
+          <h2 id="vendor-profile-name" class="text-2xl font-black text-slate-900">Loading...</h2>
+          <p id="vendor-profile-role" class="text-sm font-bold text-blue-600 mt-1">Vendor</p>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 mt-8">
+        <div class="rounded-2xl bg-slate-50 p-4"><p class="text-[10px] font-black uppercase text-slate-400">Email</p><p id="vendor-profile-email" class="font-bold text-slate-800 mt-1 break-all">—</p></div>
+        <div class="rounded-2xl bg-slate-50 p-4"><p class="text-[10px] font-black uppercase text-slate-400">Assigned Stall</p><p id="vendor-profile-shop" class="font-bold text-slate-800 mt-1">—</p></div>
+        <div class="rounded-2xl bg-slate-50 p-4"><p class="text-[10px] font-black uppercase text-slate-400">Account ID</p><p id="vendor-profile-id" class="font-bold text-slate-800 mt-1">—</p></div>
+        <div class="rounded-2xl bg-slate-50 p-4"><p class="text-[10px] font-black uppercase text-slate-400">Account Status</p><p class="font-bold text-emerald-600 mt-1">Active</p></div>
+      </div>
+      <div id="vendor-profile-message" class="hidden mt-5 rounded-xl p-3 text-xs font-bold"></div>
+      <button id="vendor-profile-logout" type="button" class="mt-6 px-5 py-3 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-black"><i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out</button>
+    </section>
+  </div>
+</main>
+</body>
+</html>
