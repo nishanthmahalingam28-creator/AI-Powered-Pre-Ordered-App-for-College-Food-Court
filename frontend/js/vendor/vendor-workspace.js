@@ -28,16 +28,27 @@ function build(){
  document.querySelectorAll('[data-vendor-link]').forEach(function(a){a.classList.toggle('active',a.getAttribute('data-vendor-link')===page);});
  var top=document.getElementById('vendor-top-avatar');
  if(top){top.onclick=function(){location.href='profile.html';};}
+ document.querySelectorAll('a[data-vendor-link="profile.html"]').forEach(function(link){link.onclick=function(){location.href='profile.html';};});
  var logout=document.getElementById('vendor-workspace-logout');
- if(logout)logout.onclick=async function(){
+ if(logout)logout.onclick=async function(e){
+  if(e)e.preventDefault();
   if(!confirm('Are you sure you want to sign out?'))return;
-  try{var api=(window.FOOD_COURT_API_BASE||(typeof window.getApiUrl==='function'?window.getApiUrl('').replace(/\\/$/,''):'https://college-food-court-api.onrender.com/api'));await fetch(api+'/auth/logout',{method:'POST',credentials:'include'});}catch(e){}
-  sessionStorage.removeItem('foodCourtUser');localStorage.removeItem('foodCourtUser');location.href='login.html';
+  logout.disabled=true;
+  try{
+   var base=window.FOOD_COURT_API_BASE||(typeof window.getApiUrl==='function'?window.getApiUrl(''):'https://college-food-court-api.onrender.com/api');
+   var api=String(base).replace(/\/$/,'');
+   await fetch(api+'/auth/logout',{method:'POST',credentials:'include'});
+  }catch(err){console.debug('[Vendor Workspace] Logout request:',err);}
+  try{sessionStorage.removeItem('foodCourtUser');localStorage.removeItem('foodCourtUser');}catch(err){}
+  location.replace('login.html');
  };
  var notify=document.getElementById('vendor-sidebar-notifications');
  if(notify)notify.onclick=function(e){e.preventDefault();if(typeof window.toggleVendorNotifDrawer==='function')window.toggleVendorNotifDrawer(true);};
+ var topNotify=document.getElementById('vendor-top-notifications');
+ if(topNotify)topNotify.onclick=function(e){e.preventDefault();if(typeof window.toggleVendorNotifDrawer==='function')window.toggleVendorNotifDrawer(true);};
+ document.querySelectorAll('#mobile-workspace-panel a[href="#vendor-notifications"]').forEach(function(link){link.onclick=function(e){e.preventDefault();if(typeof window.toggleVendorNotifDrawer==='function')window.toggleVendorNotifDrawer(true);};});
  var menu=document.getElementById('mobile-workspace-menu'),panel=document.getElementById('mobile-workspace-panel');
- if(menu&&panel){menu.onclick=function(){var open=panel.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));};}
+ if(menu&&panel){menu.onclick=function(e){e.preventDefault();var open=panel.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));};}
 }
 async function load(){
  var target=document.getElementById('vendor-workspace-container');
