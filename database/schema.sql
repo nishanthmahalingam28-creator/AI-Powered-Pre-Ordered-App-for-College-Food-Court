@@ -464,6 +464,6 @@ CREATE TABLE IF NOT EXISTS morning_survey_votes (
     CONSTRAINT fk_msv_survey FOREIGN KEY (survey_id) REFERENCES vendor_daily_surveys(id) ON DELETE CASCADE,
     CONSTRAINT fk_msv_menu FOREIGN KEY (menu_item_id) REFERENCES vendor_daily_menu_items(id) ON DELETE CASCADE,
     CONSTRAINT fk_msv_student FOREIGN KEY (student_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY uq_msv_student_survey (survey_id, student_user_id),
+    UNIQUE KEY uq_msv_student_survey_item (survey_id, student_user_id, menu_item_id),
     INDEX idx_msv_item (survey_id, menu_item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
