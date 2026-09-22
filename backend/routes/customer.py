@@ -834,8 +834,8 @@ def get_today_morning_poll():
             WHERE survey_id = %s AND is_available = 1
             ORDER BY FIELD(meal_period,'breakfast','lunch','dinner'), item_name
         """, (survey["survey_id"],))
-        voted = DB.get_one(
-            "SELECT menu_item_id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s LIMIT 1",
+        voted_rows = DB.query(
+            "SELECT menu_item_id FROM morning_survey_votes WHERE survey_id=%s AND student_user_id=%s ORDER BY id",
             (survey["survey_id"], user_id),
         )
         result.append({
@@ -843,8 +843,8 @@ def get_today_morning_poll():
             "shop_id": survey["shop_id"],
             "shop_name": survey["shop_name"],
             "date": str(survey["survey_date"]),
-            "voted": bool(voted),
-            "voted_menu_item_id": voted["menu_item_id"] if voted else None,
+            "voted": bool(voted_rows),
+            "voted_menu_item_ids": [int(row["menu_item_id"]) for row in voted_rows],
             "options": [{
                 "id": row["id"],
                 "menu_item_id": row["menu_item_id"],
