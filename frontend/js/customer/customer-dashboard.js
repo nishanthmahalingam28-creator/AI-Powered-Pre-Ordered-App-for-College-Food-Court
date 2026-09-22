@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Keep the dashboard financial cards current even if Socket.IO is temporarily unavailable.
     // The refresh is lightweight and reads only the authenticated customer's summary.
-    setInterval(loadFoodBudgetSnapshot, 2000);
+    setInterval(loadFoodBudgetSnapshot, 30000);
 
     // 3. Fetch Active Orders
     async function loadActiveOrders() {
