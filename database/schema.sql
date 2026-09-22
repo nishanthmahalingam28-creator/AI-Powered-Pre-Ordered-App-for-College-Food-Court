@@ -418,6 +418,12 @@ CREATE TABLE IF NOT EXISTS vendor_daily_surveys (
     shop_id INT UNSIGNED NOT NULL,
     survey_date DATE NOT NULL,
     is_serving_today TINYINT(1) NOT NULL DEFAULT 1,
+    breakfast_start TIME NOT NULL DEFAULT '06:00:00',
+    breakfast_end TIME NOT NULL DEFAULT '10:00:00',
+    lunch_start TIME NOT NULL DEFAULT '10:30:00',
+    lunch_end TIME NOT NULL DEFAULT '15:00:00',
+    dinner_start TIME NOT NULL DEFAULT '17:00:00',
+    dinner_end TIME NOT NULL DEFAULT '21:00:00',
     submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_vendor_daily_survey_user
