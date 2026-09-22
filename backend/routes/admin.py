@@ -723,13 +723,23 @@ def get_admin_orders():
 
     orders = DB.query(sql, tuple(params))
 
-    # Fetch order items summaries
+    # Fetch all order items in one query instead of one query per order.
+    # The order feed is paginated, so this remains bounded by the page size.
+    item_map = {}
+    if orders:
+        order_ids = [order["id"] for order in orders]
+        placeholders = ", ".join(["%s"] * len(order_ids))
+        item_rows = DB.query(
+            f"SELECT order_id, item_name, quantity, unit_price, subtotal "
+            f"FROM order_items WHERE order_id IN ({placeholders}) ORDER BY order_id DESC, id ASC",
+            tuple(order_ids),
+        )
+        for item in item_rows:
+            item_map.setdefault(item["order_id"], []).append(item)
+
     for order in orders:
         order["total_amount"] = float(order.get("total_amount") or 0.0)
-        items = DB.query(
-            "SELECT item_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = %s",
-            (order["id"],),
-        )
+        items = item_map.get(order["id"], [])
         order["items"] = items
         order["items_summary"] = ", ".join(f"{i['quantity']}x {i['item_name']}" for i in items)
 
