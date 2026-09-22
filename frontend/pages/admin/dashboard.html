@@ -131,8 +131,8 @@
         </div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="flex border-b border-slate-200 mb-6 overflow-x-auto gap-2 text-xs font-bold">
+        <!-- Legacy tab controls are retained for JS compatibility; workspace sidebar is the visible navigation. -->
+        <div id="admin-tab-strip" class="hidden">
             <button onclick="switchTab('shops')" id="tab-btn-shops" class="px-4 py-3 border-b-2 border-purple-600 text-purple-700 flex items-center gap-2 whitespace-nowrap">
                 <i class="fa-solid fa-shop"></i> Stalls & Operations
             </button>
