@@ -653,7 +653,10 @@ async function loadContactReports() {
     try {
         const params = new URLSearchParams(); if (status) params.set('status', status); if (q) params.set('q', q);
         const res = await fetch(API_BASE_URL + '/contact/admin?' + params.toString(), { credentials: 'include' });
-        const data = await res.json(); if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load reports.');
+        const data = await res.json().catch(function(){ return {}; });
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || ('Contact Reports API returned HTTP ' + res.status));
+        }
         const rows = Array.isArray(data.messages) ? data.messages : [];
         if (!rows.length) { list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">No contact reports found.</div>'; return; }
         list.innerHTML = rows.map(function(m) {
