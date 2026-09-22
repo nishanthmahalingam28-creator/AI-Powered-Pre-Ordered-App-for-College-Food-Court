@@ -31,11 +31,25 @@ function renderSurveyWindows(windows){
   const periods=['breakfast','lunch','dinner'];
   el.innerHTML=periods.map(function(p){
     const w=windows[p]||{};
-    const status=w.status||'closed';
-    const label=status==='open'?'OPEN NOW':status==='upcoming'?'UPCOMING':'CLOSED';
-    const cls=status==='open'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='upcoming'?'bg-blue-50 border-blue-200 text-blue-700':'bg-slate-50 border-slate-200 text-slate-500';
-    return '<div class="rounded-2xl border '+cls+' p-4"><div class="flex items-center justify-between gap-2"><span class="font-black text-slate-800">'+icons[p]+' '+p.charAt(0).toUpperCase()+p.slice(1)+'</span><span class="text-[9px] font-black uppercase">'+label+'</span></div><p class="text-xs font-bold mt-2">'+formatSurveyTime(w.start_time)+' – '+formatSurveyTime(w.end_time)+' IST</p></div>';
+    const label=w.status==='open'?'OPEN NOW':w.status==='upcoming'?'UPCOMING':'CLOSED';
+    return '<div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">'+
+      '<div class="flex items-center justify-between gap-2 mb-3"><span class="font-black text-slate-800">'+icons[p]+' '+p.charAt(0).toUpperCase()+p.slice(1)+'</span>'+
+      '<span class="survey-window-status px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-[9px] font-black uppercase">'+label+'</span></div>'+
+      '<div class="grid grid-cols-2 gap-2">'+
+      '<label class="text-[10px] font-bold text-slate-500">Start<input type="time" id="survey-'+p+'-start" value="'+String(w.start_time||'').slice(0,5)+'" class="mt-1 w-full px-2 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold"></label>'+
+      '<label class="text-[10px] font-bold text-slate-500">End<input type="time" id="survey-'+p+'-end" value="'+String(w.end_time||'').slice(0,5)+'" class="mt-1 w-full px-2 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold"></label>'+
+      '</div><p class="text-[10px] text-slate-400 mt-2">Students can submit only inside this window.</p></div>';
   }).join('');
+}
+function getSurveyTimeSettings(){
+  const windows={};
+  ['breakfast','lunch','dinner'].forEach(function(p){
+    windows[p]={
+      start_time:(document.getElementById('survey-'+p+'-start')||{}).value||'',
+      end_time:(document.getElementById('survey-'+p+'-end')||{}).value||''
+    };
+  });
+  return windows;
 }
 function formatSurveyTime(value){
   if(!value)return '—';
@@ -82,7 +96,7 @@ async function saveSurvey(){
   document.querySelectorAll('.survey-check:checked').forEach(ch=>{const p=ch.dataset.period,id=Number(ch.dataset.id),q=document.querySelector(`[data-qty-period="${p}"][data-qty-id="${id}"]`);meals[p].push({menu_item_id:id,quantity:q?Math.max(0,parseInt(q.value||'0',10)):0});});
   btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Publishing...';
   try{
-    const res=await fetch(`${MORNING_SURVEY_API}/vendor/daily-survey`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({is_serving_today:serving.checked,meals})}),data=await res.json();
+    const res=await fetch(`${MORNING_SURVEY_API}/vendor/daily-survey`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({is_serving_today:serving.checked,meal_windows:getSurveyTimeSettings(),meals})}),data=await res.json();
     if(!res.ok||!data.success){showSurveyMessage(data.message||'Unable to publish menu.',false);return;}
     showSurveyMessage('Today\'s Breakfast, Lunch and Dinner menu has been published.',true); await loadSurvey();
   }catch(e){showSurveyMessage('Connection error while publishing today\'s menu.',false);}
