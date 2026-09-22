@@ -227,9 +227,19 @@
         stopPolling: stopPolling
     };
 
-    // Auto-init on page load
-    document.addEventListener('DOMContentLoaded', () => {
+    let initialized = false;
+
+    // Initialize after the shared customer workspace (navbar/sidebar/notification
+    // drawer) has been inserted. The event also works on pages where the
+    // workspace loads asynchronously after DOMContentLoaded.
+    function initNotificationCenter() {
+        if (initialized) return;
+        const drawer = document.getElementById('notification-drawer');
         const triggerBtns = document.querySelectorAll('.notification-bell-trigger');
+        if (!drawer || !triggerBtns.length) return;
+
+        initialized = true;
+
         triggerBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -238,23 +248,19 @@
         });
 
         const closeBtn = document.getElementById('close-notif-drawer-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => toggleNotificationDrawer(false));
-        }
+        if (closeBtn) closeBtn.addEventListener('click', () => toggleNotificationDrawer(false));
 
         const backdrop = document.getElementById('notification-backdrop');
-        if (backdrop) {
-            backdrop.addEventListener('click', () => toggleNotificationDrawer(false));
-        }
+        if (backdrop) backdrop.addEventListener('click', () => toggleNotificationDrawer(false));
 
         const markAllBtn = document.getElementById('notif-mark-all-btn');
-        if (markAllBtn) {
-            markAllBtn.addEventListener('click', markAllAsRead);
-        }
+        if (markAllBtn) markAllBtn.addEventListener('click', markAllAsRead);
 
-        // Start controlled polling
         startPolling();
-    });
+    }
+
+    document.addEventListener('DOMContentLoaded', initNotificationCenter);
+    document.addEventListener('customerworkspace:ready', initNotificationCenter);
 
     // Pause polling in background tabs and refresh immediately when the page is visible again.
     document.addEventListener('visibilitychange', () => {
