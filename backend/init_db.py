@@ -690,25 +690,46 @@ def init_mysql():
                     survey_id INT UNSIGNED NOT NULL,
                     menu_item_id INT UNSIGNED NOT NULL,
                     student_user_id INT UNSIGNED NOT NULL,
+                    meal_period VARCHAR(20) NOT NULL,
                     voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT fk_msv_survey FOREIGN KEY (survey_id) REFERENCES vendor_daily_surveys(id) ON DELETE CASCADE,
                     CONSTRAINT fk_msv_menu FOREIGN KEY (menu_item_id) REFERENCES vendor_daily_menu_items(id) ON DELETE CASCADE,
                     CONSTRAINT fk_msv_student FOREIGN KEY (student_user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    UNIQUE KEY uq_msv_student_survey (survey_id, student_user_id),
-                    INDEX idx_msv_item (survey_id, menu_item_id)
+                    UNIQUE KEY uq_msv_student_survey_item (survey_id, student_user_id, meal_period, menu_item_id),
+                    INDEX idx_msv_item (survey_id, menu_item_id),
+                    INDEX idx_msv_meal (survey_id, meal_period)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """)
 
-            # Morning survey votes: one submission per user, but multiple food
-            # choices are allowed. Replace the old survey-wide unique key safely.
+            # Food Survey votes: one submission per student per meal period,
+            # while allowing multiple food choices inside that submission.
             cur.execute("""
-                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'morning_survey_votes'
-                  AND INDEX_NAME = 'uq_msv_student_survey'
+                  AND COLUMN_NAME = 'meal_period'
             """, (db_name,))
-            if int(cur.fetchone()[0] or 0) > 0:
-                cur.execute("ALTER TABLE morning_survey_votes DROP INDEX uq_msv_student_survey")
-                print("MySQL migration: removed single-choice morning survey constraint.")
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE morning_survey_votes ADD COLUMN meal_period VARCHAR(20) NULL AFTER student_user_id")
+                print("MySQL migration: added Food Survey meal_period column.")
+
+            # Backfill existing votes from the daily-menu row they reference.
+            cur.execute("""
+                UPDATE morning_survey_votes v
+                INNER JOIN vendor_daily_menu_items d ON d.id = v.menu_item_id
+                SET v.meal_period = d.meal_period
+                WHERE v.meal_period IS NULL OR v.meal_period = ''
+            """)
+            cur.execute("ALTER TABLE morning_survey_votes MODIFY COLUMN meal_period VARCHAR(20) NOT NULL")
+
+            # Remove legacy uniqueness rules and replace them with per-meal rules.
+            for index_name in ("uq_msv_student_survey", "uq_msv_student_survey_item"):
+                cur.execute("""
+                    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                    WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'morning_survey_votes'
+                      AND INDEX_NAME = %s
+                """, (db_name, index_name))
+                if int(cur.fetchone()[0] or 0) > 0:
+                    cur.execute(f"ALTER TABLE morning_survey_votes DROP INDEX {index_name}")
 
             cur.execute("""
                 SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
@@ -718,9 +739,19 @@ def init_mysql():
             if int(cur.fetchone()[0] or 0) == 0:
                 cur.execute("""
                     ALTER TABLE morning_survey_votes
-                    ADD UNIQUE KEY uq_msv_student_survey_item (survey_id, student_user_id, menu_item_id)
+                    ADD UNIQUE KEY uq_msv_student_survey_item (survey_id, student_user_id, meal_period, menu_item_id)
                 """)
-                print("MySQL migration: enabled multiple food choices per survey submission.")
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'morning_survey_votes'
+                  AND INDEX_NAME = 'idx_msv_meal'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("""
+                    ALTER TABLE morning_survey_votes
+                    ADD INDEX idx_msv_meal (survey_id, meal_period)
+                """)
+            print("MySQL migration: Food Survey now supports one submission per student per meal.")
 
             # Preserve the existing production YPR shop as Admin-created.
             cur.execute("UPDATE shops SET created_by_admin = 1 WHERE LOWER(name) = 'ypr'")
