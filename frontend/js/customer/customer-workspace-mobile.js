@@ -33,7 +33,7 @@
       panel.className = 'mobile-workspace-panel';
       panel.setAttribute('aria-label', 'Mobile dashboard navigation');
       panel.innerHTML =
-        '<a href="dashboard.html">Dashboard</a>' +
+        '<a href="dashboard.html" aria-label="Dashboard"><i class="fa-solid fa-table-cells-large"></i></a>' +
         '<a href="menu.html">Order Food</a>' +
         '<a href="preorder.html">My Cart</a>' +
         '<a href="orders.html">My Orders</a>' +
