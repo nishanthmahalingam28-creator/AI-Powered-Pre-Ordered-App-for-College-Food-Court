@@ -4,9 +4,51 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="../../css/pages/dashboard.css"><script src="../../js/core/public-components.js" defer></script>
 <script src="../../js/vendor/vendor-workspace.js" defer></script><link rel="stylesheet" href="../../css/pages/customer-workspace.css">
 </head>
-<body class="customer-workspace-page vendor-workspace-page" class="min-h-screen bg-slate-50 text-slate-800 customer-workspace-page vendor-workspace-page">
-<div id="vendor-workspace-container"></div>
-<main class="customer-workspace-main" class="customer-workspace-main">
+<body class="customer-workspace-page vendor-workspace-page">
+<div id="vendor-workspace-container">
+  <aside class="customer-workspace-sidebar vendor-workspace-sidebar" aria-label="Vendor navigation">
+    <div class="customer-workspace-brand">
+      <div class="customer-workspace-brand-mark"><i class="fa-solid fa-store"></i></div>
+      <div><strong>KPRIET</strong><span>Vendor Workspace</span></div>
+    </div>
+    <nav class="customer-workspace-nav">
+      <a href="dashboard.html" data-vendor-link="dashboard.html"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
+      <a href="manage-orders.html" data-vendor-link="manage-orders.html"><i class="fa-solid fa-list-check"></i><span>Manage Orders</span></a>
+      <a href="update-menu.html" data-vendor-link="update-menu.html"><i class="fa-solid fa-utensils"></i><span>Update Menu</span></a>
+      <a href="morning-survey.html" data-vendor-link="morning-survey.html"><i class="fa-solid fa-sun"></i><span>Food Survey</span></a>
+      <a href="sales-analytics.html" data-vendor-link="sales-analytics.html"><i class="fa-solid fa-chart-line"></i><span>Sales Analytics</span></a>
+      <a href="workers.html" data-vendor-link="workers.html"><i class="fa-solid fa-users-gear"></i><span>Workers</span></a>
+      <a href="profile.html" data-vendor-link="profile.html"><i class="fa-solid fa-user"></i><span>Profile</span></a>
+      <a href="#vendor-notifications" id="vendor-sidebar-notifications"><i class="fa-regular fa-bell"></i><span>Notifications</span><span id="vendor-sidebar-notif-badge" class="notification-badge hidden ml-auto">0</span></a>
+    </nav>
+    <div class="customer-workspace-user">
+      <div class="customer-workspace-avatar" id="vendor-sidebar-avatar">V</div>
+      <div class="min-w-0"><strong id="vendor-sidebar-shop-name">Vendor</strong><span id="vendor-sidebar-user-type">Vendor</span></div>
+      <button class="customer-workspace-logout" id="vendor-workspace-logout" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+    </div>
+  </aside>
+  <header class="customer-workspace-header vendor-workspace-header">
+    <div>
+      <span class="customer-workspace-header-label">Vendor workspace</span>
+      <h2 id="vendor-workspace-page-title">Vendor Dashboard</h2>
+      <button type="button" id="mobile-workspace-menu" class="student-mobile-menu-toggle" aria-label="Open vendor dashboard menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav id="mobile-workspace-panel" class="mobile-workspace-panel" aria-label="Mobile vendor navigation">
+        <a href="dashboard.html">Dashboard</a><a href="manage-orders.html">Manage Orders</a><a href="update-menu.html">Update Menu</a><a href="morning-survey.html">Food Survey</a><a href="sales-analytics.html">Sales Analytics</a><a href="workers.html">Workers</a><a href="#vendor-notifications">Notifications</a>
+      </nav>
+    </div>
+    <div class="customer-workspace-actions">
+      <button class="customer-workspace-notification notification-bell-trigger" id="vendor-top-notifications" title="Notifications" aria-label="Notifications" onclick="toggleVendorNotifDrawer(true)"><i class="fa-regular fa-bell"></i><span id="vendor-notif-badge" class="notification-badge hidden">0</span></button>
+      <span class="customer-workspace-role" id="vendor-workspace-role">Vendor</span>
+      <button type="button" class="customer-workspace-top-avatar" id="vendor-top-avatar" title="Open Profile" aria-label="Open Vendor Profile">V</button>
+    </div>
+  </header>
+  <div id="vendor-notif-backdrop" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[70] hidden" onclick="toggleVendorNotifDrawer(false)"></div>
+  <aside id="vendor-notif-drawer" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white z-[80] shadow-2xl translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200" aria-label="Vendor notifications">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-sm font-black"><i class="fa-solid fa-bell"></i></div><div><h3 class="text-sm font-black text-slate-900">Kitchen Alerts</h3><p class="text-[10px] text-slate-400">Incoming orders & kitchen events</p></div></div><div class="flex items-center gap-2"><button type="button" onclick="markAllVendorNotifsRead()" class="text-[11px] font-bold text-blue-700 hover:underline px-2 py-1">Mark all read</button><button type="button" onclick="toggleVendorNotifDrawer(false)" class="w-8 h-8 rounded-xl hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div id="vendor-notif-items" class="flex-grow overflow-y-auto p-4 space-y-3"></div><div class="p-3 border-t border-slate-100 text-center bg-slate-50 text-[10px] text-slate-400">Live notification updates</div>
+  </aside>
+</div>
+<main class="customer-workspace-main">
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
 <div class="flex items-center gap-3"><a href="morning-survey.html" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500"><i class="fa-solid fa-arrow-left"></i></a>
 <div><p class="text-[10px] font-black uppercase tracking-widest text-blue-600">Vendor Analytics</p><h1 class="text-2xl md:text-3xl font-black">Food Survey Results</h1><p id="results-date" class="text-sm text-slate-500 mt-1">Today's customer demand</p></div></div>
