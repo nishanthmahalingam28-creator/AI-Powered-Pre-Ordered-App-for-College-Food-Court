@@ -350,6 +350,7 @@ def init_sqlite():
     _safe_add_column("otp_codes", "is_consumed", "INTEGER NOT NULL DEFAULT 0")
     _safe_add_column("otp_codes", "verified_at", "TIMESTAMP NULL")
     _safe_add_column("customer_profiles", "wallet_balance", "REAL NOT NULL DEFAULT 500.00")
+    _safe_add_column("orders", "pickup_at", "TIMESTAMP NULL")
     _safe_add_column("orders", "payment_time", "TIMESTAMP NULL")
     _safe_add_column("orders", "preparing_time", "TIMESTAMP NULL")
     _safe_add_column("orders", "ready_time", "TIMESTAMP NULL")
@@ -516,6 +517,15 @@ def init_mysql():
                 SET oi.meal_period = mi.meal_period
                 WHERE oi.menu_item_id IS NOT NULL
             """)
+
+            # Customer-selected pickup date/time migration.
+            cur.execute("""
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'pickup_at'
+            """, (db_name,))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute("ALTER TABLE orders ADD COLUMN pickup_at DATETIME NULL AFTER pickup_otp")
+                print("MySQL migration: added orders.pickup_at.")
 
             # Customer morning survey migration
             cur.execute("""
