@@ -2,7 +2,7 @@
 var titles={'dashboard.html':'Dashboard','menu.html':'Order Food','preorder.html':'My Cart','orders.html':'My Orders','morning-survey.html':'Morning Survey','expenses.html':'Expenses','budgets.html':'Food Budget','analytics.html':'Analytics','assistant.html':'AI Assistant','profile.html':'Profile','income.html':'Income'};
 function pageName(){var p=decodeURIComponent(location.pathname).replace(/\\/g,'/');return(p.split('/').pop()||'dashboard.html').toLowerCase()}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
-function componentUrl(){return new URL('../../components/customer-workspace.html',document.baseURI).href}
+function componentUrl(file){return new URL('../../components/'+file,document.baseURI).href}
 function build(){
   document.body.classList.add('customer-workspace-page');
   var page=pageName(),u=userInfo(),name=u.full_name||u.name||'Student',role=u.customer_type||u.user_type||u.role||'Student',initial=(String(name).trim().charAt(0)||'S').toUpperCase();
@@ -32,12 +32,14 @@ async function loadWorkspace(){
   var target=document.getElementById('customer-workspace-container');
   if(!target)return;
   try{
-    var response=await fetch(componentUrl(),{cache:'force-cache'});
-    if(!response.ok)throw new Error('Workspace component HTTP '+response.status);
-    target.innerHTML=await response.text();
+    var urls=[componentUrl('customer-sidebar.html'),componentUrl('customer-navbar.html')];
+    var responses=await Promise.all(urls.map(function(url){return fetch(url,{cache:'force-cache'})}));
+    if(responses.some(function(response){return !response.ok}))throw new Error('Shared customer navigation component failed to load.');
+    var html=await Promise.all(responses.map(function(response){return response.text()}));
+    target.innerHTML=html[0]+html[1];
     build();
   }catch(error){
-    console.error('[Customer Workspace] Failed to load shared workspace:',error);
+    console.error('[Customer Workspace] Failed to load shared sidebar/navbar:',error);
     target.innerHTML='<div class="p-4 text-center text-rose-600 text-xs font-bold">Unable to load customer navigation.</div>';
   }
 }
