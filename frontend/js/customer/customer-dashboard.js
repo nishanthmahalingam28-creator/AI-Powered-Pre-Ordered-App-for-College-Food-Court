@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
             let res;
             try {
                 res = await fetch(`${API_BASE_URL}/ai/recommendations?limit=6`, {
@@ -296,11 +296,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Both routes use the same AI engine, but this prevents a temporary
             // blueprint/deployment mismatch from leaving the dashboard blank.
             if (!res.ok || !data.success) {
-                const legacyRes = await fetch(`${API_BASE_URL}/recommendations?limit=6`, {
-                    credentials: 'include',
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
+                const legacyController = new AbortController();
+                const legacyTimeoutId = setTimeout(() => legacyController.abort(), 10000);
+                let legacyRes;
+                try {
+                    legacyRes = await fetch(`${API_BASE_URL}/recommendations?limit=6`, {
+                        credentials: 'include',
+                        cache: 'no-store',
+                        signal: legacyController.signal
+                    });
+                } finally {
+                    clearTimeout(legacyTimeoutId);
+                }
                 const legacyData = await legacyRes.json().catch(() => ({}));
                 if (legacyRes.ok && legacyData.success) {
                     data = legacyData;
