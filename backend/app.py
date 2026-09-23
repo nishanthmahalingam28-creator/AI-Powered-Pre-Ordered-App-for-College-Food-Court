@@ -73,17 +73,15 @@ app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7
 
 # Session cookie SameSite policy:
-# The deployed frontend and API are both under onrender.com, so they are
-# same-site even though they are different origins. Lax is therefore sufficient
-# and avoids unnecessary third-party-cookie restrictions. Set SESSION_COOKIE_SAMESITE=None
-# only if the frontend is moved to a genuinely cross-site domain.
-# Can be configured explicitly via SESSION_COOKIE_SAMESITE or COOKIE_SAMESITE.
-# Development default: "Lax".
-samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") or os.getenv("COOKIE_SAMESITE") or "").strip()
+# Login is performed from a separate frontend origin using credentialed fetch().
+# In production, use SameSite=None + Secure so browsers consistently accept and
+# return the authentication cookie for the frontend -> API request.
+# Development keeps the simpler Lax policy for local HTTP.
+samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") || os.getenv("COOKIE_SAMESITE") || "").strip()
 if samesite_env:
     app.config["SESSION_COOKIE_SAMESITE"] = samesite_env.capitalize() if samesite_env.lower() in ("lax", "strict", "none") else samesite_env
 elif not is_development:
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
 else:
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
@@ -98,16 +96,21 @@ else:
 # CORS Origin Configuration:
 # Never permit wildcard '*' with credentials in production.
 raw_origins = os.getenv("CORS_ORIGINS") or os.getenv("FRONTEND_ORIGINS")
+canonical_frontend = "https://college-food-court-frontend.onrender.com"
 if raw_origins:
     allowed_origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
+    # Always retain the actual deployed frontend origin. This prevents a stale
+    # Render CORS_ORIGINS value from breaking credentialed login after a deploy.
+    allowed_origins.append(canonical_frontend)
 elif is_development:
     allowed_origins = ["http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000"]
 else:
-    # Production fallback: keep the deployed frontend able to use authenticated
-    # session cookies even when CORS_ORIGINS was not added to Render.
-    configured_frontend = (os.getenv("FRONTEND_URL") or os.getenv("APP_URL") or "https://college-food-court-frontend.onrender.com").strip().rstrip("/")
-    allowed_origins = [configured_frontend]
-    logger.warning("CORS_ORIGINS not specified; using FRONTEND_URL fallback: %s", configured_frontend)
+    configured_frontend = (os.getenv("FRONTEND_URL") or os.getenv("APP_URL") or canonical_frontend).strip().rstrip("/")
+    allowed_origins = [configured_frontend, canonical_frontend]
+    logger.warning("CORS_ORIGINS not specified; using frontend fallback origins: %s", allowed_origins)
+
+# Remove duplicates while preserving order.
+allowed_origins = list(dict.fromkeys(allowed_origins))
 
 if "*" in allowed_origins and not is_development:
     logger.error("Insecure CORS configuration: Wildcard '*' with credentials is forbidden in production.")
