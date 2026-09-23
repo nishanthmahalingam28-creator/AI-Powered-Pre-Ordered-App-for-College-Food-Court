@@ -21,7 +21,9 @@ async function loadSurvey(){
   const serving=document.getElementById('serving-today'); if(serving)serving.checked=currentSurvey?currentSurvey.is_serving_today!==false:true;
   ['breakfast','lunch','dinner'].forEach(p=>renderMeal(p,(data.selected&&data.selected[p])||[]));
   renderResult(data);
-  await loadVoteResults();
+  // Vote results are independent of the published survey details; load them in parallel
+  // so the main survey UI becomes interactive without waiting for the second request.
+  void loadVoteResults();
 }
 
 function renderSurveyWindows(windows){
