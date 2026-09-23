@@ -33,96 +33,66 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 1. Initialize User Information from authoritative backend session
     async function initUser() {
         let user = null;
-        try {
-            const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.authenticated && data.user) {
-                    user = data.user;
-                    sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
-                } else {
-                    sessionStorage.removeItem('foodCourtUser');
-                    window.location.href = '../auth/login.html';
-                    return;
+        let lastStatus = 0;
+
+        // Do not treat a temporary network/Render/5xx failure as a logout.
+        // The authenticated Flask session is authoritative; only a confirmed
+        // 401/403 should send the customer back to the login page.
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                const res = await fetch(API_BASE_URL + '/auth/me', {
+                    credentials: 'include',
+                    cache: 'no-store'
+                });
+                lastStatus = res.status;
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.authenticated && data.user) {
+                        user = data.user;
+                        sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
+                        break;
+                    }
                 }
-            } else {
+
+                if (res.status === 401 || res.status === 403) {
+                    break;
+                }
+
+                if (attempt < 2) {
+                    await new Promise(resolve => setTimeout(resolve, 250 * Math.pow(2, attempt)));
+                }
+            } catch (e) {
+                console.warn('Authentication verification check failed:', e);
+                if (attempt < 2) {
+                    await new Promise(resolve => setTimeout(resolve, 250 * Math.pow(2, attempt)));
+                }
+            }
+        }
+
+        if (!user) {
+            // Only an explicit authentication denial logs the customer out.
+            if (lastStatus === 401 || lastStatus === 403) {
                 sessionStorage.removeItem('foodCourtUser');
                 window.location.href = '../auth/login.html';
                 return;
             }
-        } catch (e) {
-            console.warn('Authentication verification check failed:', e);
-            sessionStorage.removeItem('foodCourtUser');
-            window.location.href = '../auth/login.html';
-            return;
-        }
 
-        if (!user || user.role !== 'customer') {
-            sessionStorage.removeItem('foodCourtUser');
-            window.location.href = '../auth/login.html';
-            return;
-        }
-
-        if (window.customerWorkspaceReady) await window.customerWorkspaceReady;
-
-        const customerType = String(user.customer_type || 'student').toLowerCase();
-        const customerTypeLabel = customerType === 'faculty'
-            ? 'Faculty'
-            : customerType === 'guest'
-                ? 'Guest'
-                : 'Student';
-
-        const nameEl = document.getElementById('customer-name');
-        if (nameEl && user.full_name) nameEl.textContent = user.full_name;
-
-        // Use the same dashboard experience for Student, Faculty, and Guest.
-        // Guest accounts do not use the Food Budget feature.
-        const foodBudgetSnapshot = document.getElementById('food-budget-snapshot');
-        const foodBudgetNavs = document.querySelectorAll('[data-workspace-link="budgets.html"]');
-        if (customerType === 'guest') {
-            if (foodBudgetSnapshot) foodBudgetSnapshot.classList.add('hidden');
-            foodBudgetNavs.forEach(nav => nav.remove());
-        } else {
-            if (foodBudgetSnapshot) foodBudgetSnapshot.classList.remove('hidden');
-            foodBudgetNavs.forEach(nav => nav.classList.remove('hidden'));
-        }
-
-        const workspaceLabel = document.querySelector('.customer-workspace-header-label');
-        if (workspaceLabel) workspaceLabel.textContent = customerTypeLabel + ' workspace';
-
-        const pageTitle = document.getElementById('customer-workspace-page-title');
-        if (pageTitle) pageTitle.textContent = 'Dashboard';
-
-        // Customer workspace identity
-        const displayName = user.full_name || customerTypeLabel;
-        const sidebarName = document.getElementById('sidebar-user-name');
-        const sidebarType = document.getElementById('sidebar-user-type');
-        const sidebarAvatar = document.getElementById('sidebar-avatar');
-        const topbarAvatar = document.getElementById('topbar-avatar');
-        const topbarType = document.getElementById('topbar-customer-type');
-        if (sidebarName) sidebarName.textContent = displayName;
-        if (sidebarType) sidebarType.textContent = customerTypeLabel.toUpperCase();
-        if (sidebarAvatar) sidebarAvatar.textContent = displayName.charAt(0).toUpperCase();
-        if (topbarAvatar) topbarAvatar.textContent = displayName.charAt(0).toUpperCase();
-        if (topbarType) topbarType.textContent = customerTypeLabel;
-
-
-        const badgeEl = document.getElementById('customer-type-badge');
-        if (badgeEl && user.customer_type) {
-            badgeEl.textContent = customerTypeLabel.toUpperCase();
-        }
-
-        const rollEl = document.getElementById('customer-roll-badge');
-        if (rollEl) {
-            const rollNumber = user.roll_number || user.identifier;
-            if (rollNumber) {
-                rollEl.textContent = rollNumber;
-                rollEl.classList.remove('hidden');
-            } else {
-                rollEl.classList.add('hidden');
+            // Keep the existing UI session during temporary network/server
+            // failures instead of falsely sending the user to login.
+            try {
+                user = JSON.parse(sessionStorage.getItem('foodCourtUser') || 'null');
+            } catch (e) {
+                user = null;
             }
+
+            if (!user) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            console.warn('Authentication could not be verified temporarily; keeping the current session UI.');
         }
-    }
 
     // Load today's vendor-published Morning Survey status.
     // This uses the same survey source as the Morning Survey page.
