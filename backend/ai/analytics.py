@@ -18,70 +18,109 @@ class FoodCourtAnalytics:
     def get_shop_analytics(cls, shop_id: int):
         """
         Calculates operational and demand intelligence for a single stall.
-        Strict Rule: Disregards cancelled and failed orders when aggregating revenue.
+        All read-only analytics queries share one pooled DB connection to reduce
+        database round-trips and improve dashboard response time.
         """
         try:
-            shop = DB.get_one("SELECT id, name, slug, operational_status, is_active FROM shops WHERE id = %s", (shop_id,))
+            results = DB.query_many([
+                (
+                    "SELECT id, name, slug, operational_status, is_active "
+                    "FROM shops WHERE id = %s",
+                    (shop_id,),
+                ),
+                (
+                    """
+                    SELECT COUNT(id) as total_orders,
+                           SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+                           SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
+                           SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders
+                    FROM orders
+                    WHERE shop_id = %s
+                    """,
+                    (shop_id,),
+                ),
+                (
+                    """
+                    SELECT COALESCE(SUM(o.total_amount), 0) as total_revenue,
+                           COALESCE(SUM(oi.quantity), 0) as total_units_sold
+                    FROM orders o
+                    LEFT JOIN order_items oi ON oi.order_id = o.id
+                    WHERE o.shop_id = %s
+                      AND (o.payment_status = 'paid' OR o.order_status = 'completed')
+                      AND o.order_status != 'cancelled'
+                      AND o.payment_status != 'failed'
+                    """,
+                    (shop_id,),
+                ),
+                (
+                    """
+                    SELECT oi.menu_item_id, m.name, m.category,
+                           SUM(oi.quantity) as units_sold,
+                           SUM(oi.subtotal) as item_revenue
+                    FROM order_items oi
+                    INNER JOIN orders o ON o.id = oi.order_id
+                    INNER JOIN menu_items m ON m.id = oi.menu_item_id
+                    WHERE o.shop_id = %s
+                      AND (o.payment_status = 'paid' OR o.order_status = 'completed')
+                      AND o.order_status != 'cancelled'
+                      AND o.payment_status != 'failed'
+                    GROUP BY oi.menu_item_id
+                    ORDER BY units_sold DESC
+                    LIMIT 5
+                    """,
+                    (shop_id,),
+                ),
+                (
+                    """
+                    SELECT m.category,
+                           SUM(oi.quantity) as units,
+                           SUM(oi.subtotal) as revenue
+                    FROM order_items oi
+                    INNER JOIN orders o ON o.id = oi.order_id
+                    INNER JOIN menu_items m ON m.id = oi.menu_item_id
+                    WHERE o.shop_id = %s
+                      AND (o.payment_status = 'paid' OR o.order_status = 'completed')
+                      AND o.order_status != 'cancelled'
+                      AND o.payment_status != 'failed'
+                    GROUP BY m.category
+                    ORDER BY revenue DESC
+                    """,
+                    (shop_id,),
+                ),
+                (
+                    """
+                    SELECT SUBSTR(created_at, 12, 2) as order_hour,
+                           COUNT(id) as count
+                    FROM orders
+                    WHERE shop_id = %s
+                      AND (payment_status = 'paid' OR order_status = 'completed')
+                      AND order_status != 'cancelled'
+                    GROUP BY SUBSTR(created_at, 12, 2)
+                    ORDER BY count DESC
+                    """,
+                    (shop_id,),
+                ),
+            ])
+
+            shop = (results[0][0] if results[0] else None)
             if not shop:
                 return None
 
-            # 1. Order status distribution
-            order_counts = DB.get_one(
-                """
-                SELECT COUNT(id) as total_orders,
-                       SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
-                       SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
-                       SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders
-                FROM orders
-                WHERE shop_id = %s
-                """,
-                (shop_id,)
-            ) or {}
+            order_counts = (results[1][0] if results[1] else {}) or {}
+            sales_summary = (results[2][0] if results[2] else {}) or {}
+            top_items_rows = results[3]
+            cat_rows = results[4]
+            hourly_rows = results[5]
 
             total_orders = int(order_counts.get("total_orders") or 0)
             completed_orders = int(order_counts.get("completed_orders") or 0)
             cancelled_orders = int(order_counts.get("cancelled_orders") or 0)
             active_orders = int(order_counts.get("active_orders") or 0)
-
             completion_rate = round((completed_orders / total_orders * 100.0), 1) if total_orders > 0 else 0.0
-
-            # 2. Revenue and Units from valid purchases
-            sales_summary = DB.get_one(
-                """
-                SELECT COALESCE(SUM(o.total_amount), 0) as total_revenue,
-                       COALESCE(SUM(oi.quantity), 0) as total_units_sold
-                FROM orders o
-                LEFT JOIN order_items oi ON oi.order_id = o.id
-                WHERE o.shop_id = %s
-                  AND (o.payment_status = 'paid' OR o.order_status = 'completed')
-                  AND o.order_status != 'cancelled'
-                  AND o.payment_status != 'failed'
-                """,
-                (shop_id,)
-            ) or {}
 
             total_revenue = float(sales_summary.get("total_revenue") or 0.0)
             total_units_sold = int(sales_summary.get("total_units_sold") or 0)
 
-            # 3. Top Selling Items
-            top_items_rows = DB.query(
-                """
-                SELECT oi.menu_item_id, m.name, m.category,
-                       SUM(oi.quantity) as units_sold,
-                       SUM(oi.subtotal) as item_revenue
-                FROM order_items oi
-                INNER JOIN orders o ON o.id = oi.order_id
-                INNER JOIN menu_items m ON m.id = oi.menu_item_id
-                WHERE o.shop_id = %s
-                  AND (o.payment_status = 'paid' OR o.order_status = 'completed')
-                  AND o.order_status != 'cancelled'
-                  AND o.payment_status != 'failed'
-                GROUP BY oi.menu_item_id
-                ORDER BY units_sold DESC
-                LIMIT 5
-                """,
-                (shop_id,)
-            )
             top_selling = [
                 {
                     "item_id": r["menu_item_id"],
@@ -93,24 +132,6 @@ class FoodCourtAnalytics:
                 for r in top_items_rows
             ]
 
-            # 4. Category breakdown
-            cat_rows = DB.query(
-                """
-                SELECT m.category,
-                       SUM(oi.quantity) as units,
-                       SUM(oi.subtotal) as revenue
-                FROM order_items oi
-                INNER JOIN orders o ON o.id = oi.order_id
-                INNER JOIN menu_items m ON m.id = oi.menu_item_id
-                WHERE o.shop_id = %s
-                  AND (o.payment_status = 'paid' OR o.order_status = 'completed')
-                  AND o.order_status != 'cancelled'
-                  AND o.payment_status != 'failed'
-                GROUP BY m.category
-                ORDER BY revenue DESC
-                """,
-                (shop_id,)
-            )
             categories = [
                 {
                     "category": r["category"],
@@ -120,21 +141,6 @@ class FoodCourtAnalytics:
                 for r in cat_rows
             ]
 
-            # 5. Hourly Demand Distribution (Peak hours)
-            # Safe substring extraction for hour across SQLite and MySQL (created_at format: YYYY-MM-DD HH:MM:SS)
-            hourly_rows = DB.query(
-                """
-                SELECT SUBSTR(created_at, 12, 2) as order_hour,
-                       COUNT(id) as count
-                FROM orders
-                WHERE shop_id = %s
-                  AND (payment_status = 'paid' OR order_status = 'completed')
-                  AND order_status != 'cancelled'
-                GROUP BY SUBSTR(created_at, 12, 2)
-                ORDER BY count DESC
-                """,
-                (shop_id,)
-            )
             peak_hours = [
                 {
                     "hour": int(r["order_hour"]) if str(r["order_hour"]).isdigit() else r["order_hour"],
@@ -143,7 +149,6 @@ class FoodCourtAnalytics:
                 for r in hourly_rows if r.get("order_hour")
             ]
 
-            # 6. Demand Prediction Foundation (Meal Slot Distribution)
             meal_slot_velocity = {
                 "Breakfast (06:00-11:00)": 0,
                 "Lunch (11:00-15:00)": 0,
