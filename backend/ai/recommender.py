@@ -7,11 +7,13 @@ database validation (availability, stock, and shop operational status).
 
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from db import DB
 from ai.features import FoodCourtFeatures
 from ai.model import RecommendationModel
 
 logger = logging.getLogger("food_court.ai.recommender")
+INDIA_TZ = ZoneInfo("Asia/Kolkata")
 
 
 class FoodCourtRecommender:
@@ -33,6 +35,8 @@ class FoodCourtRecommender:
         """
         try:
             limit = max(1, min(int(limit or 5), 20))
+            # Render servers commonly run in UTC; the food-court business day is India time.
+            now_ist = datetime.now(INDIA_TZ)
 
             # 1. Resolve Target Stall if requested (Server-Side Resolution)
             target_shop = None
@@ -70,7 +74,7 @@ class FoodCourtRecommender:
             today_poll_item_ids = set()
             if customer_id:
                 try:
-                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    today_str = now_ist.strftime("%Y-%m-%d")
                     today_survey = DB.get_one(
                         """SELECT plans_to_eat, meal_preference, hunger_level, dietary_preference, meal_type
                            FROM morning_surveys WHERE user_id = %s AND survey_date = %s LIMIT 1""",
@@ -186,10 +190,11 @@ class FoodCourtRecommender:
 
             # 6b. Apply today's survey preference boost after the authoritative daily-menu filter.
             if today_survey and not target_shop:
-                slot_heading = f"Today's Survey Picks · {today_survey['meal_preference'].title()}"
+                slot_heading = f"Today's Survey Picks · {str(today_survey.get('meal_preference') or 'Your Choices').title()}"
 
             if today_survey:
-                pref_tokens = [w.lower() for w in today_survey["meal_preference"].replace("-", " ").replace("/", " ").split() if len(w) > 2]
+                meal_preference = str(today_survey.get("meal_preference") or "").strip()
+                pref_tokens = [w.lower() for w in meal_preference.replace("-", " ").replace("/", " ").split() if len(w) > 2]
                 diet = (today_survey.get("dietary_preference") or "any").lower()
                 for entry in scored_candidates:
                     c_name = entry["item"]["name"].lower()
@@ -275,6 +280,7 @@ class FoodCourtRecommender:
                     "category": auth_check["category"],
                     "shop_id": auth_check["shop_id"],
                     "shop_name": auth_check["shop_name"],
+                    "description": candidate.get("description") or candidate.get("category") or "Recommended for you",
                     "reason": entry["reason"],
                     "ai_badge": entry["reason"],
                     "score": entry["score"],
