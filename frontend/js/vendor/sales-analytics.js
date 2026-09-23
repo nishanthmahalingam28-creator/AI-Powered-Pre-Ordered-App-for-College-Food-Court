@@ -75,15 +75,15 @@ async function loadSalesAnalytics(period = selectedPeriod, customStart = getDate
         // Period changes and refreshes reuse this context instead of making
         // another /auth/me + /vendor/shop round trip every time.
         if (!vendorContext) {
-            const authRes = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-            const auth = await authRes.json();
+            const [authRes, shopRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' })
+            ]);
+            const [auth, shopData] = await Promise.all([authRes.json(), shopRes.json()]);
             if (!authRes.ok || !auth.authenticated || !auth.user || (auth.user.role !== 'vendor' && auth.user.role !== 'admin')) {
                 window.location.href = 'login.html';
                 return;
             }
-
-            const shopRes = await fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' });
-            const shopData = await shopRes.json();
             if (!shopRes.ok || !shopData.success || !shopData.shop) {
                 throw new Error(shopData.message || 'Unable to resolve your assigned shop.');
             }
