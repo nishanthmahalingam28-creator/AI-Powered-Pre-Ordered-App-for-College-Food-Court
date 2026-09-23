@@ -572,7 +572,7 @@ def admin_login():
 
     session.clear()
     session.permanent = True
-    session["user_id" = user["id"]
+    session["user_id"] = user["id"]
     session["role"] = "admin"
     session["email"] = user["email"]
     session.modified = True
