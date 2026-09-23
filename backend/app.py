@@ -2,7 +2,7 @@ import os
 import secrets
 import logging
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request, g, session
 from flask_cors import CORS
 from dotenv import load_dotenv
 
