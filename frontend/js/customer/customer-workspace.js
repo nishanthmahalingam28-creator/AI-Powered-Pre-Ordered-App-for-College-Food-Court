@@ -77,7 +77,7 @@ async function loadWorkspace(){
   if(!target)return;
   try{
     var urls=[componentUrl('customer-sidebar.html'),componentUrl('customer-navbar.html'),componentUrl('customer-notifications.html')];
-    var responses=await Promise.all(urls.map(function(url){return fetch(url+'?v=20260922',{cache:'no-store'})}));
+    var responses=await Promise.all(urls.map(function(url){return fetch(url+'?v=20260922',{cache:'force-cache'})}));
     if(responses.some(function(response){return !response.ok}))throw new Error('Shared customer navigation component failed to load.');
     var html=await Promise.all(responses.map(function(response){return response.text()}));
     target.innerHTML=html[0]+html[1]+html[2];
