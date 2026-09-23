@@ -271,12 +271,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch(`${API_BASE_URL}/ai/recommendations`, { credentials: 'include' });
             const data = await res.json();
 
-            if (data.success && data.recommendations) {
+            if (data.success && Array.isArray(data.recommendations)) {
                 if (headingEl && data.heading) headingEl.textContent = data.heading;
                 if (badgeSlot && data.slot) {
                     badgeSlot.innerHTML = `<i class="fa-solid fa-clock text-[10px]"></i> ${data.slot} Session Active`;
                 }
 
+                if (!data.recommendations.length) {
+                    grid.innerHTML = '<p class="text-xs text-slate-400 p-4">No matching food recommendations are available right now. Please check the menu.</p>';
+                    return;
+                }
                 grid.innerHTML = '';
                 data.recommendations.forEach(item => {
                     const card = document.createElement('div');
@@ -304,9 +308,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                     grid.appendChild(card);
                 });
+            } else if (grid) {
+                grid.innerHTML = '<p class="text-xs text-slate-400 p-4">AI recommendations are temporarily unavailable. Please try again in a moment.</p>';
             }
         } catch (e) {
-            if (grid) grid.innerHTML = '<p class="text-xs text-slate-400 p-4">Unable to load AI smart recommendations right now.</p>';
+            console.warn('AI recommendation request failed:', e);
+            if (grid) grid.innerHTML = '<p class="text-xs text-slate-400 p-4">AI recommendations are temporarily unavailable. Please try again in a moment.</p>';
         }
     }
 
