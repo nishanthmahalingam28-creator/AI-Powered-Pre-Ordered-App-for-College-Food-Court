@@ -2,13 +2,32 @@
 var titles={'dashboard.html':'Dashboard','menu.html':'Order Food','preorder.html':'My Cart','orders.html':'My Orders','morning-survey.html':'Food Survey','expenses.html':'Expenses','budgets.html':'Food Budget','analytics.html':'Analytics','assistant.html':'AI Assistant','profile.html':'Profile','income.html':'Income'};
 function pageName(){var p=decodeURIComponent(location.pathname).replace(/\\/g,'/');return(p.split('/').pop()||'dashboard.html').toLowerCase()}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
+function applyUserIdentity(u){
+  u=u||{};
+  var name=u.full_name||u.name||'Customer';
+  var role=String(u.customer_type||u.user_type||'student').toLowerCase();
+  var roleLabel=role==='faculty'?'Faculty':role==='guest'?'Guest':'Student';
+  var initial=(String(name).trim().charAt(0)||'C').toUpperCase();
+  var nameEl=document.getElementById('customer-name'); if(nameEl) nameEl.textContent=name;
+  var typeEl=document.getElementById('customer-type-badge'); if(typeEl) typeEl.textContent=roleLabel;
+  var rollEl=document.getElementById('customer-roll-badge');
+  var identifier=u.identifier||u.roll_number||'';
+  if(rollEl){ if(identifier){rollEl.textContent=identifier;rollEl.classList.remove('hidden')}else{rollEl.textContent='';rollEl.classList.add('hidden')} }
+  var ne=document.getElementById('sidebar-user-name');if(ne)ne.textContent=name;
+  var re=document.getElementById('sidebar-user-type');if(re)re.textContent=roleLabel;
+  var tr=document.getElementById('topbar-customer-type');if(tr)tr.textContent=roleLabel;
+  ['sidebar-avatar','topbar-avatar'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=initial});
+  var header=document.querySelector('.customer-workspace-header-label');if(header)header.textContent=roleLabel+' workspace';
+}
 function componentUrl(file){return new URL('../../components/'+file,document.baseURI).href}
 async function build(){
   document.body.classList.add('customer-workspace-page');
 
-  // Refresh the UI identity from the authoritative backend session before
-  // rendering the shared customer navigation. This removes the race where
-  // the workspace rendered "Student" before dashboard authentication finished.
+  // Apply the last authenticated profile immediately so the page never flashes
+  // the default Student identity while /auth/me is being fetched.
+  applyUserIdentity(userInfo());
+
+  // Refresh the UI identity from the authoritative backend session.
   try {
     var apiBase = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
     var authResponse = await fetch(apiBase + '/auth/me', {
@@ -24,9 +43,10 @@ async function build(){
   } catch (error) {
     console.warn('[Customer Workspace] Could not refresh authenticated profile:', error);
   }
-  var page=pageName(),u=userInfo(),name=u.full_name||u.name||'Student',role=u.customer_type||u.user_type||u.role||'Student',initial=(String(name).trim().charAt(0)||'S').toUpperCase();
+  var page=pageName(),u=userInfo(),name=u.full_name||u.name||'Customer',role=u.customer_type||u.user_type||'student',initial=(String(name).trim().charAt(0)||'C').toUpperCase();
   var roleKey=String(role).toLowerCase();
   var roleLabel=roleKey==='faculty'?'Faculty':roleKey==='guest'?'Guest':'Student';
+  applyUserIdentity(u);
 
   var t=document.getElementById('customer-workspace-page-title');if(t)t.textContent=titles[page]||'Customer Workspace';
   var workspaceLabel=document.querySelector('.customer-workspace-header-label');if(workspaceLabel)workspaceLabel.textContent=roleLabel+' workspace';
