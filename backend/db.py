@@ -19,7 +19,7 @@ SQLITE_PATH = os.path.join(os.path.dirname(__file__), "food_court_local.db")
 # Reuse a small number of MySQL connections instead of creating a new TCP/TLS
 # connection for every query. This is especially important when Render and
 # Aiven are in different network locations.
-MYSQL_POOL_SIZE = max(1, min(int(os.getenv("DB_POOL_SIZE", "5")), 10))
+MYSQL_POOL_SIZE = max(1, min(int(os.getenv("DB_POOL_SIZE", "8")), 10))
 _mysql_pool = None
 _mysql_pool_lock = threading.Lock()
 
