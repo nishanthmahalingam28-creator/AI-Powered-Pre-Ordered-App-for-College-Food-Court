@@ -12,6 +12,7 @@ function escapeHtml(value) {
 
 let latestSalesData = null;
 let selectedPeriod = 'daily';
+let vendorContext = null;
 
 function getDateInput(id) {
     return document.getElementById(id)?.value || '';
@@ -70,19 +71,26 @@ async function loadSalesAnalytics(period = selectedPeriod, customStart = getDate
     if (errorBox) errorBox.classList.add('hidden');
 
     try {
-        const authRes = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-        const auth = await authRes.json();
-        if (!authRes.ok || !auth.authenticated || !auth.user || (auth.user.role !== 'vendor' && auth.user.role !== 'admin')) {
-            window.location.href = 'login.html';
-            return;
-        }
+        // Resolve the authenticated vendor/shop only once per page.
+        // Period changes and refreshes reuse this context instead of making
+        // another /auth/me + /vendor/shop round trip every time.
+        if (!vendorContext) {
+            const authRes = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+            const auth = await authRes.json();
+            if (!authRes.ok || !auth.authenticated || !auth.user || (auth.user.role !== 'vendor' && auth.user.role !== 'admin')) {
+                window.location.href = 'login.html';
+                return;
+            }
 
-        const shopRes = await fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' });
-        const shopData = await shopRes.json();
-        if (!shopRes.ok || !shopData.success || !shopData.shop) {
-            throw new Error(shopData.message || 'Unable to resolve your assigned shop.');
+            const shopRes = await fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' });
+            const shopData = await shopRes.json();
+            if (!shopRes.ok || !shopData.success || !shopData.shop) {
+                throw new Error(shopData.message || 'Unable to resolve your assigned shop.');
+            }
+
+            vendorContext = { user: auth.user, shop: shopData.shop };
+            document.getElementById('shop-name').textContent = shopData.shop.name || 'Shop';
         }
-        document.getElementById('shop-name').textContent = shopData.shop.name || 'Shop';
 
         const params = new URLSearchParams();
         params.set('period', period);
