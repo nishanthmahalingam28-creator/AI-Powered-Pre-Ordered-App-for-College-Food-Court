@@ -77,7 +77,7 @@ app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7
 # In production, use SameSite=None + Secure so browsers consistently accept and
 # return the authentication cookie for the frontend -> API request.
 # Development keeps the simpler Lax policy for local HTTP.
-samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") || os.getenv("COOKIE_SAMESITE") || "").strip()
+samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") or os.getenv("COOKIE_SAMESITE") or "").strip()
 if samesite_env:
     app.config["SESSION_COOKIE_SAMESITE"] = samesite_env.capitalize() if samesite_env.lower() in ("lax", "strict", "none") else samesite_env
 elif not is_development:
