@@ -504,7 +504,7 @@ def vendor_login():
 
     session.clear()
     session.permanent = True
-    session["user_id" = user["id"]
+    session["user_id"] = user["id"]
     session["role"] = "vendor"
     session["email"] = user["email"]
     session["shop_id"] = shop_id
