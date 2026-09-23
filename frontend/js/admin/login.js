@@ -41,9 +41,32 @@ document.getElementById('adminLoginForm').addEventListener('submit', async funct
         alertBox.classList.add('bg-emerald-50', 'text-emerald-700');
         alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Root Authorization Granted! Loading Admin Control Hub...';
 
+        if (result.auth_token) {
+            localStorage.setItem('foodCourtAuthToken', result.auth_token);
+        }
         if (result.user) {
             sessionStorage.setItem('foodCourtUser', JSON.stringify(result.user));
         }
+
+        const authToken = localStorage.getItem('foodCourtAuthToken');
+        const meResponse = await fetch(API_BASE_URL + '/auth/me', {
+            method: 'GET',
+            headers: authToken ? { Authorization: 'Bearer ' + authToken } : {},
+            credentials: 'include',
+            cache: 'no-store'
+        });
+        const meData = await meResponse.json().catch(() => ({}));
+
+        if (!meResponse.ok || !meData.authenticated || !meData.user || meData.user.role !== 'admin') {
+            sessionStorage.removeItem('foodCourtUser');
+            localStorage.removeItem('foodCourtAuthToken');
+            alertBox.classList.remove('bg-emerald-50', 'text-emerald-700');
+            alertBox.classList.add('bg-red-50', 'text-red-700');
+            alertBox.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Login verification failed. Please try again.';
+            return;
+        }
+
+        sessionStorage.setItem('foodCourtUser', JSON.stringify(meData.user));
 
         setTimeout(() => {
             window.location.href = result.redirect || 'dashboard.html';
