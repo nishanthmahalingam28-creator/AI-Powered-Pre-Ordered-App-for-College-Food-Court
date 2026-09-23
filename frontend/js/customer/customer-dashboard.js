@@ -67,10 +67,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 401/403 should send the customer back to the login page.
         for (let attempt = 0; attempt < 3; attempt += 1) {
             try {
-                const res = await fetch(API_BASE_URL + '/auth/me', {
-                    credentials: 'include',
-                    cache: 'no-store'
-                });
+                const authController = new AbortController();
+                const authTimeout = setTimeout(() => authController.abort(), 5000);
+                let res;
+                try {
+                    res = await fetch(API_BASE_URL + '/auth/me', {
+                        credentials: 'include',
+                        cache: 'no-store',
+                        signal: authController.signal
+                    });
+                } finally {
+                    clearTimeout(authTimeout);
+                }
                 lastStatus = res.status;
 
                 if (res.ok) {
@@ -539,11 +547,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
-await initUser();
-    await Promise.allSettled([
-        loadMorningSurveyStatus(),
-        loadRecommendations(),
-        loadActiveOrders(),
-        loadFoodBudgetSnapshot()
-    ]);
+let cachedDashboardUser = null;
+    try {
+        cachedDashboardUser = JSON.parse(sessionStorage.getItem('foodCourtUser') || 'null');
+    } catch (e) {
+        cachedDashboardUser = null;
+    }
+
+    if (cachedDashboardUser) {
+        // Do not make the entire dashboard wait for /auth/me (Render cold starts
+        // or a slow API must never leave the AI section blank).
+        applyDashboardIdentity(cachedDashboardUser);
+        initUser().catch(function (e) {
+            console.warn('Background authentication refresh failed:', e);
+        });
+        await Promise.allSettled([
+            loadMorningSurveyStatus(),
+            loadRecommendations(),
+            loadActiveOrders(),
+            loadFoodBudgetSnapshot()
+        ]);
+    } else {
+        await initUser();
+        await Promise.allSettled([
+            loadMorningSurveyStatus(),
+            loadRecommendations(),
+            loadActiveOrders(),
+            loadFoodBudgetSnapshot()
+        ]);
+    }
 });
