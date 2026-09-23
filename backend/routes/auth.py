@@ -5,9 +5,10 @@ import hashlib
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, current_app
 from security import hash_password, verify_password
 from services.email_service import EmailService
+from itsdangerous import URLSafeTimedSerializer
 from services.sms_service import SMSService
 
 from db import DB
@@ -440,9 +441,15 @@ def customer_login():
     session["mobile"] = user.get("mobile")
     session.modified = True
 
+    auth_token = URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt="food-court-auth-token-v1").dumps({
+        "user_id": user["id"],
+        "role": user["role"],
+    })
+
     return jsonify({
         "success": True,
         "message": "Login successful.",
+        "auth_token": auth_token,
         "user": {
             "id": user["id"],
             "email": user["email"],
