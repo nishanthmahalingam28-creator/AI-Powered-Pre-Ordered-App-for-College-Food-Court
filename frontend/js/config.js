@@ -34,4 +34,28 @@
         var cleanPath = (path || "").replace(/^\/+/, "");
         return base + "/" + cleanPath;
     };
+
+    // Attach the signed auth token to API calls when the browser does not
+    // persist the cross-origin Flask session cookie.
+    var originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+        init = init || {};
+        var url = typeof input === "string" ? input : (input && input.url) || "";
+        var apiBase = (window.FOOD_COURT_API_BASE || "").replace(/\/+$/, "");
+        var token = null;
+        try { token = localStorage.getItem("foodCourtAuthToken"); } catch (e) {}
+        if (token && apiBase && url.indexOf(apiBase + "/") === 0) {
+            var headers = new Headers(init.headers || {});
+            if (!headers.has("Authorization")) {
+                headers.set("Authorization", "Bearer " + token);
+            }
+            init.headers = headers;
+        }
+        return originalFetch(input, init).then(function (response) {
+            if (apiBase && url.indexOf(apiBase + "/auth/logout") === 0) {
+                try { localStorage.removeItem("foodCourtAuthToken"); } catch (e) {}
+            }
+            return response;
+        });
+    };
 })();
