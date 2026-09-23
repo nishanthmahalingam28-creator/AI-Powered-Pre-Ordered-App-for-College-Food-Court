@@ -267,9 +267,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         const headingEl = document.getElementById('ai-section-heading');
         const badgeSlot = document.getElementById('meal-slot-badge');
 
+        if (grid) {
+            grid.innerHTML = `
+                <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-6 text-center">
+                    <i class="fa-solid fa-wand-magic-sparkles text-teal-600 text-xl mb-2"></i>
+                    <p class="text-sm font-bold text-slate-700">Loading smart recommendations...</p>
+                    <p class="text-xs text-slate-400 mt-1">Personalizing picks using today's menu and your food preferences.</p>
+                </div>`;
+        }
+
         try {
-            const res = await fetch(`${API_BASE_URL}/ai/recommendations`, { credentials: 'include' });
-            const data = await res.json();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            let res;
+            try {
+                res = await fetch(`${API_BASE_URL}/ai/recommendations?limit=6`, {
+                    credentials: 'include',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(data.message || `AI recommendations request failed (${res.status})`);
+            }
 
             if (data.success && Array.isArray(data.recommendations)) {
                 if (headingEl && data.heading) headingEl.textContent = data.heading;
@@ -313,7 +338,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (e) {
             console.warn('AI recommendation request failed:', e);
-            if (grid) grid.innerHTML = '<p class="text-xs text-slate-400 p-4">AI recommendations are temporarily unavailable. Please try again in a moment.</p>';
+            if (grid) {
+                const message = e && e.name === 'AbortError'
+                    ? 'AI recommendations took too long to respond. Please refresh the dashboard.'
+                    : 'AI recommendations are temporarily unavailable. Please try again in a moment.';
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white rounded-2xl border border-amber-200 p-6 text-center">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mb-2"></i>
+                        <p class="text-sm font-bold text-slate-700">${message}</p>
+                        <button type="button" class="mt-3 text-xs font-bold text-teal-700 hover:underline" onclick="window.location.reload()">Refresh recommendations →</button>
+                    </div>`;
+            }
         }
     }
 
