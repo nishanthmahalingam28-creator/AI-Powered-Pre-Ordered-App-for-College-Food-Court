@@ -51,6 +51,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (data.authenticated && data.user) {
                         user = data.user;
                         sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
+                        // Update the visible dashboard identity immediately from the
+                        // authoritative profile returned by /auth/me.
+                        const dashboardName = document.getElementById('customer-name');
+                        const dashboardType = document.getElementById('customer-type-badge');
+                        const dashboardRoll = document.getElementById('customer-roll-badge');
+                        const displayName = user.full_name || user.name || 'Customer';
+                        const customerType = String(user.customer_type || user.user_type || 'student').toLowerCase();
+                        if (dashboardName) dashboardName.textContent = displayName;
+                        if (dashboardType) dashboardType.textContent = customerType.charAt(0).toUpperCase() + customerType.slice(1);
+                        if (dashboardRoll) {
+                            const identifier = user.identifier || user.roll_number || '';
+                            if (identifier) {
+                                dashboardRoll.textContent = identifier;
+                                dashboardRoll.classList.remove('hidden');
+                            } else {
+                                dashboardRoll.classList.add('hidden');
+                            }
+                        }
                         break;
                     }
                 }
