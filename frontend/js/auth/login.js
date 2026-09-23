@@ -93,6 +93,11 @@ loginForm?.addEventListener("submit", async function (event) {
             return;
         }
 
+        // Save the signed fallback token for browsers that block the session cookie.
+        if (result.auth_token) {
+            localStorage.setItem("foodCourtAuthToken", result.auth_token);
+        }
+
         // Keep only non-sensitive session information for the frontend UI.
         if (result.user) {
             sessionStorage.setItem("foodCourtUser", JSON.stringify({
@@ -108,8 +113,14 @@ loginForm?.addEventListener("submit", async function (event) {
         // Verify that the browser actually received the authenticated Flask session
         // cookie before leaving the login page. Without this check the UI could show
         // the cached student session while protected API calls still return 401.
+        const meHeaders = {};
+        const authToken = localStorage.getItem("foodCourtAuthToken");
+        if (authToken) {
+            meHeaders.Authorization = "Bearer " + authToken;
+        }
         const meResponse = await fetch(`${API_BASE_URL}/auth/me`, {
             method: "GET",
+            headers: meHeaders,
             credentials: "include",
             cache: "no-store"
         });
@@ -117,7 +128,8 @@ loginForm?.addEventListener("submit", async function (event) {
 
         if (!meResponse.ok || !meData.authenticated || !meData.user) {
             sessionStorage.removeItem("foodCourtUser");
-            passwordError.innerHTML = "Login succeeded, but the secure session was not saved. Please refresh and try again.";
+            localStorage.removeItem("foodCourtAuthToken");
+            passwordError.innerHTML = "Login verification failed. Please try again.";
             return;
         }
 
