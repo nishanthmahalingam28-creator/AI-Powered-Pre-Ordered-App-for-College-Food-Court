@@ -20,10 +20,12 @@ document.addEventListener('DOMContentLoaded', initManageOrders);
 
 async function initManageOrders() {
   try {
-    const auth = await fetch(`${MANAGE_ORDERS_API}/auth/me`, {credentials:'include'});
+    const [auth, shopRes] = await Promise.all([
+      fetch(`${MANAGE_ORDERS_API}/auth/me`, {credentials:'include'}),
+      fetch(`${MANAGE_ORDERS_API}/vendor/shop`, {credentials:'include'})
+    ]);
     const authData = await auth.json();
     if (!auth.ok || !authData.authenticated || !['vendor','admin'].includes(authData.user.role)) { window.location.href='login.html'; return; }
-    const shopRes = await fetch(`${MANAGE_ORDERS_API}/vendor/shop`, {credentials:'include'});
     const shopData = await shopRes.json();
     if (!shopRes.ok || !shopData.success || !shopData.shop) { showOrdersMessage(shopData.message || 'No assigned shop found.', false); return; }
     manageOrdersShopId = shopData.shop.id;
