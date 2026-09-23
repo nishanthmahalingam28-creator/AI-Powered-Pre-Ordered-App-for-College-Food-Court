@@ -193,42 +193,87 @@ class FoodCourtAnalytics:
     def get_admin_overview_analytics(cls):
         """Calculates platform-wide food court sales intelligence across all stalls."""
         try:
-            # 1. Platform-wide high level aggregates
-            order_counts = DB.get_one(
-                """
-                SELECT COUNT(id) as total_orders,
-                       SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
-                       SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
-                       SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders
-                FROM orders
-                """
-            ) or {}
+            # Keep all read-only analytics on one pooled connection. The admin
+            # analytics endpoint otherwise performs several sequential DB
+            # checkouts/returns before it can render the dashboard.
+            results = DB.query_many([
+                (
+                    """
+                    SELECT COUNT(id) as total_orders,
+                           SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+                           SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
+                           SUM(CASE WHEN order_status IN ('pending', 'preparing', 'ready') THEN 1 ELSE 0 END) as active_orders
+                    FROM orders
+                    """,
+                    (),
+                ),
+                (
+                    """
+                    SELECT COALESCE(SUM(o.total_amount), 0) as total_revenue,
+                           COALESCE(SUM(oi.quantity), 0) as total_units_sold
+                    FROM orders o
+                    LEFT JOIN order_items oi ON oi.order_id = o.id
+                    WHERE (o.payment_status = 'paid' OR o.order_status = 'completed')
+                      AND o.order_status != 'cancelled'
+                      AND o.payment_status != 'failed'
+                    """,
+                    (),
+                ),
+                (
+                    """
+                    SELECT s.id as shop_id, s.name as shop_name, s.operational_status,
+                           COUNT(DISTINCT o.id) as orders_count,
+                           COALESCE(SUM(CASE WHEN (o.payment_status = 'paid' OR o.order_status = 'completed') AND o.order_status != 'cancelled' THEN o.total_amount ELSE 0 END), 0) as revenue
+                    FROM shops s
+                    LEFT JOIN orders o ON o.shop_id = s.id
+                    WHERE s.is_active = 1
+                    GROUP BY s.id
+                    ORDER BY revenue DESC
+                    """,
+                    (),
+                ),
+                (
+                    """
+                    SELECT oi.menu_item_id, m.name, s.name as shop_name, m.category,
+                           SUM(oi.quantity) as units_sold,
+                           SUM(oi.subtotal) as total_revenue
+                    FROM order_items oi
+                    INNER JOIN orders o ON o.id = oi.order_id
+                    INNER JOIN menu_items m ON m.id = oi.menu_item_id
+                    INNER JOIN shops s ON s.id = m.shop_id
+                    WHERE (o.payment_status = 'paid' OR o.order_status = 'completed')
+                      AND o.order_status != 'cancelled'
+                      AND o.payment_status != 'failed'
+                    GROUP BY oi.menu_item_id
+                    ORDER BY units_sold DESC
+                    LIMIT 8
+                    """,
+                    (),
+                ),
+                (
+                    """
+                    SELECT m.category,
+                           SUM(oi.quantity) as units,
+                           SUM(oi.subtotal) as revenue
+                    FROM order_items oi
+                    INNER JOIN orders o ON o.id = oi.order_id
+                    INNER JOIN menu_items m ON m.id = oi.menu_item_id
+                    WHERE (o.payment_status = 'paid' OR o.order_status = 'completed')
+                      AND o.order_status != 'cancelled'
+                      AND o.payment_status != 'failed'
+                    GROUP BY m.category
+                    ORDER BY revenue DESC
+                    """,
+                    (),
+                ),
+            ])
 
-            sales_summary = DB.get_one(
-                """
-                SELECT COALESCE(SUM(o.total_amount), 0) as total_revenue,
-                       COALESCE(SUM(oi.quantity), 0) as total_units_sold
-                FROM orders o
-                LEFT JOIN order_items oi ON oi.order_id = o.id
-                WHERE (o.payment_status = 'paid' OR o.order_status = 'completed')
-                  AND o.order_status != 'cancelled'
-                  AND o.payment_status != 'failed'
-                """
-            ) or {}
+            order_counts = (results[0][0] if results[0] else {}) or {}
+            sales_summary = (results[1][0] if results[1] else {}) or {}
+            stall_stats = results[2]
+            top_items = results[3]
+            cat_rows = results[4]
 
-            # 2. Stall-by-Stall Comparison
-            stall_stats = DB.query(
-                """
-                SELECT s.id as shop_id, s.name as shop_name, s.operational_status,
-                       COUNT(DISTINCT o.id) as orders_count,
-                       COALESCE(SUM(CASE WHEN (o.payment_status = 'paid' OR o.order_status = 'completed') AND o.order_status != 'cancelled' THEN o.total_amount ELSE 0 END), 0) as revenue
-                FROM shops s
-                LEFT JOIN orders o ON o.shop_id = s.id
-                WHERE s.is_active = 1
-                GROUP BY s.id
-                ORDER BY revenue DESC
-                """
-            )
             stall_performance = [
                 {
                     "shop_id": r["shop_id"],
@@ -240,24 +285,6 @@ class FoodCourtAnalytics:
                 for r in stall_stats
             ]
 
-            # 3. Top Campus-Wide Menu Items
-            top_items = DB.query(
-                """
-                SELECT oi.menu_item_id, m.name, s.name as shop_name, m.category,
-                       SUM(oi.quantity) as units_sold,
-                       SUM(oi.subtotal) as total_revenue
-                FROM order_items oi
-                INNER JOIN orders o ON o.id = oi.order_id
-                INNER JOIN menu_items m ON m.id = oi.menu_item_id
-                INNER JOIN shops s ON s.id = m.shop_id
-                WHERE (o.payment_status = 'paid' OR o.order_status = 'completed')
-                  AND o.order_status != 'cancelled'
-                  AND o.payment_status != 'failed'
-                GROUP BY oi.menu_item_id
-                ORDER BY units_sold DESC
-                LIMIT 8
-                """
-            )
             top_selling = [
                 {
                     "item_id": r["menu_item_id"],
@@ -270,22 +297,6 @@ class FoodCourtAnalytics:
                 for r in top_items
             ]
 
-            # 4. Category breakdown across campus
-            cat_rows = DB.query(
-                """
-                SELECT m.category,
-                       SUM(oi.quantity) as units,
-                       SUM(oi.subtotal) as revenue
-                FROM order_items oi
-                INNER JOIN orders o ON o.id = oi.order_id
-                INNER JOIN menu_items m ON m.id = oi.menu_item_id
-                WHERE (o.payment_status = 'paid' OR o.order_status = 'completed')
-                  AND o.order_status != 'cancelled'
-                  AND o.payment_status != 'failed'
-                GROUP BY m.category
-                ORDER BY revenue DESC
-                """
-            )
             categories = [
                 {
                     "category": r["category"],
