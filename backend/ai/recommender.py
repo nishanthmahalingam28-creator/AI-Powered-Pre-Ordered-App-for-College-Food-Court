@@ -33,6 +33,13 @@ class FoodCourtRecommender:
         - limit: Maximum recommendations to return (default 5, capped at 20)
         - hour: Optional override for time-of-day meal slot testing
         """
+        # Keep these values initialized so the emergency fallback can never
+        # fail because an earlier optional feature lookup raised an exception.
+        target_shop_id = None
+        target_shop_name = None
+        meal_slot = "All-Day"
+        target_categories = set()
+        slot_heading = "🍽️ Campus Favorites"
         try:
             limit = max(1, min(int(limit or 5), 20))
             # Render servers commonly run in UTC; the food-court business day is India time.
@@ -56,7 +63,9 @@ class FoodCourtRecommender:
             target_shop_name = target_shop["name"] if target_shop else None
 
             # 2. Extract Temporal Context and Meal Slot
-            meal_slot, target_categories, slot_heading = FoodCourtFeatures.get_current_meal_context(hour=hour)
+            meal_slot, target_categories, slot_heading = FoodCourtFeatures.get_current_meal_context(
+                hour=now_ist.hour if hour is None else hour
+            )
             if target_shop:
                 slot_heading = f"{slot_heading} · {target_shop_name}"
 
@@ -118,7 +127,7 @@ class FoodCourtRecommender:
             # real menu_items.id used by the cart/order system.
             if customer_id:
                 try:
-                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    today_str = now_ist.strftime("%Y-%m-%d")
                     poll_rows = DB.query(
                         """
                         SELECT d.menu_item_id
@@ -332,7 +341,6 @@ class FoodCourtRecommender:
                     WHERE m.is_available = 1
                       AND m.quantity > 0
                       AND s.is_active = 1
-                      AND COALESCE(s.operational_status, 'OPEN') = 'OPEN'
                 """
                 fallback_params = []
                 if target_shop_id:
