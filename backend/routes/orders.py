@@ -55,10 +55,9 @@ def place_order():
         return jsonify({"success": False, "message": "Invalid pickup time. Please choose a valid time."}), 400
 
     # Authoritative Item Validation & Single-Shop Enforcement
-    validated_items = []
-    total_amount = 0.0
-    detected_shop_id = None
-
+    # Validate all cart items with one DB round-trip instead of one query per item.
+    requested_items = []
+    item_ids = []
     for entry in items_input:
         item_id = entry.get("id") or entry.get("item_id") or entry.get("menu_item_id")
         raw_qty = entry.get("quantity") if entry.get("quantity") is not None else entry.get("qty")
@@ -69,19 +68,36 @@ def place_order():
 
         if qty <= 0:
             return jsonify({"success": False, "message": "Item quantity must be greater than zero."}), 400
-
         if not item_id:
             return jsonify({"success": False, "message": "Invalid item payload. Item ID is required."}), 400
 
-        item = DB.get_one(
-            """
-            SELECT m.*, s.name as shop_name, s.is_active as shop_is_active, s.operational_status as shop_operational_status
-            FROM menu_items m
-            INNER JOIN shops s ON s.id = m.shop_id
-            WHERE m.id = %s
-            """,
-            (item_id,)
-        )
+        try:
+            normalized_id = int(item_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid item ID."}), 400
+
+        requested_items.append((normalized_id, qty))
+        item_ids.append(normalized_id)
+
+    placeholders = ", ".join(["%s"] * len(item_ids))
+    item_rows = DB.query(
+        f"""
+        SELECT m.*, s.name as shop_name, s.is_active as shop_is_active,
+               s.operational_status as shop_operational_status
+        FROM menu_items m
+        INNER JOIN shops s ON s.id = m.shop_id
+        WHERE m.id IN ({placeholders})
+        """,
+        tuple(item_ids)
+    )
+    items_by_id = {int(row["id"]): row for row in item_rows}
+
+    validated_items = []
+    total_amount = 0.0
+    detected_shop_id = None
+
+    for item_id, qty in requested_items:
+        item = items_by_id.get(item_id)
         if not item:
             return jsonify({"success": False, "message": f"Menu item #{item_id} not found."}), 404
 
