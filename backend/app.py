@@ -66,18 +66,24 @@ app.config["SECRET_KEY"] = secret_key
 # sent over HTTPS and be usable on cross-origin fetch requests.
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_PATH"] = "/"
+# Use a dedicated cookie name so stale cookies from earlier deployments cannot
+# collide with the current authentication session.
+app.config["SESSION_COOKIE_NAME"] = "food_court_auth"
 app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7
 
 # Session cookie SameSite policy:
-# - Production with HTTPS and cross-origin frontend: "None" enables cross-site authenticated cookies on modern browsers.
-# - Can be configured explicitly via SESSION_COOKIE_SAMESITE or COOKIE_SAMESITE environment variable.
-# - Development default: "Lax".
+# The deployed frontend and API are both under onrender.com, so they are
+# same-site even though they are different origins. Lax is therefore sufficient
+# and avoids unnecessary third-party-cookie restrictions. Set SESSION_COOKIE_SAMESITE=None
+# only if the frontend is moved to a genuinely cross-site domain.
+# Can be configured explicitly via SESSION_COOKIE_SAMESITE or COOKIE_SAMESITE.
+# Development default: "Lax".
 samesite_env = (os.getenv("SESSION_COOKIE_SAMESITE") or os.getenv("COOKIE_SAMESITE") or "").strip()
 if samesite_env:
     app.config["SESSION_COOKIE_SAMESITE"] = samesite_env.capitalize() if samesite_env.lower() in ("lax", "strict", "none") else samesite_env
 elif not is_development:
-    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 else:
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
