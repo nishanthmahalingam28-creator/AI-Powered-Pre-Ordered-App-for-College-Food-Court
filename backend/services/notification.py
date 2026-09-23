@@ -257,10 +257,7 @@ class NotificationService:
         where_sql = " AND ".join(where_clauses)
 
         count_sql = f"SELECT COUNT(*) as total FROM notifications WHERE {where_sql}"
-        total_row = DB.get_one(count_sql, tuple(params)) or {}
-        total = int(total_row.get("total") or 0)
-
-        unread_count = cls.get_unread_count(user_id)
+        unread_sql = "SELECT COUNT(*) as unread_count FROM notifications WHERE user_id = %s AND is_read = 0"
 
         data_sql = f"""
             SELECT id, user_id, order_id, type, title, message, is_read,
@@ -271,7 +268,17 @@ class NotificationService:
             LIMIT %s OFFSET %s
         """
         data_params = list(params) + [safe_limit, offset]
-        rows = DB.query(data_sql, tuple(data_params))
+
+        # Run the count, unread count and page query on one pooled connection.
+        # This avoids three separate pool checkouts for every notification refresh.
+        results = DB.query_many([
+            (count_sql, tuple(params)),
+            (unread_sql, (user_id,)),
+            (data_sql, tuple(data_params)),
+        ])
+        total_rows, unread_rows, rows = results
+        total = int((total_rows[0].get("total") if total_rows else 0) or 0)
+        unread_count = int((unread_rows[0].get("unread_count") if unread_rows else 0) or 0)
 
         notifications = []
         for r in rows:
