@@ -295,7 +295,52 @@ class FoodCourtRecommender:
             }
 
         except Exception as e:
+            # Keep the customer dashboard useful even if one optional AI signal
+            # (history, survey, popularity, or scoring) fails. The database menu
+            # remains the authoritative fallback recommendation source.
             logger.error("FoodCourtRecommender exception (non-fatal): %s", e)
+            try:
+                fallback_sql = """
+                    SELECT m.id, m.name, m.description, m.price, m.category,
+                           m.shop_id, s.name AS shop_name
+                    FROM menu_items m
+                    INNER JOIN shops s ON s.id = m.shop_id
+                    WHERE m.is_available = 1
+                      AND m.quantity > 0
+                      AND s.is_active = 1
+                      AND COALESCE(s.operational_status, 'OPEN') = 'OPEN'
+                """
+                fallback_params = []
+                if target_shop_id:
+                    fallback_sql += " AND m.shop_id = %s"
+                    fallback_params.append(target_shop_id)
+                fallback_sql += " ORDER BY m.id DESC LIMIT %s"
+                fallback_params.append(limit)
+                fallback_rows = DB.query(fallback_sql, tuple(fallback_params))
+                return {
+                    "success": True,
+                    "shop_id": target_shop_id,
+                    "shop_name": target_shop_name,
+                    "slot": meal_slot,
+                    "heading": slot_heading,
+                    "recommendations": [{
+                        "id": row["id"],
+                        "item_id": row["id"],
+                        "name": row["name"],
+                        "item_name": row["name"],
+                        "description": row.get("description") or "",
+                        "price": float(row["price"]),
+                        "category": row.get("category") or "Food",
+                        "shop_id": row["shop_id"],
+                        "shop_name": row["shop_name"],
+                        "reason": "Available now",
+                        "ai_badge": "Available now",
+                        "score": 0.5,
+                        "ai_score": 50.0
+                    } for row in fallback_rows]
+                }
+            except Exception as fallback_error:
+                logger.error("Recommendation fallback also failed: %s", fallback_error)
             return {
                 "success": False,
                 "shop_id": shop_id,
