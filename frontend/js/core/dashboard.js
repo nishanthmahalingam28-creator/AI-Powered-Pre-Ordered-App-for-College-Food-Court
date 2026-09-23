@@ -3,6 +3,7 @@ const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 
 let currentShopId = 1;
 let currentShopName = 'YPR';
 let currentOperationalStatus = 'OPEN';
+let morningVotesRequestInFlight = false;
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', async () => {
@@ -150,9 +151,11 @@ async function setVendorOperationalStatus(newStatus) {
 
 
 async function loadMorningFoodVotes() {
+    if (morningVotesRequestInFlight) return;
     const wrap = document.getElementById('dashboard-vote-results');
     const totalEl = document.getElementById('dashboard-vote-total');
     if (!wrap) return;
+    morningVotesRequestInFlight = true;
     try {
         const res = await fetch(`${API_BASE_URL}/vendor/daily-survey/vote-results`, { credentials: 'include' });
         const data = await res.json();
