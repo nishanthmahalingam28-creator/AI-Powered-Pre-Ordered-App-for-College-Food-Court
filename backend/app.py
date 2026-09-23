@@ -1,6 +1,7 @@
 import os
 import secrets
 import logging
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -71,6 +72,31 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_NAME"] = "food_court_auth"
 app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7
+
+# Signed bearer-token fallback for browsers that block the Flask session cookie.
+AUTH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7
+
+def _auth_token_serializer():
+    return URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="food-court-auth-token-v1")
+
+def restore_session_from_auth_token():
+    if session.get("user_id"):
+        return
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        return
+    token = auth_header[7:].strip()
+    if not token:
+        return
+    try:
+        data = _auth_token_serializer().loads(token, max_age=AUTH_TOKEN_MAX_AGE)
+        if data.get("user_id") and data.get("role"):
+            session["user_id"] = data["user_id"]
+            session["role"] = data["role"]
+            session.permanent = True
+            session.modified = True
+    except (BadSignature, SignatureExpired, TypeError, ValueError):
+        return
 
 # Session cookie SameSite policy:
 # Login is performed from a separate frontend origin using credentialed fetch().
@@ -158,6 +184,7 @@ except Exception as _bootstrap_err:
 
 @app.before_request
 def before_request_func():
+    restore_session_from_auth_token()
     req_id = request.headers.get("X-Request-ID") or secrets.token_hex(8)
     g.request_id = req_id
     if request.path not in ("/api/health", "/api/ready"):
