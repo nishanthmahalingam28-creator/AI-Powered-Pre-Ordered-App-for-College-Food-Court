@@ -7,6 +7,12 @@ let cachedAdminCount = 0;
 let cachedCustomerCount = null;
 const loadedAdminTabs = new Set(['shops']);
 let cachedTemporaryAccounts = [];
+let adminOrdersRequestController = null;
+let adminOrdersRequestSequence = 0;
+let adminPaymentsRequestController = null;
+let adminPaymentsRequestSequence = 0;
+let adminContactRequestController = null;
+let adminContactRequestSequence = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const isAdmin = await verifyAdmin();
@@ -14,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([loadOverview(), loadShops()]);
     document.getElementById('contact-report-status')?.addEventListener('change', loadContactReports);
     let contactSearchTimer;
-    document.getElementById('contact-report-search')?.addEventListener('input', function(){ clearTimeout(contactSearchTimer); contactSearchTimer=setTimeout(loadContactReports,300); });
+    document.getElementById('contact-report-search')?.addEventListener('input', function(){ clearTimeout(contactSearchTimer); contactSearchTimer=setTimeout(loadContactReports,400); });
 });
 
 async function verifyAdmin() {
@@ -530,10 +536,16 @@ async function loadGlobalOrders() {
     if (status) url += `&status=${encodeURIComponent(status)}`;
     if (q) url += `&q=${encodeURIComponent(q)}`;
 
+    if (adminOrdersRequestController) adminOrdersRequestController.abort();
+    const controller = new AbortController();
+    adminOrdersRequestController = controller;
+    const requestId = ++adminOrdersRequestSequence;
+
     try {
-        const res = await fetch(url, { credentials: 'include' });
+        const res = await fetch(url, { credentials: 'include', signal: controller.signal });
         const data = await res.json();
 
+        if (requestId !== adminOrdersRequestSequence) return;
         if (data.success && data.orders) {
             tbody.innerHTML = '';
             if (data.orders.length === 0) {
@@ -595,10 +607,16 @@ async function loadPayments() {
     let url = `${API_BASE_URL}/admin/payments?limit=50`;
     if (status) url += `&status=${encodeURIComponent(status)}`;
 
+    if (adminPaymentsRequestController) adminPaymentsRequestController.abort();
+    const controller = new AbortController();
+    adminPaymentsRequestController = controller;
+    const requestId = ++adminPaymentsRequestSequence;
+
     try {
-        const res = await fetch(url, { credentials: 'include' });
+        const res = await fetch(url, { credentials: 'include', signal: controller.signal });
         const data = await res.json();
 
+        if (requestId !== adminPaymentsRequestSequence) return;
         if (data.success && data.payments) {
             tbody.innerHTML = '';
             if (data.payments.length === 0) {
@@ -637,7 +655,9 @@ async function loadPayments() {
             });
         }
     } catch (e) {
-        console.error('Payments fetch error:', e);
+        if (e.name !== 'AbortError') console.error('Payments fetch error:', e);
+    } finally {
+        if (adminPaymentsRequestController === controller) adminPaymentsRequestController = null;
     }
 }
 
@@ -649,11 +669,17 @@ async function loadContactReports() {
     if (!list) return;
     const status = document.getElementById('contact-report-status')?.value || '';
     const q = document.getElementById('contact-report-search')?.value.trim() || '';
+    if (adminContactRequestController) adminContactRequestController.abort();
+    const controller = new AbortController();
+    adminContactRequestController = controller;
+    const requestId = ++adminContactRequestSequence;
+
     list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Loading contact reports...</div>';
     try {
         const params = new URLSearchParams(); if (status) params.set('status', status); if (q) params.set('q', q);
-        const res = await fetch(API_BASE_URL + '/contact/admin?' + params.toString(), { credentials: 'include' });
+        const res = await fetch(API_BASE_URL + '/contact/admin?' + params.toString(), { credentials: 'include', signal: controller.signal });
         const data = await res.json().catch(function(){ return {}; });
+        if (requestId !== adminContactRequestSequence) return;
         if (!res.ok || !data.success) {
             throw new Error(data.message || ('Contact Reports API returned HTTP ' + res.status));
         }
@@ -663,7 +689,11 @@ async function loadContactReports() {
             const statusClass = m.status === 'new' ? 'bg-amber-100 text-amber-800' : m.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800';
             return '<article class="p-5 hover:bg-slate-50"><div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="font-black text-slate-800">' + escapeHtml(m.subject) + '</span><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ' + statusClass + '">' + escapeHtml(m.status) + '</span></div><p class="text-xs text-slate-500 mt-1">' + escapeHtml(m.full_name) + ' · <a class="text-blue-700 font-semibold" href="mailto:' + escapeHtml(m.email) + '">' + escapeHtml(m.email) + '</a> · ' + escapeHtml(formatAdminDate(m.created_at)) + '</p><p class="mt-3 text-sm text-slate-700 whitespace-pre-wrap break-words">' + escapeHtml(m.message) + '</p></div><div class="flex gap-2 shrink-0"><button onclick="updateContactReportStatus(' + m.id + ', \'read\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100">Mark Read</button><button onclick="updateContactReportStatus(' + m.id + ', \'resolved\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Resolve</button></div></div></article>';
         }).join('');
-    } catch (e) { list.innerHTML = '<div class="p-8 text-center text-sm text-rose-600 font-semibold">Unable to load contact reports. Please refresh.</div>'; }
+    } catch (e) {
+        if (e.name !== 'AbortError') list.innerHTML = '<div class="p-8 text-center text-sm text-rose-600 font-semibold">Unable to load contact reports. Please refresh.</div>';
+    } finally {
+        if (adminContactRequestController === controller) adminContactRequestController = null;
+    }
 }
 function formatAdminDate(v) { if (!v) return '—'; const d = new Date(String(v).includes('T') ? v : String(v).replace(' ', 'T') + 'Z'); return Number.isNaN(d.getTime()) ? String(v) : new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}).format(d); }
 async function updateContactReportStatus(id, status) { try { const res=await fetch(API_BASE_URL+'/contact/admin/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({status})}); const data=await res.json(); if(!res.ok||!data.success) throw new Error(data.message||'Failed'); await loadContactReports(); } catch(e){ alert(e.message||'Unable to update contact report.'); } }
