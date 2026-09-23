@@ -35,8 +35,12 @@
       : '/';
   }
 
+  var COMPONENT_CACHE_VERSION = '20260923';
+
   function getComponentUrl(name) {
-    return new URL(getFrontendRoot() + 'components/' + name + '.html', window.location.href);
+    var url = new URL(getFrontendRoot() + 'components/' + name + '.html', window.location.href);
+    url.searchParams.set('v', COMPONENT_CACHE_VERSION);
+    return url;
   }
 
   function getTarget(name) {
@@ -46,7 +50,7 @@
 
   async function loadComponent(name) {
     var url = getComponentUrl(name);
-    var response = await fetch(url.href);
+    var response = await fetch(url.href, { cache: 'force-cache' });
 
     if (!response.ok) {
       throw new Error(
