@@ -21,7 +21,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Resolve Authoritative Assigned Stall for Vendor
 async function initShopProfile() {
     try {
-        const authRes = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+        // Both endpoints authenticate from the same server session; request them in parallel
+        // so dashboard startup does not wait for two network round-trips sequentially.
+        const [authRes, res] = await Promise.all([
+            fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' }),
+            fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' })
+        ]);
         if (!authRes.ok) {
             sessionStorage.removeItem('foodCourtUser');
             window.location.href = 'login.html';
@@ -33,8 +38,6 @@ async function initShopProfile() {
             window.location.href = 'login.html';
             return false;
         }
-
-        const res = await fetch(`${API_BASE_URL}/vendor/shop`, { credentials: 'include' });
         const data = await res.json();
         if (data.success && data.shop) {
             currentShopId = data.shop.id;
