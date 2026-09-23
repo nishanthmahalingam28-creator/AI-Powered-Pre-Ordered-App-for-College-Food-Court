@@ -17,7 +17,7 @@ cpu_count = multiprocessing.cpu_count()
 default_workers = min(max(cpu_count * 2, 2), 4)
 workers = int(os.getenv("GUNICORN_WORKERS", "1"))
 worker_class = "gthread"
-threads = int(os.getenv("GUNICORN_THREADS", "8"))
+threads = int(os.getenv("GUNICORN_THREADS", "12"))
 
 # Process Lifecycle & Memory Protection
 max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1000"))
