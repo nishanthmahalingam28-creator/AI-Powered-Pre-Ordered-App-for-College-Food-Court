@@ -31,8 +31,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn("Storage access restricted:", e);
     }
 // 1. Initialize User Information from authoritative backend session
+    function applyDashboardIdentity(user) {
+        user = user || {};
+        const name = user.full_name || user.name || 'Customer';
+        const type = String(user.customer_type || user.user_type || 'student').toLowerCase();
+        const typeLabel = type === 'faculty' ? 'Faculty' : type === 'guest' ? 'Guest' : 'Student';
+        const nameEl = document.getElementById('customer-name');
+        const typeEl = document.getElementById('customer-type-badge');
+        const rollEl = document.getElementById('customer-roll-badge');
+        if (nameEl) nameEl.textContent = name;
+        if (typeEl) typeEl.textContent = typeLabel;
+        if (rollEl) {
+            const identifier = user.identifier || user.roll_number || '';
+            rollEl.textContent = identifier;
+            rollEl.classList.toggle('hidden', !identifier);
+        }
+    }
+
     async function initUser() {
+        // Render the last successful login identity immediately. The backend
+        // refresh below remains authoritative and prevents the default
+        // "Student" placeholder from appearing for faculty/guest accounts.
         let user = null;
+        try {
+            user = JSON.parse(sessionStorage.getItem('foodCourtUser') || 'null');
+        } catch (e) {
+            user = null;
+        }
+        if (user) applyDashboardIdentity(user);
+
         let lastStatus = 0;
 
         // Do not treat a temporary network/Render/5xx failure as a logout.
@@ -51,24 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (data.authenticated && data.user) {
                         user = data.user;
                         sessionStorage.setItem('foodCourtUser', JSON.stringify(user));
-                        // Update the visible dashboard identity immediately from the
-                        // authoritative profile returned by /auth/me.
-                        const dashboardName = document.getElementById('customer-name');
-                        const dashboardType = document.getElementById('customer-type-badge');
-                        const dashboardRoll = document.getElementById('customer-roll-badge');
-                        const displayName = user.full_name || user.name || 'Customer';
-                        const customerType = String(user.customer_type || user.user_type || 'student').toLowerCase();
-                        if (dashboardName) dashboardName.textContent = displayName;
-                        if (dashboardType) dashboardType.textContent = customerType.charAt(0).toUpperCase() + customerType.slice(1);
-                        if (dashboardRoll) {
-                            const identifier = user.identifier || user.roll_number || '';
-                            if (identifier) {
-                                dashboardRoll.textContent = identifier;
-                                dashboardRoll.classList.remove('hidden');
-                            } else {
-                                dashboardRoll.classList.add('hidden');
-                            }
-                        }
+                        applyDashboardIdentity(user);
                         break;
                     }
                 }
@@ -110,6 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             console.warn('Authentication could not be verified temporarily; keeping the current session UI.');
+            applyDashboardIdentity(user);
         }
 
     // Load today's vendor-published Morning Survey status.
