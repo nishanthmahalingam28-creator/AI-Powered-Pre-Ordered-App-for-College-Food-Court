@@ -503,15 +503,23 @@ def vendor_login():
         }), 403
 
     session.clear()
-    session["user_id"] = user["id"]
+    session.permanent = True
+    session["user_id" = user["id"]
     session["role"] = "vendor"
     session["email"] = user["email"]
     session["shop_id"] = shop_id
     session["shop_name"] = user.get("shop_name") or "Food Court Stall"
+    session.modified = True
+
+    auth_token = URLSafeTimedSerializer(
+        current_app.config["SECRET_KEY"],
+        salt="food-court-auth-token-v1"
+    ).dumps({"user_id": user["id"], "role": "vendor"})
 
     return jsonify({
         "success": True,
         "message": "Vendor authentication successful.",
+        "auth_token": auth_token,
         "user": {
             "id": user["id"],
             "email": user["email"],
@@ -563,13 +571,21 @@ def admin_login():
         return jsonify({"success": False, "message": "Access Denied: Invalid root access identifiers."}), 401
 
     session.clear()
-    session["user_id"] = user["id"]
+    session.permanent = True
+    session["user_id" = user["id"]
     session["role"] = "admin"
     session["email"] = user["email"]
+    session.modified = True
+
+    auth_token = URLSafeTimedSerializer(
+        current_app.config["SECRET_KEY"],
+        salt="food-court-auth-token-v1"
+    ).dumps({"user_id": user["id"], "role": "admin"})
 
     return jsonify({
         "success": True,
         "message": "Admin authentication successful.",
+        "auth_token": auth_token,
         "user": {
             "id": user["id"],
             "email": user["email"],
