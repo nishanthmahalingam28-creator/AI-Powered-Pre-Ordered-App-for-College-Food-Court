@@ -72,11 +72,68 @@ def get_ai_recommendations():
     except (ValueError, TypeError):
         limit = 5
 
-    results = FoodCourtRecommender.get_recommendations(
-        customer_id=customer_id,
-        shop_id=shop_id,
-        limit=limit
-    )
+    try:
+        results = FoodCourtRecommender.get_recommendations(
+            customer_id=customer_id,
+            shop_id=shop_id,
+            limit=limit
+        )
+    except Exception as exc:
+        logger.error("AI recommendation route failed: %s", type(exc).__name__)
+        results = {"success": False, "recommendations": []}
+
+    # Last-resort production-safe menu fallback. The AI engine is advisory;
+    # the live menu remains the authoritative source. This intentionally uses
+    # only columns that existed before the operational-status migration, so an
+    # older production database can still render the customer dashboard while
+    # its startup migration catches up.
+    if not results.get("success") or not isinstance(results.get("recommendations"), list):
+        try:
+            fallback_sql = """
+                SELECT m.id, m.name, m.description, m.price, m.category,
+                       m.shop_id, s.name AS shop_name
+                FROM menu_items m
+                INNER JOIN shops s ON s.id = m.shop_id
+                WHERE m.is_available = 1
+                  AND m.quantity > 0
+                  AND s.is_active = 1
+            """
+            fallback_params = []
+            if shop_id:
+                fallback_sql += " AND m.shop_id = %s"
+                fallback_params.append(shop_id)
+            fallback_sql += " ORDER BY m.id DESC LIMIT %s"
+            fallback_params.append(limit)
+            rows = DB.query(fallback_sql, tuple(fallback_params))
+            results = {
+                "success": True,
+                "slot": "Campus Specials",
+                "heading": "🍽️ Campus Favorites",
+                "shop_id": shop_id,
+                "shop_name": None,
+                "recommendations": [{
+                    "id": row["id"],
+                    "item_id": row["id"],
+                    "name": row["name"],
+                    "item_name": row["name"],
+                    "description": row.get("description") or row.get("category") or "Available now",
+                    "price": float(row["price"]),
+                    "category": row.get("category") or "Food",
+                    "shop_id": row["shop_id"],
+                    "shop_name": row["shop_name"],
+                    "reason": "Available now",
+                    "ai_badge": "Available now",
+                    "score": 0.5,
+                    "ai_score": 50.0
+                } for row in rows]
+            }
+        except Exception as fallback_exc:
+            logger.error("AI recommendation fallback failed: %s", type(fallback_exc).__name__)
+            return jsonify({
+                "success": False,
+                "message": "Recommendations are temporarily unavailable."
+            }), 503
+
     return jsonify(results), 200
 
 
