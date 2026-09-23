@@ -6,10 +6,12 @@ document.addEventListener('DOMContentLoaded', initUpdateMenu);
 
 async function initUpdateMenu() {
   try {
-    const auth = await fetch(`${UPDATE_MENU_API}/auth/me`, {credentials:'include'});
+    const [auth, shopRes] = await Promise.all([
+      fetch(`${UPDATE_MENU_API}/auth/me`, {credentials:'include'}),
+      fetch(`${UPDATE_MENU_API}/vendor/shop`, {credentials:'include'})
+    ]);
     const authData = await auth.json();
     if (!auth.ok || !authData.authenticated || !['vendor','admin'].includes(authData.user.role)) { window.location.href='login.html'; return; }
-    const shopRes = await fetch(`${UPDATE_MENU_API}/vendor/shop`, {credentials:'include'});
     const shopData = await shopRes.json();
     if (!shopData.success || !shopData.shop) { showMenuMessage(shopData.message || 'No assigned shop found.', false); return; }
     updateMenuShopId = shopData.shop.id;
