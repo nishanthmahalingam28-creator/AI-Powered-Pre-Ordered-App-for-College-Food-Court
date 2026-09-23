@@ -427,13 +427,18 @@ def customer_login():
             "message": f"This account is registered as a {user.get('customer_type')}. Please sign in through the appropriate portal."
         }), 401
 
+    # Rotate the Flask session after successful authentication without losing the
+    # authenticated identity. This prevents stale pre-login session state while
+    # keeping the new login session authoritative.
     session.clear()
+    session.permanent = True
     session["user_id"] = user["id"]
     session["role"] = user["role"]
     session["customer_type"] = user.get("customer_type") or "student"
     session["full_name"] = user.get("full_name") or "Customer"
     session["email"] = user["email"]
     session["mobile"] = user.get("mobile")
+    session.modified = True
 
     return jsonify({
         "success": True,
