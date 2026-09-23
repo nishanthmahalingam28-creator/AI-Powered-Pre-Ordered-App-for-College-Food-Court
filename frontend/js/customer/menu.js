@@ -3,6 +3,10 @@ const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 
 let selectedShop = '';
 let selectedCategory = 'all';
 let searchQuery = '';
+let shopsCache = null;
+const categoriesCache = new Map();
+let menuRequestController = null;
+let menuRequestSequence = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Read query params from URL
@@ -16,8 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (searchInput) searchInput.value = searchQuery;
     }
 
-    updateCartCount();
     await Promise.all([loadStallFilters(), loadCategoryFilters(), fetchAndRenderMenu()]);
+    updateCartCount();
 
     // Live search listener
     const searchInput = document.getElementById('menu-search-input');
@@ -28,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             timer = setTimeout(() => {
                 searchQuery = e.target.value.trim();
                 fetchAndRenderMenu();
-            }, 300);
+            }, 400);
         });
     }
 });
@@ -124,8 +128,8 @@ async function loadStallFilters() {
     if (!container) return;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/shops`);
-        const data = await res.json();
+        const data = shopsCache || await fetch(`${API_BASE_URL}/shops`).then(res => res.json());
+        shopsCache = data;
         if (data.success && data.shops) {
             container.innerHTML = '';
 
@@ -177,11 +181,15 @@ async function loadCategoryFilters() {
 
     let categories = ['all'];
     try {
-        const url = selectedShop 
-            ? `${API_BASE_URL}/categories?shop=${encodeURIComponent(selectedShop)}`
-            : `${API_BASE_URL}/categories`;
-        const res = await fetch(url);
-        const data = await res.json();
+        const cacheKey = selectedShop || '__all__';
+        let data = categoriesCache.get(cacheKey);
+        if (!data) {
+            const url = selectedShop
+                ? `${API_BASE_URL}/categories?shop=${encodeURIComponent(selectedShop)}`
+                : `${API_BASE_URL}/categories`;
+            data = await fetch(url).then(res => res.json());
+            if (data && data.success) categoriesCache.set(cacheKey, data);
+        }
         if (data.success && Array.isArray(data.categories)) {
             categories = ['all', ...data.categories];
         }
@@ -226,8 +234,12 @@ async function fetchAndRenderMenu() {
     if (searchQuery) queryParams.append('q', searchQuery);
 
     try {
-        const res = await fetch(`${API_BASE_URL}/menu?${queryParams.toString()}`);
+        if (menuRequestController) menuRequestController.abort();
+        menuRequestController = new AbortController();
+        const requestId = ++menuRequestSequence;
+        const res = await fetch(`${API_BASE_URL}/menu?${queryParams.toString()}`, { signal: menuRequestController.signal });
         const data = await res.json();
+        if (requestId !== menuRequestSequence) return;
 
         if (headerTitle) {
             headerTitle.textContent = selectedShop ? `${selectedShop} Menu` : 'Available Food Court Dishes';
@@ -281,6 +293,7 @@ async function fetchAndRenderMenu() {
             });
         }
     } catch (e) {
+        if (e && e.name === 'AbortError') return;
         grid.innerHTML = '<p class="text-xs text-red-500 p-4 col-span-3 text-center">Unable to load menu. Ensure the Flask backend is running.</p>';
     }
 }
