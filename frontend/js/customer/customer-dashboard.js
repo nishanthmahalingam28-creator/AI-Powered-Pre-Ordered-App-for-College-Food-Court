@@ -290,10 +290,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 clearTimeout(timeoutId);
             }
 
-            const data = await res.json().catch(() => ({}));
+            let data = await res.json().catch(() => ({}));
 
-            if (!res.ok) {
-                throw new Error(data.message || `AI recommendations request failed (${res.status})`);
+            // Backward-compatible retry through the legacy recommendation route.
+            // Both routes use the same AI engine, but this prevents a temporary
+            // blueprint/deployment mismatch from leaving the dashboard blank.
+            if (!res.ok || !data.success) {
+                const legacyRes = await fetch(`${API_BASE_URL}/recommendations?limit=6`, {
+                    credentials: 'include',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                const legacyData = await legacyRes.json().catch(() => ({}));
+                if (legacyRes.ok && legacyData.success) {
+                    data = legacyData;
+                } else {
+                    throw new Error(data.message || `AI recommendations request failed (${res.status})`);
+                }
             }
 
             if (data.success && Array.isArray(data.recommendations)) {
