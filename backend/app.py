@@ -61,7 +61,13 @@ if not secret_key or (not is_development and (secret_key.startswith("dev-") or "
         secret_key = secrets.token_hex(32)
 
 app.config["SECRET_KEY"] = secret_key
+# Keep authenticated sessions stable across the frontend -> API requests.
+# The frontend and API are separate Render origins, so the cookie must be
+# sent over HTTPS and be usable on cross-origin fetch requests.
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_PATH"] = "/"
+app.config["SESSION_PERMANENT"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7
 
 # Session cookie SameSite policy:
 # - Production with HTTPS and cross-origin frontend: "None" enables cross-site authenticated cookies on modern browsers.
@@ -154,6 +160,11 @@ def after_request_func(response):
     # Attach correlation ID
     if hasattr(g, "request_id"):
         response.headers["X-Request-ID"] = g.request_id
+
+    # Never let browsers cache authentication state or login responses.
+    if request.path.startswith("/api/auth/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
 
     # Production HTTP Security Headers
     response.headers["X-Content-Type-Options"] = "nosniff"
