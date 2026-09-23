@@ -156,19 +156,37 @@ class FoodCourtRecommender:
                 sql += " AND m.shop_id = %s"
                 params.append(target_shop_id)
 
-            # If the customer completed today's survey, recommend only dishes
-            # explicitly published for the selected meal period today.
+            # Ground recommendations in today's survey when possible, but never
+            # leave the customer with an empty AI section just because a vendor
+            # has not published the current meal-period menu yet.
             if customer_id and today_survey:
-                if not bool(today_survey.get("plans_to_eat", 1)):
-                    sql += " AND 1 = 0"
-                elif daily_menu_published and daily_item_ids:
+                if daily_menu_published and daily_item_ids:
                     placeholders = ",".join(["%s"] * len(daily_item_ids))
                     sql += f" AND m.id IN ({placeholders})"
                     params.extend(daily_item_ids)
-                elif daily_menu_published:
-                    sql += " AND 1 = 0"
 
             raw_candidates = DB.query(sql, tuple(params))
+
+            # Reliable cold-start/fallback behavior: if the survey grounding has
+            # no usable dishes, score the normal live menu instead of returning
+            # an empty recommendation list.
+            if not raw_candidates and customer_id and today_survey and daily_menu_published:
+                fallback_sql = """
+                    SELECT m.id, m.shop_id, m.name, m.description, m.price, m.category,
+                           m.quantity, m.is_available, s.name as shop_name, s.is_active as shop_is_active,
+                           s.operational_status as shop_operational_status
+                    FROM menu_items m
+                    INNER JOIN shops s ON s.id = m.shop_id
+                    WHERE m.is_available = 1
+                      AND m.quantity > 0
+                      AND s.is_active = 1
+                """
+                fallback_params = []
+                if target_shop_id:
+                    fallback_sql += " AND m.shop_id = %s"
+                    fallback_params.append(target_shop_id)
+                raw_candidates = DB.query(fallback_sql, tuple(fallback_params))
+
             if not raw_candidates:
                 return {
                     "success": True,
