@@ -105,8 +105,24 @@ loginForm?.addEventListener("submit", async function (event) {
             }));
         }
 
-        // The login endpoint already creates and verifies the authoritative Flask customer session.
-        // The dashboard performs its normal /auth/me check, so avoid a duplicate round-trip here.
+        // Verify that the browser actually received the authenticated Flask session
+        // cookie before leaving the login page. Without this check the UI could show
+        // the cached student session while protected API calls still return 401.
+        const meResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store"
+        });
+        const meData = await meResponse.json().catch(() => ({}));
+
+        if (!meResponse.ok || !meData.authenticated || !meData.user) {
+            sessionStorage.removeItem("foodCourtUser");
+            passwordError.innerHTML = "Login succeeded, but the secure session was not saved. Please refresh and try again.";
+            return;
+        }
+
+        // Always use the authoritative server profile for the dashboard UI.
+        sessionStorage.setItem("foodCourtUser", JSON.stringify(meData.user));
         window.location.href = "../customer/dashboard.html";
     } catch (error) {
         console.error("Customer login API error:", error);
