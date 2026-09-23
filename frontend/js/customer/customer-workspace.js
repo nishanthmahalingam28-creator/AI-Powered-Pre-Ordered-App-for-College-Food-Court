@@ -3,8 +3,27 @@ var titles={'dashboard.html':'Dashboard','menu.html':'Order Food','preorder.html
 function pageName(){var p=decodeURIComponent(location.pathname).replace(/\\/g,'/');return(p.split('/').pop()||'dashboard.html').toLowerCase()}
 function userInfo(){try{return JSON.parse(sessionStorage.getItem('foodCourtUser')||'{}')}catch(e){return{}}}
 function componentUrl(file){return new URL('../../components/'+file,document.baseURI).href}
-function build(){
+async function build(){
   document.body.classList.add('customer-workspace-page');
+
+  // Refresh the UI identity from the authoritative backend session before
+  // rendering the shared customer navigation. This removes the race where
+  // the workspace rendered "Student" before dashboard authentication finished.
+  try {
+    var apiBase = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
+    var authResponse = await fetch(apiBase + '/auth/me', {
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    if (authResponse.ok) {
+      var authData = await authResponse.json();
+      if (authData.authenticated && authData.user) {
+        sessionStorage.setItem('foodCourtUser', JSON.stringify(authData.user));
+      }
+    }
+  } catch (error) {
+    console.warn('[Customer Workspace] Could not refresh authenticated profile:', error);
+  }
   var page=pageName(),u=userInfo(),name=u.full_name||u.name||'Student',role=u.customer_type||u.user_type||u.role||'Student',initial=(String(name).trim().charAt(0)||'S').toUpperCase();
   var roleKey=String(role).toLowerCase();
   var roleLabel=roleKey==='faculty'?'Faculty':roleKey==='guest'?'Guest':'Student';
@@ -43,7 +62,7 @@ async function loadWorkspace(){
     var html=await Promise.all(responses.map(function(response){return response.text()}));
     target.innerHTML=html[0]+html[1]+html[2];
     document.dispatchEvent(new CustomEvent('customerworkspace:ready'));
-    build();
+    await build();
   }catch(error){
     console.error('[Customer Workspace] Failed to load shared sidebar/navbar:',error);
     target.innerHTML='<div class="p-4 text-center text-rose-600 text-xs font-bold">Unable to load customer navigation.</div>';
