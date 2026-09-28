@@ -1,0 +1,10 @@
+project_id = "food-court"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[studio]
+enabled = true
