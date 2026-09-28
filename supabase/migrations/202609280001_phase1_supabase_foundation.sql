@@ -456,13 +456,13 @@ create policy food_survey_admin_write on public.food_survey_submissions
 for all to authenticated
 using ((select private.is_admin())) with check ((select private.is_admin()));
 
--- Direct browser writes to order/payment state are intentionally blocked.
+-- Direct browser writes to order/payment state are intentionally blocked by RLS:
+-- there are no authenticated INSERT/UPDATE/DELETE policies for these tables.
 -- Checkout, stock reservation, payment verification and pickup OTP completion
 -- will be implemented atomically in later phases.
-revoke insert,update,delete on public.orders from authenticated;
-revoke insert,update,delete on public.order_items from authenticated;
-revoke insert,update,delete on public.payments from authenticated;
-revoke all on public.audit_logs from authenticated;
+
+create policy audit_admin_read on public.audit_logs
+for select to authenticated using ((select private.is_admin()));
 
 comment on table public.food_survey_submissions is 'One student submission per meal period per day.';
 comment on table public.expenses is 'Created after completed pickup in the order workflow.';
