@@ -50,6 +50,7 @@ async function loadNotifications(){
  }catch(e){list.innerHTML='<div class="admin-notification-empty">Unable to load notifications. Please refresh.</div>';}
 }
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});}
+window.escapeHtml = escapeHtml;
 async function logout(){
  if(!confirm('Are you sure you want to sign out?'))return;
  try{await fetch(apiBase()+'/auth/logout',{method:'POST',credentials:'include'});}catch(e){}

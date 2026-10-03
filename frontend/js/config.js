@@ -58,4 +58,12 @@
             return response;
         });
     };
+
+    if (typeof window.escapeHtml !== 'function') {
+        window.escapeHtml = function (v) {
+            return String(v ?? '').replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        };
+    }
 })();

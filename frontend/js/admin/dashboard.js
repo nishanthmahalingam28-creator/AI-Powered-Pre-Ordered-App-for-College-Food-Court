@@ -1,6 +1,31 @@
 const rawAdminApiBase = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
 const API_BASE_URL = String(rawAdminApiBase || '').replace(/\/+$/, '');
 
+function getAdminAuthHeaders(extraHeaders) {
+    const headers = Object.assign({ 'Accept': 'application/json' }, extraHeaders || {});
+    let token = null;
+    try {
+        token = localStorage.getItem('foodCourtAuthToken');
+    } catch (_) {}
+    if (token && !headers['Authorization']) {
+        headers['Authorization'] = 'Bearer ' + token;
+    }
+    return headers;
+}
+
+function escapeHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, function(c) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[c];
+    });
+}
+window.escapeHtml = escapeHtml;
+
 let cachedShops = [];
 let cachedCustomers = [];
 let cachedVendors = [];
@@ -16,20 +41,35 @@ let adminContactRequestController = null;
 let adminContactRequestSequence = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const isAdmin = await verifyAdmin();
-    if (!isAdmin) return;
-    await Promise.all([loadOverview(), loadShops()]);
+    // 1. Immediately bind contact search and status filter listeners
     document.getElementById('contact-report-status')?.addEventListener('change', loadContactReports);
     let contactSearchTimer;
-    document.getElementById('contact-report-search')?.addEventListener('input', function(){ clearTimeout(contactSearchTimer); contactSearchTimer=setTimeout(loadContactReports,400); });
-    if (window.location.hash === '#contacts') {
+    document.getElementById('contact-report-search')?.addEventListener('input', function() {
+        clearTimeout(contactSearchTimer);
+        contactSearchTimer = setTimeout(loadContactReports, 350);
+    });
+
+    // 2. Verify admin credentials
+    const isAdmin = await verifyAdmin();
+    if (!isAdmin) return;
+
+    // 3. If direct hash access #contacts, trigger loadContactReports immediately
+    if (window.location.hash.toLowerCase() === '#contacts') {
         loadContactReports();
     }
+
+    // 4. Background load overview and shops
+    Promise.all([loadOverview(), loadShops()]).catch(err => {
+        console.error('Initial admin dashboard load error:', err);
+    });
 });
 
 async function verifyAdmin() {
     try {
-        const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: getAdminAuthHeaders(),
+            credentials: 'include'
+        });
         if (!res.ok) {
             window.location.href = 'login.html';
             return false;
@@ -672,37 +712,157 @@ async function loadPayments() {
 async function loadContactReports() {
     const list = document.getElementById('contact-reports-list');
     if (!list) return;
+
     const status = document.getElementById('contact-report-status')?.value || '';
     const q = document.getElementById('contact-report-search')?.value.trim() || '';
-    if (adminContactRequestController) adminContactRequestController.abort();
+
+    if (adminContactRequestController) {
+        try { adminContactRequestController.abort(); } catch (_) {}
+    }
     const controller = new AbortController();
     adminContactRequestController = controller;
     const requestId = ++adminContactRequestSequence;
 
-    list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Loading contact reports...</div>';
+    list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><i class="fa-solid fa-spinner fa-spin text-purple-600"></i> Loading contact reports...</div>';
+
     try {
-        const params = new URLSearchParams(); if (status) params.set('status', status); if (q) params.set('q', q);
-        const res = await fetch(API_BASE_URL + '/contact/admin?' + params.toString(), { credentials: 'include', signal: controller.signal });
-        const data = await res.json().catch(function(){ return {}; });
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (q) params.set('q', q);
+
+        const url = `${API_BASE_URL}/contact/admin${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('[Contact Reports] Request URL:', url);
+        console.log('[Contact Reports] Token present:', !!localStorage.getItem('foodCourtAuthToken'));
+
+        const res = await fetch(url, {
+            headers: getAdminAuthHeaders(),
+            credentials: 'include',
+            signal: controller.signal
+        });
+
+        const data = await res.json().catch(() => ({}));
+        console.log('[Contact Reports] Response status:', res.status, 'success:', data.success);
+
         if (requestId !== adminContactRequestSequence) return;
+
         if (!res.ok || !data.success) {
             throw new Error(data.message || ('Contact Reports API returned HTTP ' + res.status));
         }
-        const rows = Array.isArray(data.reports) ? data.reports : (Array.isArray(data.messages) ? data.messages : []);
-        if (!rows.length) { list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">No contact reports found.</div>'; return; }
+
+        const rows = Array.isArray(data.reports)
+            ? data.reports
+            : (Array.isArray(data.messages) ? data.messages : []);
+
+        if (!rows.length) {
+            list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">No contact reports found.</div>';
+            return;
+        }
+
         list.innerHTML = rows.map(function(m) {
-            const statusClass = m.status === 'new' ? 'bg-amber-100 text-amber-800' : m.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800';
+            const statusVal = String(m.status || 'new').toLowerCase();
+            const statusClass = statusVal === 'new'
+                ? 'bg-amber-100 text-amber-800'
+                : statusVal === 'resolved'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-blue-100 text-blue-800';
             const displayName = m.full_name || m.name || 'Anonymous User';
-            return '<article class="p-5 hover:bg-slate-50"><div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="font-black text-slate-800">' + escapeHtml(m.subject) + '</span><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ' + statusClass + '">' + escapeHtml(m.status) + '</span></div><p class="text-xs text-slate-500 mt-1">' + escapeHtml(displayName) + ' · <a class="text-blue-700 font-semibold" href="mailto:' + escapeHtml(m.email) + '">' + escapeHtml(m.email) + '</a> · ' + escapeHtml(formatAdminDate(m.created_at)) + '</p><p class="mt-3 text-sm text-slate-700 whitespace-pre-wrap break-words">' + escapeHtml(m.message) + '</p></div><div class="flex gap-2 shrink-0"><button onclick="updateContactReportStatus(' + m.id + ', \'read\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100">Mark Read</button><button onclick="updateContactReportStatus(' + m.id + ', \'resolved\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Resolve</button></div></div></article>';
+            const subject = m.subject || '(No subject)';
+            const email = m.email || '';
+            const msg = m.message || '';
+            const dateStr = formatAdminDate(m.created_at);
+
+            return `
+                <article class="p-5 hover:bg-slate-50 transition-colors">
+                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-black text-slate-800">${escapeHtml(subject)}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${statusClass}">${escapeHtml(statusVal)}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">
+                                ${escapeHtml(displayName)} · 
+                                <a class="text-blue-700 font-semibold hover:underline" href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a> · 
+                                <span>${escapeHtml(dateStr)}</span>
+                            </p>
+                            <p class="mt-3 text-sm text-slate-700 whitespace-pre-wrap break-words">${escapeHtml(msg)}</p>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button type="button" onclick="updateContactReportStatus(${m.id}, 'read')" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">Mark Read</button>
+                            <button type="button" onclick="updateContactReportStatus(${m.id}, 'resolved')" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">Resolve</button>
+                        </div>
+                    </div>
+                </article>
+            `;
         }).join('');
     } catch (e) {
-        if (e.name !== 'AbortError') list.innerHTML = '<div class="p-8 text-center text-sm text-rose-600 font-semibold">' + escapeHtml(e.message || 'Unable to load contact reports. Please refresh.') + '</div>';
+        if (e.name === 'AbortError') {
+            return;
+        }
+        console.error('[Contact Reports] Fetch error:', e);
+        if (requestId !== adminContactRequestSequence) return;
+
+        const errMessage = String(e && e.message ? e.message : 'Unable to load contact reports. Please try again.');
+        list.innerHTML = `
+            <div class="p-8 text-center text-sm text-rose-600 font-semibold flex flex-col items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                    <span>${escapeHtml(errMessage)}</span>
+                </div>
+                <button type="button" onclick="loadContactReports()" class="px-4 py-2 text-xs font-bold rounded-xl bg-purple-700 text-white hover:bg-purple-800 transition-all shadow-sm">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Retry
+                </button>
+            </div>
+        `;
     } finally {
-        if (adminContactRequestController === controller) adminContactRequestController = null;
+        if (adminContactRequestController === controller) {
+            adminContactRequestController = null;
+        }
     }
 }
-function formatAdminDate(v) { if (!v) return '—'; const d = new Date(String(v).includes('T') ? v : String(v).replace(' ', 'T') + 'Z'); return Number.isNaN(d.getTime()) ? String(v) : new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}).format(d); }
-async function updateContactReportStatus(id, status) { try { const res=await fetch(API_BASE_URL+'/contact/admin/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({status})}); const data=await res.json(); if(!res.ok||!data.success) throw new Error(data.message||'Failed'); await loadContactReports(); } catch(e){ alert(e.message||'Unable to update contact report.'); } }
+
+function formatAdminDate(v) {
+    if (!v) return '—';
+    try {
+        const d = new Date(String(v).includes('T') ? v : String(v).replace(' ', 'T') + 'Z');
+        return Number.isNaN(d.getTime())
+            ? String(v)
+            : new Intl.DateTimeFormat('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(d);
+    } catch (_) {
+        return String(v);
+    }
+}
+window.formatAdminDate = formatAdminDate;
+
+async function updateContactReportStatus(id, status) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/contact/admin/${id}/status`, {
+            method: 'PUT',
+            headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ status })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed to update contact report.');
+        }
+        await loadContactReports();
+    } catch (e) {
+        console.error('Update status error:', e);
+        alert(e.message || 'Unable to update contact report.');
+    }
+}
+
+window.loadContactReports = loadContactReports;
+window.updateContactReportStatus = updateContactReportStatus;
+window.switchTab = switchTab;
 // ============================================================================
 // AUDIT LOGS
 // ============================================================================
