@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const status = document.getElementById('contact-form-status');
   if (!form) return;
 
-  const apiBase = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
+  const rawBase = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
+  const apiBase = String(rawBase || '').replace(/\/+$/, '');
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
     const button = form.querySelector('button[type="submit"]');
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const response = await fetch(apiBase + '/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           full_name: document.getElementById('name')?.value.trim(),
           email: document.getElementById('email')?.value.trim(),
@@ -22,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
           message: document.getElementById('message')?.value.trim()
         })
       });
-      const data = await response.json();
+      const data = await response.json().catch(function () { return {}; });
       if (!response.ok || !data.success) throw new Error(data.message || 'Unable to send your message.');
       if (status) { status.textContent = 'Thank you! Your message has been submitted to the Food Court administration.'; status.className = 'mt-3 text-sm font-semibold text-emerald-700'; }
       form.reset();

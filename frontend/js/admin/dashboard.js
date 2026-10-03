@@ -1,4 +1,5 @@
-const API_BASE_URL = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
+const rawAdminApiBase = window.FOOD_COURT_API_BASE || (typeof window.getApiUrl === 'function' ? window.getApiUrl('') : '/api');
+const API_BASE_URL = String(rawAdminApiBase || '').replace(/\/+$/, '');
 
 let cachedShops = [];
 let cachedCustomers = [];
@@ -21,6 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('contact-report-status')?.addEventListener('change', loadContactReports);
     let contactSearchTimer;
     document.getElementById('contact-report-search')?.addEventListener('input', function(){ clearTimeout(contactSearchTimer); contactSearchTimer=setTimeout(loadContactReports,400); });
+    if (window.location.hash === '#contacts') {
+        loadContactReports();
+    }
 });
 
 async function verifyAdmin() {
@@ -57,7 +61,9 @@ function switchTab(tabId) {
         }
     });
 
-    if (!loadedAdminTabs.has(tabId)) {
+    if (tabId === 'contacts') {
+        loadContactReports();
+    } else if (!loadedAdminTabs.has(tabId)) {
         loadedAdminTabs.add(tabId);
         if (tabId === 'shops') loadShops();
         else if (tabId === 'vendors') loadVendors();
@@ -66,7 +72,6 @@ function switchTab(tabId) {
         else if (tabId === 'orders') loadGlobalOrders();
         else if (tabId === 'payments') loadPayments();
         else if (tabId === 'audit') loadAuditLogs();
-        else if (tabId === 'contacts') loadContactReports();
     }
 }
 
@@ -683,14 +688,15 @@ async function loadContactReports() {
         if (!res.ok || !data.success) {
             throw new Error(data.message || ('Contact Reports API returned HTTP ' + res.status));
         }
-        const rows = Array.isArray(data.messages) ? data.messages : [];
+        const rows = Array.isArray(data.reports) ? data.reports : (Array.isArray(data.messages) ? data.messages : []);
         if (!rows.length) { list.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">No contact reports found.</div>'; return; }
         list.innerHTML = rows.map(function(m) {
             const statusClass = m.status === 'new' ? 'bg-amber-100 text-amber-800' : m.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800';
-            return '<article class="p-5 hover:bg-slate-50"><div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="font-black text-slate-800">' + escapeHtml(m.subject) + '</span><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ' + statusClass + '">' + escapeHtml(m.status) + '</span></div><p class="text-xs text-slate-500 mt-1">' + escapeHtml(m.full_name) + ' · <a class="text-blue-700 font-semibold" href="mailto:' + escapeHtml(m.email) + '">' + escapeHtml(m.email) + '</a> · ' + escapeHtml(formatAdminDate(m.created_at)) + '</p><p class="mt-3 text-sm text-slate-700 whitespace-pre-wrap break-words">' + escapeHtml(m.message) + '</p></div><div class="flex gap-2 shrink-0"><button onclick="updateContactReportStatus(' + m.id + ', \'read\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100">Mark Read</button><button onclick="updateContactReportStatus(' + m.id + ', \'resolved\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Resolve</button></div></div></article>';
+            const displayName = m.full_name || m.name || 'Anonymous User';
+            return '<article class="p-5 hover:bg-slate-50"><div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="font-black text-slate-800">' + escapeHtml(m.subject) + '</span><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ' + statusClass + '">' + escapeHtml(m.status) + '</span></div><p class="text-xs text-slate-500 mt-1">' + escapeHtml(displayName) + ' · <a class="text-blue-700 font-semibold" href="mailto:' + escapeHtml(m.email) + '">' + escapeHtml(m.email) + '</a> · ' + escapeHtml(formatAdminDate(m.created_at)) + '</p><p class="mt-3 text-sm text-slate-700 whitespace-pre-wrap break-words">' + escapeHtml(m.message) + '</p></div><div class="flex gap-2 shrink-0"><button onclick="updateContactReportStatus(' + m.id + ', \'read\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100">Mark Read</button><button onclick="updateContactReportStatus(' + m.id + ', \'resolved\')" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Resolve</button></div></div></article>';
         }).join('');
     } catch (e) {
-        if (e.name !== 'AbortError') list.innerHTML = '<div class="p-8 text-center text-sm text-rose-600 font-semibold">Unable to load contact reports. Please refresh.</div>';
+        if (e.name !== 'AbortError') list.innerHTML = '<div class="p-8 text-center text-sm text-rose-600 font-semibold">' + escapeHtml(e.message || 'Unable to load contact reports. Please refresh.') + '</div>';
     } finally {
         if (adminContactRequestController === controller) adminContactRequestController = null;
     }

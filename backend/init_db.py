@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'customer',
     is_active INTEGER NOT NULL DEFAULT 1,
+    is_temporary INTEGER NOT NULL DEFAULT 0,
+    account_expires_at TIMESTAMP NULL,
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -30,9 +32,7 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
     wallet_balance REAL NOT NULL DEFAULT 500.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
-    UNIQUE (order_id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS shops (
@@ -359,6 +359,8 @@ def init_sqlite():
         except Exception as err:
             pass
 
+    _safe_add_column("users", "is_temporary", "INTEGER NOT NULL DEFAULT 0")
+    _safe_add_column("users", "account_expires_at", "TIMESTAMP NULL")
     _safe_add_column("otp_codes", "is_consumed", "INTEGER NOT NULL DEFAULT 0")
     _safe_add_column("otp_codes", "verified_at", "TIMESTAMP NULL")
     _safe_add_column("customer_profiles", "wallet_balance", "REAL NOT NULL DEFAULT 500.00")

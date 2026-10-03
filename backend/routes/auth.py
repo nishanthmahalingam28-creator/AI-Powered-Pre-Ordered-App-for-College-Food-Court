@@ -411,7 +411,7 @@ def customer_login():
         FROM users u
         LEFT JOIN customer_profiles cp ON cp.user_id = u.id
         WHERE LOWER(u.email) = %s AND u.role = 'customer' AND u.is_active = 1
-          AND (u.account_expires_at IS NULL OR u.account_expires_at > NOW())
+          AND (u.account_expires_at IS NULL OR u.account_expires_at > CURRENT_TIMESTAMP)
         LIMIT 1
         """,
         (email,),
@@ -615,7 +615,7 @@ def current_user():
         LEFT JOIN customer_profiles cp ON cp.user_id = u.id
         LEFT JOIN shops s ON s.owner_user_id = u.id
         WHERE u.id = %s AND u.is_active = 1
-          AND (u.account_expires_at IS NULL OR u.account_expires_at > NOW())
+          AND (u.account_expires_at IS NULL OR u.account_expires_at > CURRENT_TIMESTAMP)
         LIMIT 1
         """,
         (user_id,),
